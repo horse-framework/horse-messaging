@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
-using Horse.Messaging.Protocol;
-using Sample.Consumer;
 
 namespace Sample.Producer;
 

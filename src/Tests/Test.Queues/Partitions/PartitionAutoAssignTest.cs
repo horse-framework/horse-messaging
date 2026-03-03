@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -69,6 +70,20 @@ public class PartitionAutoAssignTest
     {
         await producer.Queue.Push(queue, Encoding.UTF8.GetBytes($"msg-{label}"), false,
             new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) });
+    }
+
+    /// <summary>
+    /// Polls a condition with 100ms intervals until it returns true or timeout expires.
+    /// Eliminates flakiness from fixed Task.Delay waits in timing-sensitive tests.
+    /// </summary>
+    private static async Task WaitUntil(Func<bool> condition, int timeoutMs = 5000)
+    {
+        int elapsed = 0;
+        while (!condition() && elapsed < timeoutMs)
+        {
+            await Task.Delay(100);
+            elapsed += 100;
+        }
     }
 
     #endregion
@@ -372,7 +387,7 @@ public class PartitionAutoAssignTest
         var (rider, port, queue) = await CreateAutoAssignQueue(
             maxPartitionsPerWorker: 1,
             autoDestroy: PartitionAutoDestroy.NoMessages,
-            autoDestroyIdleSeconds: 1);
+            autoDestroyIdleSeconds: 2);
 
         HorseClient worker = await ConnectWorker(port);
         HorseClient producer = await ConnectWorker(port);
@@ -381,24 +396,25 @@ public class PartitionAutoAssignTest
         worker.MessageReceived += (_, _) => Interlocked.Increment(ref received);
 
         await SubscribeNoLabel(worker);
-        await Task.Delay(200);
+        await Task.Delay(300);
 
         // Push to label "t1" — worker gets assigned
         await PushLabeled(producer, "t1");
-        await Task.Delay(600);
+        await WaitUntil(() => received >= 1, 3000);
         Assert.Equal(1, received);
 
-        // Wait for NoMessages destroy
-        await Task.Delay(2500);
+        // Wait for NoMessages destroy (timer runs every 2s, needs IsEmpty check)
+        await WaitUntil(() => !queue.PartitionManager.Partitions.Any(), 8000);
 
         // Partition should be destroyed — worker recycled back to pool
         Assert.Empty(queue.PartitionManager.Partitions);
 
         // Push to label "t2" — worker should be re-assigned from pool
         await PushLabeled(producer, "t2");
-        await Task.Delay(600);
+        await WaitUntil(() => received >= 2, 3000);
         Assert.Equal(2, received);
 
+        await WaitUntil(() => queue.PartitionManager.Partitions.Any(), 3000);
         Assert.Single(queue.PartitionManager.Partitions);
         PartitionEntry entry = queue.PartitionManager.Partitions.First();
         Assert.Equal("t2", entry.Label);

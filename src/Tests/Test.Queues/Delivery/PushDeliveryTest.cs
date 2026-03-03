@@ -279,5 +279,47 @@ public class PushDeliveryTest
         producer.Disconnect();
         consumer.Disconnect();
     }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Push_StoredMessages_DeliveredWhenConsumerJoins(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.AfterReceived;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        await ctx.Rider.Queue.Create("push-delayed-sub", o => o.Type = QueueType.Push);
+
+        // Push messages before any consumer exists
+        HorseClient producer = new HorseClient();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        for (int i = 0; i < 3; i++)
+            await producer.Queue.Push("push-delayed-sub", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"stored-{i}")), false);
+        await Task.Delay(500);
+
+        HorseQueue queue = ctx.Rider.Queue.Find("push-delayed-sub");
+        Assert.False(queue.IsEmpty);
+
+        // Now a consumer subscribes → should receive stored messages
+        List<string> received = new();
+        HorseClient consumer = new HorseClient();
+        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        consumer.MessageReceived += (_, m) => { lock (received) received.Add(m.ToString()); };
+        await consumer.Queue.Subscribe("push-delayed-sub", true);
+
+        for (int i = 0; i < 50 && received.Count < 3; i++)
+            await Task.Delay(100);
+
+        Assert.Equal(3, received.Count);
+        Assert.Equal("stored-0", received[0]);
+        Assert.Equal("stored-1", received[1]);
+        Assert.Equal("stored-2", received[2]);
+
+        producer.Disconnect();
+        consumer.Disconnect();
+    }
 }
 

@@ -1,6 +1,3 @@
-using System;
-using System.IO;
-using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Xunit;
 
@@ -228,6 +225,174 @@ public class ProtocolReaderTest
         Assert.NotNull(read);
         Assert.NotNull(read.AdditionalContent);
         Assert.Equal(0, read.AdditionalContent.Position);
+    }
+
+    #endregion
+
+    #region State Isolation — No Leakage Between Messages
+
+    [Fact]
+    public async Task Reader_HeaderState_DoesNotLeakBetweenMessages()
+    {
+        HorseProtocolReader reader = new HorseProtocolReader();
+
+        HorseMessage msg1 = new HorseMessage(MessageType.Server, "target");
+        msg1.SetMessageId("iso-001");
+        msg1.AddHeader("Secret", "should-not-leak");
+        msg1.SetStringContent("with headers");
+
+        HorseMessage msg2 = new HorseMessage(MessageType.QueueMessage, "queue");
+        msg2.SetMessageId("iso-002");
+        msg2.SetStringContent("no headers");
+
+        byte[] data1 = HorseProtocolWriter.Create(msg1);
+        byte[] data2 = HorseProtocolWriter.Create(msg2);
+
+        using MemoryStream ms = new MemoryStream();
+        ms.Write(data1);
+        ms.Write(data2);
+        ms.Position = 0;
+
+        HorseMessage read1 = await reader.Read(ms);
+        HorseMessage read2 = await reader.Read(ms);
+
+        Assert.NotNull(read1);
+        Assert.True(read1.HasHeader);
+        Assert.Equal("should-not-leak", read1.FindHeader("Secret"));
+
+        Assert.NotNull(read2);
+        Assert.False(read2.HasHeader);
+        Assert.Null(read2.FindHeader("Secret"));
+    }
+
+    [Fact]
+    public async Task Reader_AdditionalContent_DoesNotLeakBetweenMessages()
+    {
+        HorseProtocolReader reader = new HorseProtocolReader();
+
+        HorseMessage msg1 = new HorseMessage(MessageType.QueueMessage, "q");
+        msg1.SetMessageId("acl-001");
+        msg1.SetStringContent("main");
+        msg1.SetStringAdditionalContent("additional");
+        msg1.CalculateLengths();
+
+        HorseMessage msg2 = new HorseMessage(MessageType.QueueMessage, "q");
+        msg2.SetMessageId("acl-002");
+        msg2.SetStringContent("only main");
+
+        byte[] data1 = HorseProtocolWriter.Create(msg1);
+        byte[] data2 = HorseProtocolWriter.Create(msg2);
+
+        using MemoryStream ms = new MemoryStream();
+        ms.Write(data1);
+        ms.Write(data2);
+        ms.Position = 0;
+
+        HorseMessage read1 = await reader.Read(ms);
+        HorseMessage read2 = await reader.Read(ms);
+
+        Assert.NotNull(read1);
+        Assert.True(read1.HasAdditionalContent);
+
+        Assert.NotNull(read2);
+        Assert.False(read2.HasAdditionalContent);
+        Assert.Null(read2.AdditionalContent);
+    }
+
+    [Fact]
+    public async Task Reader_Alternating_HeadersAndNoHeaders_10Messages()
+    {
+        HorseProtocolReader reader = new HorseProtocolReader();
+        using MemoryStream ms = new MemoryStream();
+
+        for (int i = 0; i < 10; i++)
+        {
+            HorseMessage msg = new HorseMessage(MessageType.Server, "t");
+            msg.SetMessageId($"alt-{i:D2}");
+
+            if (i % 2 == 0)
+                msg.AddHeader("Index", i.ToString());
+
+            msg.SetStringContent($"body-{i}");
+            byte[] data = HorseProtocolWriter.Create(msg);
+            ms.Write(data);
+        }
+
+        ms.Position = 0;
+
+        for (int i = 0; i < 10; i++)
+        {
+            HorseMessage read = await reader.Read(ms);
+            Assert.NotNull(read);
+            Assert.Equal($"alt-{i:D2}", read.MessageId);
+            Assert.Equal($"body-{i}", read.ToString());
+
+            if (i % 2 == 0)
+            {
+                Assert.True(read.HasHeader);
+                Assert.Equal(i.ToString(), read.FindHeader("Index"));
+            }
+            else
+            {
+                Assert.False(read.HasHeader);
+            }
+        }
+    }
+
+    #endregion
+
+    #region SlowStream Advanced
+
+    [Fact]
+    public async Task SlowStream_SingleByte_FullMessage_WithAllFields()
+    {
+        HorseMessage msg = new HorseMessage(MessageType.DirectMessage, "target", 777);
+        msg.SetMessageId("slow-full");
+        msg.SetSource("source");
+        msg.WaitResponse = true;
+        msg.AddHeader("H1", "V1");
+        msg.SetStringContent("slow content");
+        msg.SetStringAdditionalContent("slow additional");
+        msg.CalculateLengths();
+
+        byte[] data = HorseProtocolWriter.Create(msg);
+        using SlowStream slow = new SlowStream(data, 1);
+        HorseProtocolReader reader = new HorseProtocolReader();
+
+        HorseMessage read = await reader.Read(slow);
+
+        Assert.NotNull(read);
+        Assert.Equal("slow-full", read.MessageId);
+        Assert.Equal("source", read.Source);
+        Assert.Equal("target", read.Target);
+        Assert.Equal(777, read.ContentType);
+        Assert.True(read.WaitResponse);
+        Assert.True(read.HasHeader);
+        Assert.Equal("V1", read.FindHeader("H1"));
+        Assert.Equal("slow content", read.ToString());
+        Assert.True(read.HasAdditionalContent);
+    }
+
+    [Fact]
+    public async Task SlowStream_LargeContent_FiveByteChunks()
+    {
+        byte[] content = new byte[10000];
+        Random.Shared.NextBytes(content);
+
+        HorseMessage msg = new HorseMessage(MessageType.QueueMessage, "q");
+        msg.SetMessageId("slow-lg");
+        msg.Content = new MemoryStream(content);
+        msg.CalculateLengths();
+
+        byte[] data = HorseProtocolWriter.Create(msg);
+        using SlowStream slow = new SlowStream(data, 5);
+        HorseProtocolReader reader = new HorseProtocolReader();
+
+        HorseMessage read = await reader.Read(slow);
+
+        Assert.NotNull(read);
+        Assert.Equal(10000ul, read.Length);
+        Assert.Equal(content, read.Content.ToArray());
     }
 
     #endregion

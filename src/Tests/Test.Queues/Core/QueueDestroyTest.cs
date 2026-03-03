@@ -1,5 +1,4 @@
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -156,6 +155,41 @@ public class QueueDestroyTest
         Assert.True(queue.IsDestroyed);
 
         client.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Destroy_ThenFind_ReturnsNull(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        await ctx.Rider.Queue.Create("dest-find", o => o.Type = QueueType.Push);
+        HorseQueue queue = ctx.Rider.Queue.Find("dest-find");
+        Assert.NotNull(queue);
+
+        await ctx.Rider.Queue.Remove(queue);
+
+        HorseQueue afterDestroy = ctx.Rider.Queue.Find("dest-find");
+        Assert.Null(afterDestroy);
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Destroy_ThenRecreate_Succeeds(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        await ctx.Rider.Queue.Create("dest-recreate", o => o.Type = QueueType.Push);
+        HorseQueue queue = ctx.Rider.Queue.Find("dest-recreate");
+        await ctx.Rider.Queue.Remove(queue);
+        Assert.Null(ctx.Rider.Queue.Find("dest-recreate"));
+
+        await ctx.Rider.Queue.Create("dest-recreate", o => o.Type = QueueType.RoundRobin);
+        HorseQueue recreated = ctx.Rider.Queue.Find("dest-recreate");
+        Assert.NotNull(recreated);
+        Assert.Equal(QueueType.RoundRobin, recreated.Type);
     }
 }
 

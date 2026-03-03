@@ -1,6 +1,3 @@
-using System;
-using System.IO;
-using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Xunit;
 
@@ -238,6 +235,115 @@ public class ProtocolWriterTest
         Assert.True(read.HasHeader);
         Assert.Equal("Header", read.FindHeader("Original"));
         Assert.Equal("Value", read.FindHeader("Extra"));
+    }
+
+    #endregion
+
+    #region Header Overflow Guard (>1024 bytes)
+
+    [Fact]
+    public async Task LargeHeaderValue_ExceedsStackBuffer_RoundTrip()
+    {
+        string largeValue = new string('X', 2000);
+        HorseMessage msg = new HorseMessage(MessageType.Server, "target");
+        msg.SetMessageId("lg-hdr-001");
+        msg.AddHeader("LargeKey", largeValue);
+
+        byte[] data = HorseProtocolWriter.Create(msg);
+        using MemoryStream ms = new MemoryStream(data);
+        HorseProtocolReader reader = new HorseProtocolReader();
+        HorseMessage read = await reader.Read(ms);
+
+        Assert.NotNull(read);
+        Assert.True(read.HasHeader);
+        Assert.Equal(largeValue, read.FindHeader("LargeKey"));
+    }
+
+    [Fact]
+    public async Task LargeHeaderKey_ExceedsStackBuffer_RoundTrip()
+    {
+        string largeKey = new string('K', 1500);
+        HorseMessage msg = new HorseMessage(MessageType.Server, "target");
+        msg.SetMessageId("lg-key-001");
+        msg.AddHeader(largeKey, "small-value");
+
+        byte[] data = HorseProtocolWriter.Create(msg);
+        using MemoryStream ms = new MemoryStream(data);
+        HorseProtocolReader reader = new HorseProtocolReader();
+        HorseMessage read = await reader.Read(ms);
+
+        Assert.NotNull(read);
+        Assert.True(read.HasHeader);
+        Assert.Equal("small-value", read.FindHeader(largeKey));
+    }
+
+    [Fact]
+    public async Task MixedHeaders_SmallAndLarge_RoundTrip()
+    {
+        string largeValue = new string('V', 3000);
+        HorseMessage msg = new HorseMessage(MessageType.Server, "target");
+        msg.SetMessageId("mix-hdr-001");
+        msg.AddHeader("Small", "value");
+        msg.AddHeader("Large", largeValue);
+        msg.AddHeader("AnotherSmall", "ok");
+
+        byte[] data = HorseProtocolWriter.Create(msg);
+        using MemoryStream ms = new MemoryStream(data);
+        HorseProtocolReader reader = new HorseProtocolReader();
+        HorseMessage read = await reader.Read(ms);
+
+        Assert.NotNull(read);
+        Assert.Equal("value", read.FindHeader("Small"));
+        Assert.Equal(largeValue, read.FindHeader("Large"));
+        Assert.Equal("ok", read.FindHeader("AnotherSmall"));
+    }
+
+    [Fact]
+    public async Task LargeAdditionalHeader_ExceedsStackBuffer_RoundTrip()
+    {
+        string largeValue = new string('Z', 2500);
+        HorseMessage msg = new HorseMessage(MessageType.Server, "target");
+        msg.SetMessageId("lg-ah-001");
+
+        var additionalHeaders = new List<KeyValuePair<string, string>>
+        {
+            new("BigExtra", largeValue)
+        };
+
+        byte[] data = HorseProtocolWriter.Create(msg, additionalHeaders);
+        using MemoryStream ms = new MemoryStream(data);
+        HorseProtocolReader reader = new HorseProtocolReader();
+        HorseMessage read = await reader.Read(ms);
+
+        Assert.NotNull(read);
+        Assert.True(read.HasHeader);
+        Assert.Equal(largeValue, read.FindHeader("BigExtra"));
+    }
+
+    #endregion
+
+    #region Non-Seekable Stream Fallback
+
+    [Fact]
+    public async Task Write_NonSeekableStream_ProducesValidData()
+    {
+        HorseMessage msg = new HorseMessage(MessageType.QueueMessage, "queue");
+        msg.SetMessageId("ns-001");
+        msg.AddHeader("Key", "Value");
+        msg.SetStringContent("non-seekable content");
+
+        using NonSeekableStream ns = new NonSeekableStream();
+        HorseProtocolWriter.Write(msg, ns);
+
+        byte[] written = ns.ToArray();
+        using MemoryStream ms = new MemoryStream(written);
+        HorseProtocolReader reader = new HorseProtocolReader();
+        HorseMessage read = await reader.Read(ms);
+
+        Assert.NotNull(read);
+        Assert.Equal("ns-001", read.MessageId);
+        Assert.Equal("Value", read.FindHeader("Key"));
+        Assert.Equal("non-seekable content", read.ToString());
     }
 
     #endregion

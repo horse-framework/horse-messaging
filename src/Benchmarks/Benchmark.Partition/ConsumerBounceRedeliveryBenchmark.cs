@@ -7,8 +7,6 @@ using BenchmarkDotNet.Order;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Queues;
-using Horse.Messaging.Server.Queues.Delivery;
-using Horse.Messaging.Server.Queues.Partitions;
 
 namespace Benchmark.Partition;
 

@@ -1246,7 +1246,7 @@ public class HorseQueue
             //so we need to check it again after a few milliseconds
             if (delivery == null)
             {
-                await Task.Delay(1);
+                await Task.Yield();
                 delivery = Manager.DeliveryHandler.Tracker.FindDelivery(from, deliveryMessage.MessageId, true);
 
                 //try again

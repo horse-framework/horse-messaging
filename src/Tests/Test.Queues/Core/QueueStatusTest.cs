@@ -175,5 +175,44 @@ public class QueueStatusTest
         producer.Disconnect();
         consumer.Disconnect();
     }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Status_OnlyConsume_ConsumerReceivesStored_ProducerRejected(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.AfterReceived;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        HorseQueue queue = await ctx.Rider.Queue.Create("status-oc", o => o.Type = QueueType.Push);
+
+        // Push while running so messages get stored
+        HorseClient producer = new HorseClient();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await producer.Queue.Push("status-oc", new MemoryStream("before-oc"u8.ToArray()), false);
+        await Task.Delay(300);
+
+        // Switch to OnlyConsume
+        queue.SetStatus(QueueStatus.OnlyConsume);
+
+        // Now subscribe → stored messages should be delivered
+        HorseMessage received = null;
+        HorseClient consumer = new HorseClient();
+        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        consumer.MessageReceived += (_, m) => received = m;
+        await consumer.Queue.Subscribe("status-oc", true);
+
+        for (int i = 0; i < 30 && received == null; i++)
+            await Task.Delay(100);
+
+        Assert.NotNull(received);
+        Assert.Equal("before-oc", received.ToString());
+
+        producer.Disconnect();
+        consumer.Disconnect();
+    }
 }
 

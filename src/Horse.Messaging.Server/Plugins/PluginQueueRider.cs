@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Horse.Messaging.Plugins.Queues;
 using Horse.Messaging.Server.Queues;
-using Horse.Messaging.Server.Queues.Delivery;
 
 namespace Horse.Messaging.Server.Plugins;
 

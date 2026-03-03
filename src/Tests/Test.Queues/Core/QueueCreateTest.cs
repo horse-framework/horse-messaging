@@ -1,10 +1,8 @@
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Queues;
-using Horse.Messaging.Server.Queues.Delivery;
 using Xunit;
 
 namespace Test.Queues.Core;
@@ -138,6 +136,55 @@ public class QueueCreateTest
 
         HorseQueue queue = ctx.Rider.Queue.Find("does-not-exist");
         Assert.Null(queue);
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Create_WithTopic_TopicPreserved(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        await ctx.Rider.Queue.Create("topic-q", o => o.Type = QueueType.Push);
+        HorseQueue queue = ctx.Rider.Queue.Find("topic-q");
+        queue.Topic = "my-topic";
+
+        Assert.Equal("my-topic", queue.Topic);
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Find_IsCaseSensitive(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        await ctx.Rider.Queue.Create("CaseSensitive-Q", o => o.Type = QueueType.Push);
+
+        HorseQueue found = ctx.Rider.Queue.Find("CaseSensitive-Q");
+        Assert.NotNull(found);
+
+        HorseQueue notFound = ctx.Rider.Queue.Find("casesensitive-q");
+        Assert.Null(notFound);
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Create_MultipleTypes_Coexist(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        await ctx.Rider.Queue.Create("push-q2", o => o.Type = QueueType.Push);
+        await ctx.Rider.Queue.Create("rr-q2", o => o.Type = QueueType.RoundRobin);
+        await ctx.Rider.Queue.Create("pull-q2", o => o.Type = QueueType.Pull);
+
+        Assert.NotNull(ctx.Rider.Queue.Find("push-q2"));
+        Assert.NotNull(ctx.Rider.Queue.Find("rr-q2"));
+        Assert.NotNull(ctx.Rider.Queue.Find("pull-q2"));
+        Assert.Equal(QueueType.Push, ctx.Rider.Queue.Find("push-q2").Type);
+        Assert.Equal(QueueType.RoundRobin, ctx.Rider.Queue.Find("rr-q2").Type);
+        Assert.Equal(QueueType.Pull, ctx.Rider.Queue.Find("pull-q2").Type);
     }
 }
 

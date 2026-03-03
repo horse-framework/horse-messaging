@@ -143,5 +143,41 @@ public class MessageLimitTest
 
         producer.Disconnect();
     }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task MessageLimit_DeleteOldest_KeepsNewestMessages(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.None;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        await ctx.Rider.Queue.Create("ml-newest", o =>
+        {
+            o.Type = QueueType.Push;
+            o.MessageLimit = 3;
+            o.LimitExceededStrategy = MessageLimitExceededStrategy.DeleteOldestMessage;
+        });
+
+        HorseClient producer = new HorseClient();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+
+        for (int i = 0; i < 5; i++)
+            await producer.Queue.Push("ml-newest", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false);
+        await Task.Delay(500);
+
+        HorseQueue queue = ctx.Rider.Queue.Find("ml-newest");
+        Assert.Equal(3, queue.Manager.MessageStore.Count());
+
+        // Oldest (msg-0, msg-1) should be deleted; newest (msg-2, msg-3, msg-4) remain
+        var first = queue.Manager.MessageStore.ReadFirst();
+        Assert.NotNull(first);
+        Assert.Equal("msg-2", first.Message.ToString());
+
+        producer.Disconnect();
+    }
 }
 

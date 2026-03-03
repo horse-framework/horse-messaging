@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Queues.Managers;
@@ -25,10 +24,11 @@ public class SetMessageStore : IQueueMessageStore
         }
     }
 
-    private HashSet<QueueMessage> _messages = new(new MessageEqualityComparer());
+    private readonly HashSet<QueueMessage> _messages = new(new MessageEqualityComparer());
+    private readonly Dictionary<string, QueueMessage> _index = new();
 
     /// <summary>
-    /// Creates new dictionary based message store
+    /// Creates new set based message store
     /// </summary>
     public SetMessageStore(IHorseQueueManager manager)
     {
@@ -52,6 +52,9 @@ public class SetMessageStore : IQueueMessageStore
             bool added = _messages.Add(message);
             if (!added)
                 throw new DuplicateNameException("Another message with same id is already in queue");
+
+            if (message.Message.MessageId != null)
+                _index[message.Message.MessageId] = message;
         }
     }
 
@@ -62,7 +65,8 @@ public class SetMessageStore : IQueueMessageStore
             if (_messages.Count == 0)
                 return null;
 
-            return _messages.FirstOrDefault();
+            using var enumerator = _messages.GetEnumerator();
+            return enumerator.MoveNext() ? enumerator.Current : null;
         }
     }
 
@@ -73,8 +77,14 @@ public class SetMessageStore : IQueueMessageStore
             if (_messages.Count == 0)
                 return null;
 
-            QueueMessage message = _messages.FirstOrDefault();
+            using var enumerator = _messages.GetEnumerator();
+            if (!enumerator.MoveNext())
+                return null;
+
+            QueueMessage message = enumerator.Current;
             _messages.Remove(message);
+            if (message.Message.MessageId != null)
+                _index.Remove(message.Message.MessageId);
             return message;
         }
     }
@@ -86,16 +96,29 @@ public class SetMessageStore : IQueueMessageStore
             if (_messages.Count == 0)
                 return null;
 
-            QueueMessage message = _messages.LastOrDefault();
-            _messages.Remove(message);
-            return message;
+            // HashSet has no indexed access — enumerate to last element
+            QueueMessage last = null;
+            foreach (QueueMessage m in _messages)
+                last = m;
+
+            if (last != null)
+            {
+                _messages.Remove(last);
+                if (last.Message.MessageId != null)
+                    _index.Remove(last.Message.MessageId);
+            }
+
+            return last;
         }
     }
 
     public QueueMessage Find(string messageId)
     {
         lock (_messages)
-            return _messages.FirstOrDefault(x => x.Message.MessageId == messageId);
+        {
+            _index.TryGetValue(messageId, out QueueMessage msg);
+            return msg;
+        }
     }
 
     public List<QueueMessage> ConsumeMultiple(int count)
@@ -104,19 +127,20 @@ public class SetMessageStore : IQueueMessageStore
 
         lock (_messages)
         {
-            for (int i = 0; i < count; i++)
+            foreach (QueueMessage message in _messages)
             {
-                if (_messages.Count == 0)
+                if (list.Count >= count)
                     break;
 
-                QueueMessage message = _messages.FirstOrDefault();
-                if (message == null)
-                    continue;
-
                 message.IsInQueue = false;
-
                 list.Add(message);
+            }
+
+            foreach (QueueMessage message in list)
+            {
                 _messages.Remove(message);
+                if (message.Message.MessageId != null)
+                    _index.Remove(message.Message.MessageId);
             }
         }
 
@@ -133,8 +157,7 @@ public class SetMessageStore : IQueueMessageStore
     {
         lock (_messages)
         {
-            QueueMessage message = _messages.FirstOrDefault(x => x.Message.MessageId == messageId);
-            if (message == null)
+            if (!_index.Remove(messageId, out QueueMessage message))
                 return false;
 
             _messages.Remove(message);
@@ -147,8 +170,7 @@ public class SetMessageStore : IQueueMessageStore
     {
         lock (_messages)
         {
-            QueueMessage msg = _messages.FirstOrDefault(x => x.Message.MessageId == message.MessageId);
-            if (msg != null)
+            if (message.MessageId != null && _index.Remove(message.MessageId, out QueueMessage msg))
                 _messages.Remove(msg);
         }
     }
@@ -158,13 +180,18 @@ public class SetMessageStore : IQueueMessageStore
         lock (_messages)
         {
             _messages.Remove(message);
+            if (message.Message.MessageId != null)
+                _index.Remove(message.Message.MessageId);
         }
     }
 
     public Task Clear()
     {
         lock (_messages)
+        {
             _messages.Clear();
+            _index.Clear();
+        }
 
         return Task.CompletedTask;
     }

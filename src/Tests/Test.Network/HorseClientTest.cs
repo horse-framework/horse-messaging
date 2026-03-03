@@ -1,5 +1,3 @@
-using System;
-using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Test.Common;

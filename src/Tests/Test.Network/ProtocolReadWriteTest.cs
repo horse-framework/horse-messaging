@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Text;
-using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Xunit;
 
@@ -536,6 +532,220 @@ public class ProtocolReadWriteTest
         Assert.Equal("complete message body", read.ToString());
         Assert.True(read.HasAdditionalContent);
         Assert.NotNull(read.AdditionalContent);
+    }
+
+    #endregion
+
+    #region Content Size Boundaries
+
+    [Fact]
+    public async Task ExactBoundary_UInt16Max_65535Bytes()
+    {
+        byte[] content = new byte[65535];
+        Random.Shared.NextBytes(content);
+
+        HorseMessage msg = new HorseMessage(MessageType.QueueMessage, "q");
+        msg.SetMessageId("u16max");
+        msg.Content = new MemoryStream(content);
+        msg.CalculateLengths();
+
+        HorseMessage read = await WriteAndRead(msg);
+
+        Assert.NotNull(read);
+        Assert.Equal(65535ul, read.Length);
+        Assert.Equal(content, read.Content.ToArray());
+    }
+
+    [Fact]
+    public async Task ExactBoundary_UInt16MaxPlus1_65536Bytes()
+    {
+        byte[] content = new byte[65536];
+        Random.Shared.NextBytes(content);
+
+        HorseMessage msg = new HorseMessage(MessageType.QueueMessage, "q");
+        msg.SetMessageId("u16ovr");
+        msg.Content = new MemoryStream(content);
+        msg.CalculateLengths();
+
+        HorseMessage read = await WriteAndRead(msg);
+
+        Assert.NotNull(read);
+        Assert.Equal(65536ul, read.Length);
+        Assert.Equal(content, read.Content.ToArray());
+    }
+
+    #endregion
+
+    #region Header Edge Cases
+
+    [Fact]
+    public async Task EmptyHeaderValue_RoundTrip()
+    {
+        HorseMessage msg = new HorseMessage(MessageType.Server, "target");
+        msg.SetMessageId("ehv-001");
+        msg.AddHeader("EmptyVal", "");
+
+        HorseMessage read = await WriteAndRead(msg);
+
+        Assert.NotNull(read);
+        Assert.True(read.HasHeader);
+        Assert.Equal("", read.FindHeader("EmptyVal"));
+    }
+
+    [Fact]
+    public async Task HeaderValue_WithColons_RoundTrip()
+    {
+        HorseMessage msg = new HorseMessage(MessageType.Server, "target");
+        msg.SetMessageId("colon-001");
+        msg.AddHeader("URL", "http://example.com:8080/path");
+
+        HorseMessage read = await WriteAndRead(msg);
+
+        Assert.NotNull(read);
+        Assert.True(read.HasHeader);
+        string value = read.FindHeader("URL");
+        Assert.NotNull(value);
+        Assert.Contains("example.com", value);
+    }
+
+    [Fact]
+    public async Task ManyHeaders_50_RoundTrip()
+    {
+        HorseMessage msg = new HorseMessage(MessageType.Server, "target");
+        msg.SetMessageId("many-001");
+
+        for (int i = 0; i < 50; i++)
+            msg.AddHeader($"Key-{i:D3}", $"Value-{i:D3}");
+
+        HorseMessage read = await WriteAndRead(msg);
+
+        Assert.NotNull(read);
+        Assert.True(read.HasHeader);
+        for (int i = 0; i < 50; i++)
+            Assert.Equal($"Value-{i:D3}", read.FindHeader($"Key-{i:D3}"));
+    }
+
+    #endregion
+
+    #region Combined Fields
+
+    [Fact]
+    public async Task AllFieldsCombined_Headers_Content_AdditionalContent_RoundTrip()
+    {
+        HorseMessage msg = new HorseMessage(MessageType.QueueMessage, "queue-1", 42);
+        msg.SetMessageId("combo-001");
+        msg.SetSource("source");
+        msg.WaitResponse = true;
+        msg.HighPriority = true;
+        msg.AddHeader("H1", "V1");
+        msg.AddHeader("H2", "V2");
+        msg.SetStringContent("main body");
+        msg.SetStringAdditionalContent("extra body");
+        msg.CalculateLengths();
+
+        HorseMessage read = await WriteAndRead(msg);
+
+        Assert.NotNull(read);
+        Assert.Equal(MessageType.QueueMessage, read.Type);
+        Assert.Equal("queue-1", read.Target);
+        Assert.Equal("source", read.Source);
+        Assert.Equal("combo-001", read.MessageId);
+        Assert.Equal(42, read.ContentType);
+        Assert.True(read.WaitResponse);
+        Assert.True(read.HighPriority);
+        Assert.True(read.HasHeader);
+        Assert.Equal("V1", read.FindHeader("H1"));
+        Assert.Equal("V2", read.FindHeader("H2"));
+        Assert.Equal("main body", read.ToString());
+        Assert.True(read.HasAdditionalContent);
+        string additional = Encoding.UTF8.GetString(read.AdditionalContent.ToArray());
+        Assert.Equal("extra body", additional);
+    }
+
+    #endregion
+
+    #region Zero-Length Fields
+
+    [Fact]
+    public async Task NoMessageId_NoSource_NoTarget_WithContent_RoundTrip()
+    {
+        HorseMessage msg = new HorseMessage(MessageType.QueueMessage);
+        msg.SetStringContent("orphan content");
+
+        HorseMessage read = await WriteAndRead(msg);
+
+        Assert.NotNull(read);
+        Assert.Equal("orphan content", read.ToString());
+    }
+
+    [Fact]
+    public async Task NoContent_WithHeaders_RoundTrip()
+    {
+        HorseMessage msg = new HorseMessage(MessageType.Server, "target");
+        msg.SetMessageId("nch-001");
+        msg.AddHeader("Key", "Value");
+
+        HorseMessage read = await WriteAndRead(msg);
+
+        Assert.NotNull(read);
+        Assert.True(read.HasHeader);
+        Assert.Equal("Value", read.FindHeader("Key"));
+        Assert.Equal(0ul, read.Length);
+    }
+
+    #endregion
+
+    #region Binary Content Integrity
+
+    [Fact]
+    public async Task BinaryContent_AllByteValues_PreservedExactly()
+    {
+        byte[] content = new byte[256];
+        for (int i = 0; i < 256; i++)
+            content[i] = (byte)i;
+
+        HorseMessage msg = new HorseMessage(MessageType.QueueMessage, "q");
+        msg.SetMessageId("bin256");
+        msg.Content = new MemoryStream(content);
+        msg.CalculateLengths();
+
+        HorseMessage read = await WriteAndRead(msg);
+
+        Assert.NotNull(read);
+        Assert.Equal(content, read.Content.ToArray());
+    }
+
+    [Fact]
+    public async Task BinaryContent_AllZeros_Preserved()
+    {
+        byte[] content = new byte[500];
+
+        HorseMessage msg = new HorseMessage(MessageType.QueueMessage, "q");
+        msg.SetMessageId("bin0");
+        msg.Content = new MemoryStream(content);
+        msg.CalculateLengths();
+
+        HorseMessage read = await WriteAndRead(msg);
+
+        Assert.NotNull(read);
+        Assert.All(read.Content.ToArray(), b => Assert.Equal(0, b));
+    }
+
+    [Fact]
+    public async Task BinaryContent_AllOnes_Preserved()
+    {
+        byte[] content = new byte[500];
+        Array.Fill(content, (byte)0xFF);
+
+        HorseMessage msg = new HorseMessage(MessageType.QueueMessage, "q");
+        msg.SetMessageId("binFF");
+        msg.Content = new MemoryStream(content);
+        msg.CalculateLengths();
+
+        HorseMessage read = await WriteAndRead(msg);
+
+        Assert.NotNull(read);
+        Assert.All(read.Content.ToArray(), b => Assert.Equal(0xFF, b));
     }
 
     #endregion

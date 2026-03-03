@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -54,9 +55,14 @@ public class QueueRider
     public IEnumerable<HorseQueue> Queues => _queues.Values;
 
     /// <summary>
-    /// Key specific registered queue manager methods
+    /// Key specific registered queue manager methods (mutable, used during setup)
     /// </summary>
-    internal Dictionary<string, Func<QueueManagerBuilder, Task<IHorseQueueManager>>> QueueManagerFactories { get; } = new(StringComparer.OrdinalIgnoreCase);
+    internal Dictionary<string, Func<QueueManagerBuilder, Task<IHorseQueueManager>>> QueueManagerFactoriesMutable { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Key specific registered queue manager methods (frozen after initialization for fast read)
+    /// </summary>
+    internal FrozenDictionary<string, Func<QueueManagerBuilder, Task<IHorseQueueManager>>> QueueManagerFactories { get; private set; }
 
     /// <summary>
     /// Root horse rider object
@@ -243,6 +249,9 @@ public class QueueRider
         }
 
         Task.WhenAll(createTasks).GetAwaiter().GetResult();
+
+        // Freeze the factory dictionary for optimal read performance after startup
+        QueueManagerFactories = QueueManagerFactoriesMutable.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
     }
 
     #region Actions
@@ -252,7 +261,8 @@ public class QueueRider
     /// </summary>
     public string[] GetQueueManagers()
     {
-        return QueueManagerFactories.Keys.ToArray();
+        var dict = QueueManagerFactories;
+        return dict != null ? dict.Keys.ToArray() : QueueManagerFactoriesMutable.Keys.ToArray();
     }
 
     /// <summary>
@@ -261,7 +271,10 @@ public class QueueRider
     /// <param name="name">Delivery handler name</param>
     public Func<QueueManagerBuilder, Task<IHorseQueueManager>> FindQueueManagerFactory(string name)
     {
-        QueueManagerFactories.TryGetValue(name, out var handler);
+        Func<QueueManagerBuilder, Task<IHorseQueueManager>> handler = null;
+        QueueManagerFactories?.TryGetValue(name, out handler);
+        if (handler == null)
+            QueueManagerFactoriesMutable.TryGetValue(name, out handler);
         return handler;
     }
 
@@ -341,7 +354,10 @@ public class QueueRider
         if (string.IsNullOrEmpty(handlerName))
             handlerName = "Default";
 
-        QueueManagerFactories.TryGetValue(handlerName, out Func<QueueManagerBuilder, Task<IHorseQueueManager>> queueManagerFactory);
+        Func<QueueManagerBuilder, Task<IHorseQueueManager>> queueManagerFactory = null;
+        QueueManagerFactories?.TryGetValue(handlerName, out queueManagerFactory);
+        if (queueManagerFactory == null)
+            QueueManagerFactoriesMutable.TryGetValue(handlerName, out queueManagerFactory);
 
         await _createLock.WaitAsync();
         try
@@ -486,7 +502,10 @@ public class QueueRider
 
     internal async Task<HorseQueue> CreateReplica(NodeQueueInfo info)
     {
-        QueueManagerFactories.TryGetValue(info.HandlerName, out Func<QueueManagerBuilder, Task<IHorseQueueManager>> queueManagerFactory);
+        Func<QueueManagerBuilder, Task<IHorseQueueManager>> queueManagerFactory = null;
+        QueueManagerFactories?.TryGetValue(info.HandlerName, out queueManagerFactory);
+        if (queueManagerFactory == null)
+            QueueManagerFactoriesMutable.TryGetValue(info.HandlerName, out queueManagerFactory);
 
         await _createLock.WaitAsync();
         try

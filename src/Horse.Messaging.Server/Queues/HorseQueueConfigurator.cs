@@ -66,13 +66,13 @@ public class HorseQueueConfigurator
     /// </summary>
     public HorseQueueConfigurator UseCustomQueueManager(string name, Func<QueueManagerBuilder, Task<IHorseQueueManager>> queueManager)
     {
-        if (Rider.Queue.QueueManagerFactories.ContainsKey(name))
+        if (Rider.Queue.QueueManagerFactoriesMutable.ContainsKey(name))
             throw new DuplicateNameException($"There is already registered delivery handler with same name: {name}");
 
-        Rider.Queue.QueueManagerFactories.Add(name, queueManager);
+        Rider.Queue.QueueManagerFactoriesMutable.Add(name, queueManager);
 
-        if (!name.Equals("DEFAULT", StringComparison.OrdinalIgnoreCase) && !Rider.Queue.QueueManagerFactories.ContainsKey("DEFAULT"))
-            Rider.Queue.QueueManagerFactories.Add("DEFAULT", Rider.Queue.QueueManagerFactories[name]);
+        if (!name.Equals("DEFAULT", StringComparison.OrdinalIgnoreCase) && !Rider.Queue.QueueManagerFactoriesMutable.ContainsKey("DEFAULT"))
+            Rider.Queue.QueueManagerFactoriesMutable.Add("DEFAULT", Rider.Queue.QueueManagerFactoriesMutable[name]);
 
         return this;
     }
@@ -93,10 +93,10 @@ public class HorseQueueConfigurator
     /// <param name="config">Queue configurator action right after manager creation</param>
     public HorseQueueConfigurator UseMemoryQueues(string name, Action<HorseQueue> config = null)
     {
-        if (Rider.Queue.QueueManagerFactories.ContainsKey(name))
+        if (Rider.Queue.QueueManagerFactoriesMutable.ContainsKey(name))
             throw new DuplicateNameException($"There is already registered Ack delivery handler with same name: {name}");
 
-        Rider.Queue.QueueManagerFactories.Add(name, b =>
+        Rider.Queue.QueueManagerFactoriesMutable.Add(name, b =>
         {
             MemoryQueueManager queueManager = new MemoryQueueManager(b.Queue);
             b.Queue.Manager = queueManager;
@@ -104,8 +104,8 @@ public class HorseQueueConfigurator
             return Task.FromResult<IHorseQueueManager>(queueManager);
         });
 
-        if (!name.Equals("DEFAULT", StringComparison.OrdinalIgnoreCase) && !Rider.Queue.QueueManagerFactories.ContainsKey("DEFAULT"))
-            Rider.Queue.QueueManagerFactories.Add("DEFAULT", Rider.Queue.QueueManagerFactories[name]);
+        if (!name.Equals("DEFAULT", StringComparison.OrdinalIgnoreCase) && !Rider.Queue.QueueManagerFactoriesMutable.ContainsKey("DEFAULT"))
+            Rider.Queue.QueueManagerFactoriesMutable.Add("DEFAULT", Rider.Queue.QueueManagerFactoriesMutable[name]);
 
         return this;
     }

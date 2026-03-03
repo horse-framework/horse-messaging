@@ -1,5 +1,4 @@
 ﻿using System;
-using Horse.Messaging.Server;
 using Horse.Messaging.Server.Logging;
 
 namespace ClusteringSample.Server;

@@ -557,16 +557,16 @@ public class NodeClient
 
             case KnownContentTypes.RemoveCache:
             {
-                _ = Rider.Cache.Remove(null, message.Target, false);
+                Rider.Cache.Remove(null, message.Target, false);
                 break;
             }
 
             case KnownContentTypes.PurgeCache:
             {
                 if (string.IsNullOrEmpty(message.Target))
-                    _ = Rider.Cache.Purge(null, false);
+                    Rider.Cache.Purge(null, false);
                 else
-                    _ = Rider.Cache.PurgeByTag(message.Target, null, false);
+                    Rider.Cache.PurgeByTag(message.Target, null, false);
                 break;
             }
 

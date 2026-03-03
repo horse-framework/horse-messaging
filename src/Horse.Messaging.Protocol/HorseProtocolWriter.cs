@@ -150,27 +150,41 @@ public class HorseProtocolWriter
         twoBytesStack[0] = (byte)'\r';
         twoBytesStack[1] = (byte)'\n';
 
-        Span<byte> buffer = stackalloc byte[1024];
+        const int stackBufferSize = 1024;
+        Span<byte> buffer = stackalloc byte[stackBufferSize];
         int offset = 0;
 
         if (message.HeadersList != null)
         {
             foreach (KeyValuePair<string, string> pair in message.HeadersList)
             {
-                offset = 0;
+                int requiredSize = Utf8NoBom.GetMaxByteCount(pair.Key.Length) + 1 + Utf8NoBom.GetMaxByteCount(pair.Value.Length) + 2;
 
-                int keyLen = Utf8NoBom.GetBytes(pair.Key.AsSpan(), buffer[offset..]);
-                offset += keyLen;
-
-                buffer[offset++] = (byte)':';
-
-                int valueLen = Utf8NoBom.GetBytes(pair.Value.AsSpan(), buffer[offset..]);
-                offset += valueLen;
-
-                buffer[offset++] = (byte)'\r';
-                buffer[offset++] = (byte)'\n';
-
-                ms.Write(buffer[..offset]);
+                if (requiredSize > stackBufferSize)
+                {
+                    byte[] heapBuffer = new byte[requiredSize];
+                    offset = 0;
+                    int keyLen = Utf8NoBom.GetBytes(pair.Key.AsSpan(), heapBuffer);
+                    offset += keyLen;
+                    heapBuffer[offset++] = (byte)':';
+                    int valueLen = Utf8NoBom.GetBytes(pair.Value.AsSpan(), heapBuffer.AsSpan(offset));
+                    offset += valueLen;
+                    heapBuffer[offset++] = (byte)'\r';
+                    heapBuffer[offset++] = (byte)'\n';
+                    ms.Write(heapBuffer, 0, offset);
+                }
+                else
+                {
+                    offset = 0;
+                    int keyLen = Utf8NoBom.GetBytes(pair.Key.AsSpan(), buffer[offset..]);
+                    offset += keyLen;
+                    buffer[offset++] = (byte)':';
+                    int valueLen = Utf8NoBom.GetBytes(pair.Value.AsSpan(), buffer[offset..]);
+                    offset += valueLen;
+                    buffer[offset++] = (byte)'\r';
+                    buffer[offset++] = (byte)'\n';
+                    ms.Write(buffer[..offset]);
+                }
             }
         }
 
@@ -178,20 +192,33 @@ public class HorseProtocolWriter
         {
             foreach (KeyValuePair<string, string> pair in additionalHeaders)
             {
-                offset = 0;
+                int requiredSize = Utf8NoBom.GetMaxByteCount(pair.Key.Length) + 1 + Utf8NoBom.GetMaxByteCount(pair.Value.Length) + 2;
 
-                int keyLen = Utf8NoBom.GetBytes(pair.Key.AsSpan(), buffer[offset..]);
-                offset += keyLen;
-
-                buffer[offset++] = (byte)':';
-
-                int valueLen = Utf8NoBom.GetBytes(pair.Value.AsSpan(), buffer[offset..]);
-                offset += valueLen;
-
-                buffer[offset++] = (byte)'\r';
-                buffer[offset++] = (byte)'\n';
-
-                ms.Write(buffer[..offset]);
+                if (requiredSize > stackBufferSize)
+                {
+                    byte[] heapBuffer = new byte[requiredSize];
+                    offset = 0;
+                    int keyLen = Utf8NoBom.GetBytes(pair.Key.AsSpan(), heapBuffer);
+                    offset += keyLen;
+                    heapBuffer[offset++] = (byte)':';
+                    int valueLen = Utf8NoBom.GetBytes(pair.Value.AsSpan(), heapBuffer.AsSpan(offset));
+                    offset += valueLen;
+                    heapBuffer[offset++] = (byte)'\r';
+                    heapBuffer[offset++] = (byte)'\n';
+                    ms.Write(heapBuffer, 0, offset);
+                }
+                else
+                {
+                    offset = 0;
+                    int keyLen = Utf8NoBom.GetBytes(pair.Key.AsSpan(), buffer[offset..]);
+                    offset += keyLen;
+                    buffer[offset++] = (byte)':';
+                    int valueLen = Utf8NoBom.GetBytes(pair.Value.AsSpan(), buffer[offset..]);
+                    offset += valueLen;
+                    buffer[offset++] = (byte)'\r';
+                    buffer[offset++] = (byte)'\n';
+                    ms.Write(buffer[..offset]);
+                }
             }
         }
 

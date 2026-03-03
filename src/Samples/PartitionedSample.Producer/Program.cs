@@ -1,5 +1,4 @@
-﻿using Horse.Messaging.Client;
-using Horse.Messaging.Client.Queues;
+﻿using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Extensions.Client;
 using Horse.Messaging.Protocol;
 using Microsoft.Extensions.DependencyInjection;

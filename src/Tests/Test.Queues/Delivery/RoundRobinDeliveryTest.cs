@@ -1,6 +1,4 @@
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -219,6 +217,95 @@ public class RoundRobinDeliveryTest
         Assert.False(queue.IsEmpty);
 
         producer.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task RoundRobin_StoredMessages_DeliveredWhenFirstConsumerJoins(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.AfterReceived;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        await ctx.Rider.Queue.Create("rr-stored", o => o.Type = QueueType.RoundRobin);
+
+        // Push 3 messages without any consumer
+        HorseClient producer = new HorseClient();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        for (int i = 0; i < 3; i++)
+            await producer.Queue.Push("rr-stored", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false);
+        await Task.Delay(500);
+
+        // Consumer subscribes → should get all stored messages (one at a time via RR)
+        int received = 0;
+        HorseClient consumer = new HorseClient();
+        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        consumer.MessageReceived += (_, _) => received++;
+        await consumer.Queue.Subscribe("rr-stored", true);
+
+        for (int i = 0; i < 50 && received < 3; i++)
+            await Task.Delay(100);
+
+        Assert.Equal(3, received);
+
+        producer.Disconnect();
+        consumer.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task RoundRobin_NewConsumerJoinsMidStream_GetsNextMessage(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.AfterReceived;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        await ctx.Rider.Queue.Create("rr-midjoin", o => o.Type = QueueType.RoundRobin);
+
+        int count1 = 0, count2 = 0;
+
+        HorseClient c1 = new HorseClient();
+        await c1.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await c1.Queue.Subscribe("rr-midjoin", true);
+        c1.MessageReceived += (_, _) => count1++;
+
+        HorseClient producer = new HorseClient();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+
+        // Send 2 messages → all go to c1
+        for (int i = 0; i < 2; i++)
+            await producer.Queue.Push("rr-midjoin", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"batch1-{i}")), true);
+
+        for (int i = 0; i < 30 && count1 < 2; i++)
+            await Task.Delay(100);
+        Assert.Equal(2, count1);
+
+        // c2 joins mid-stream
+        HorseClient c2 = new HorseClient();
+        await c2.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await c2.Queue.Subscribe("rr-midjoin", true);
+        c2.MessageReceived += (_, _) => count2++;
+        await Task.Delay(300);
+
+        // Send 4 more → distributed between c1 and c2
+        for (int i = 0; i < 4; i++)
+            await producer.Queue.Push("rr-midjoin", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"batch2-{i}")), true);
+
+        for (int i = 0; i < 50 && count1 + count2 < 6; i++)
+            await Task.Delay(100);
+
+        Assert.Equal(6, count1 + count2);
+        Assert.True(count2 >= 1, "New consumer should have received at least 1 message");
+
+        producer.Disconnect();
+        c1.Disconnect();
+        c2.Disconnect();
     }
 }
 

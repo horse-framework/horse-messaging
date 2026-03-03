@@ -257,5 +257,89 @@ public class PullDeliveryTest
         producer.Disconnect();
         consumer.Disconnect();
     }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Pull_AfterClearMessages_ReturnsEmpty(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.None;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        await ctx.Rider.Queue.Create("pull-clear", o => o.Type = QueueType.Pull);
+
+        HorseClient producer = new HorseClient();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+
+        for (int i = 0; i < 5; i++)
+            await producer.Queue.Push("pull-clear", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false);
+        await Task.Delay(500);
+
+        // Clear all messages
+        HorseClient admin = new HorseClient();
+        await admin.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await admin.Queue.ClearMessages("pull-clear", true, true);
+        await Task.Delay(300);
+
+        // Pull → should be empty
+        HorseClient consumer = new HorseClient();
+        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await consumer.Queue.Subscribe("pull-clear", true);
+
+        PullContainer result = await consumer.Queue.Pull(new PullRequest
+        {
+            Queue = "pull-clear",
+            Count = 10
+        });
+
+        Assert.Equal(0, result.ReceivedCount);
+
+        producer.Disconnect();
+        admin.Disconnect();
+        consumer.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Pull_MultipleBatches_FIFO_Continues(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.None;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        await ctx.Rider.Queue.Create("pull-batch", o => o.Type = QueueType.Pull);
+
+        HorseClient producer = new HorseClient();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+
+        for (int i = 0; i < 6; i++)
+            await producer.Queue.Push("pull-batch", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false);
+        await Task.Delay(500);
+
+        HorseClient consumer = new HorseClient();
+        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await consumer.Queue.Subscribe("pull-batch", true);
+
+        // Pull first batch of 2
+        PullContainer batch1 = await consumer.Queue.Pull(new PullRequest { Queue = "pull-batch", Count = 2 });
+        Assert.Equal(2, batch1.ReceivedCount);
+        Assert.Equal("msg-0", batch1.ReceivedMessages.First().ToString());
+        Assert.Equal("msg-1", batch1.ReceivedMessages.Last().ToString());
+
+        // Pull second batch of 2
+        PullContainer batch2 = await consumer.Queue.Pull(new PullRequest { Queue = "pull-batch", Count = 2 });
+        Assert.Equal(2, batch2.ReceivedCount);
+        Assert.Equal("msg-2", batch2.ReceivedMessages.First().ToString());
+        Assert.Equal("msg-3", batch2.ReceivedMessages.Last().ToString());
+
+        producer.Disconnect();
+        consumer.Disconnect();
+    }
 }
 

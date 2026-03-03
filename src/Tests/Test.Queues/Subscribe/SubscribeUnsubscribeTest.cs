@@ -131,5 +131,72 @@ public class SubscribeUnsubscribeTest
 
         client.Disconnect();
     }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Disconnect_DropsSubscription(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.AfterReceived;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        await ctx.Rider.Queue.Create("disc-sub", o => o.Type = QueueType.Push);
+
+        HorseClient consumer = new HorseClient();
+        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await consumer.Queue.Subscribe("disc-sub", true);
+        await Task.Delay(300);
+
+        HorseQueue queue = ctx.Rider.Queue.Find("disc-sub");
+        Assert.True(queue.HasAnyClient());
+
+        consumer.Disconnect();
+        await Task.Delay(500);
+
+        Assert.False(queue.HasAnyClient());
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Subscribe_Unsubscribe_Resubscribe_Works(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.AfterReceived;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        await ctx.Rider.Queue.Create("resub-q", o => o.Type = QueueType.Push);
+
+        HorseClient client = new HorseClient();
+        await client.ConnectAsync($"horse://localhost:{ctx.Port}");
+
+        // Subscribe
+        await client.Queue.Subscribe("resub-q", true);
+
+        // Unsubscribe
+        await client.Queue.Unsubscribe("resub-q", true);
+
+        // Re-subscribe → should receive messages
+        int received = 0;
+        client.MessageReceived += (_, _) => received++;
+        await client.Queue.Subscribe("resub-q", true);
+
+        HorseClient producer = new HorseClient();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await producer.Queue.Push("resub-q", new MemoryStream("hello"u8.ToArray()), true);
+
+        for (int i = 0; i < 30 && received == 0; i++)
+            await Task.Delay(100);
+
+        Assert.Equal(1, received);
+
+        client.Disconnect();
+        producer.Disconnect();
+    }
 }
 

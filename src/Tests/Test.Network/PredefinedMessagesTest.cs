@@ -1,4 +1,3 @@
-using System;
 using Horse.Messaging.Protocol;
 using Xunit;
 

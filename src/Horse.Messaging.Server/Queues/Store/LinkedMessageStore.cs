@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
@@ -28,6 +29,7 @@ public class LinkedMessageStore : IQueueMessageStore
     }
 
     private readonly LinkedList<QueueMessage> _messages = new();
+    private readonly Dictionary<string, LinkedListNode<QueueMessage>> _index = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Creates new linked list message store
@@ -53,7 +55,9 @@ public class LinkedMessageStore : IQueueMessageStore
                 return;
 
             message.IsInQueue = true;
-            _messages.AddLast(message);
+            var node = _messages.AddLast(message);
+            if (message.Message.MessageId != null)
+                _index[message.Message.MessageId] = node;
         }
     }
 
@@ -75,10 +79,11 @@ public class LinkedMessageStore : IQueueMessageStore
             if (_messages.Count == 0)
                 return null;
 
-            QueueMessage message;
-            message = _messages.First.Value;
+            QueueMessage message = _messages.First.Value;
             _messages.RemoveFirst();
             message.IsInQueue = false;
+            if (message.Message.MessageId != null)
+                _index.Remove(message.Message.MessageId);
             return message;
         }
     }
@@ -94,6 +99,8 @@ public class LinkedMessageStore : IQueueMessageStore
             QueueMessage message = _messages.Last.Value;
             _messages.RemoveLast();
             message.IsInQueue = false;
+            if (message.Message.MessageId != null)
+                _index.Remove(message.Message.MessageId);
             return message;
         }
     }
@@ -103,11 +110,8 @@ public class LinkedMessageStore : IQueueMessageStore
     {
         lock (_messages)
         {
-            foreach (QueueMessage qm in _messages)
-            {
-                if (qm.Message.MessageId == messageId)
-                    return qm;
-            }
+            if (_index.TryGetValue(messageId, out var node))
+                return node.Value;
         }
 
         return null;
@@ -130,6 +134,8 @@ public class LinkedMessageStore : IQueueMessageStore
                     continue;
 
                 message.IsInQueue = false;
+                if (message.Message.MessageId != null)
+                    _index.Remove(message.Message.MessageId);
 
                 list.Add(message);
                 _messages.RemoveFirst();
@@ -151,17 +157,10 @@ public class LinkedMessageStore : IQueueMessageStore
     {
         lock (_messages)
         {
-            LinkedListNode<QueueMessage> node = _messages.First;
-
-            while (node?.Value != null)
+            if (_index.Remove(messageId, out var node))
             {
-                if (node.Value.Message.MessageId == messageId)
-                {
-                    _messages.Remove(node);
-                    return true;
-                }
-
-                node = node.Next;
+                _messages.Remove(node);
+                return true;
             }
         }
 
@@ -173,16 +172,23 @@ public class LinkedMessageStore : IQueueMessageStore
     {
         lock (_messages)
         {
-            LinkedListNode<QueueMessage> node = _messages.First;
-            while (node?.Value != null)
+            if (message.MessageId != null && _index.Remove(message.MessageId, out var node))
             {
-                if (node.Value.Message == message)
+                _messages.Remove(node);
+                return;
+            }
+
+            // Fallback: reference scan
+            LinkedListNode<QueueMessage> current = _messages.First;
+            while (current?.Value != null)
+            {
+                if (current.Value.Message == message)
                 {
-                    _messages.Remove(node);
+                    _messages.Remove(current);
                     return;
                 }
 
-                node = node.Next;
+                current = current.Next;
             }
         }
     }
@@ -192,14 +198,22 @@ public class LinkedMessageStore : IQueueMessageStore
     {
         if (message.IsInQueue)
             lock (_messages)
-                _messages.Remove(message);
+            {
+                if (message.Message.MessageId != null && _index.Remove(message.Message.MessageId, out var node))
+                    _messages.Remove(node);
+                else
+                    _messages.Remove(message);
+            }
     }
 
     /// <inheritdoc />
     public virtual Task Clear()
     {
         lock (_messages)
+        {
             _messages.Clear();
+            _index.Clear();
+        }
 
         return Task.CompletedTask;
     }

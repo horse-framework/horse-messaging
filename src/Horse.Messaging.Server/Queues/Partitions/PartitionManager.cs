@@ -484,9 +484,9 @@ public class PartitionManager
         {
             bool shouldDestroy = _options.AutoDestroy switch
             {
-                PartitionAutoDestroy.NoConsumers => !entry.Queue.Clients.Any(),
+                PartitionAutoDestroy.NoConsumers => !entry.Queue.HasAnyClient(),
                 PartitionAutoDestroy.NoMessages  => entry.Queue.IsEmpty,
-                PartitionAutoDestroy.Empty       => !entry.Queue.Clients.Any() && entry.Queue.IsEmpty,
+                PartitionAutoDestroy.Empty       => !entry.Queue.HasAnyClient() && entry.Queue.IsEmpty,
                 _                                => false
             };
 

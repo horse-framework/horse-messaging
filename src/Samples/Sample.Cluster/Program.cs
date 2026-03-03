@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Horse.Core;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Queues.Delivery;

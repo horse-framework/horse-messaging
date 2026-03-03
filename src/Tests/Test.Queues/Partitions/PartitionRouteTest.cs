@@ -8,9 +8,7 @@ using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Queues;
-using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Messaging.Server.Queues.Partitions;
-using Test.Common;
 using Xunit;
 
 namespace Test.Queues.Partitions;
