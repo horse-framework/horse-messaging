@@ -84,6 +84,21 @@ public class LinkedMessageStore : IQueueMessageStore
     }
 
     /// <inheritdoc />
+    public virtual QueueMessage ConsumeLast()
+    {
+        lock (_messages)
+        {
+            if (_messages.Count == 0)
+                return null;
+
+            QueueMessage message = _messages.Last.Value;
+            _messages.RemoveLast();
+            message.IsInQueue = false;
+            return message;
+        }
+    }
+
+    /// <inheritdoc />
     public virtual QueueMessage Find(string messageId)
     {
         lock (_messages)

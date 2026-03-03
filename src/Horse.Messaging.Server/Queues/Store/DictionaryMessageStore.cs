@@ -95,6 +95,22 @@ public class DictionaryMessageStore : IQueueMessageStore
     }
 
     /// <inheritdoc />
+    public QueueMessage ConsumeLast()
+    {
+        lock (_messages)
+        {
+            if (_messages.Count == 0)
+                return null;
+
+            var keyValue = _messages.LastOrDefault();
+            QueueMessage message = keyValue.Value;
+            message.IsInQueue = false;
+            _messages.Remove(keyValue.Key);
+            return message;
+        }
+    }
+
+    /// <inheritdoc />
     public QueueMessage Find(string messageId)
     {
         QueueMessage msg;

@@ -1,0 +1,143 @@
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using Horse.Messaging.Client;
+using Horse.Messaging.Protocol;
+using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Queues.Delivery;
+using Xunit;
+
+namespace Test.Queues.Core;
+
+public class QueueCreateTest
+{
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Create_ExplicitPush(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        await ctx.Rider.Queue.Create("push-q", o => o.Type = QueueType.Push);
+        HorseQueue queue = ctx.Rider.Queue.Find("push-q");
+
+        Assert.NotNull(queue);
+        Assert.Equal(QueueType.Push, queue.Type);
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Create_ExplicitRoundRobin(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        await ctx.Rider.Queue.Create("rr-q", o => o.Type = QueueType.RoundRobin);
+        HorseQueue queue = ctx.Rider.Queue.Find("rr-q");
+
+        Assert.NotNull(queue);
+        Assert.Equal(QueueType.RoundRobin, queue.Type);
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Create_ExplicitPull(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        await ctx.Rider.Queue.Create("pull-q", o => o.Type = QueueType.Pull);
+        HorseQueue queue = ctx.Rider.Queue.Find("pull-q");
+
+        Assert.NotNull(queue);
+        Assert.Equal(QueueType.Pull, queue.Type);
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Create_AutoQueueCreation_OnPush(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        HorseClient client = new HorseClient();
+        await client.ConnectAsync($"horse://localhost:{ctx.Port}");
+        Assert.True(client.IsConnected);
+
+        await client.Queue.Push("auto-push-q", new MemoryStream("hello"u8.ToArray()), true);
+        await Task.Delay(500);
+
+        HorseQueue queue = ctx.Rider.Queue.Find("auto-push-q");
+        Assert.NotNull(queue);
+
+        client.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Create_AutoQueueCreation_OnSubscribe(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        HorseClient client = new HorseClient();
+        await client.ConnectAsync($"horse://localhost:{ctx.Port}");
+        Assert.True(client.IsConnected);
+
+        HorseResult result = await client.Queue.Subscribe("auto-sub-q", true);
+        Assert.Equal(HorseResultCode.Ok, result.Code);
+
+        HorseQueue queue = ctx.Rider.Queue.Find("auto-sub-q");
+        Assert.NotNull(queue);
+
+        client.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Create_Duplicate_ThrowsDuplicateNameException(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        await ctx.Rider.Queue.Create("dup-q", o => o.Type = QueueType.Push);
+
+        await Assert.ThrowsAsync<System.Data.DuplicateNameException>(async () =>
+            await ctx.Rider.Queue.Create("dup-q", o => o.Type = QueueType.Push));
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Create_WithOptions_OptionsApplied(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        await ctx.Rider.Queue.Create("opt-q", o =>
+        {
+            o.Type = QueueType.RoundRobin;
+            o.MessageLimit = 100;
+            o.ClientLimit = 5;
+            o.DelayBetweenMessages = 50;
+        });
+
+        HorseQueue queue = ctx.Rider.Queue.Find("opt-q");
+        Assert.NotNull(queue);
+        Assert.Equal(QueueType.RoundRobin, queue.Type);
+        Assert.Equal(100, queue.Options.MessageLimit);
+        Assert.Equal(5, queue.Options.ClientLimit);
+        Assert.Equal(50, queue.Options.DelayBetweenMessages);
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Find_NonExistent_ReturnsNull(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        HorseQueue queue = ctx.Rider.Queue.Find("does-not-exist");
+        Assert.Null(queue);
+    }
+}
+

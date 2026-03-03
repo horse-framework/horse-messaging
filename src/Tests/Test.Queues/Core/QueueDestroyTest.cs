@@ -1,0 +1,161 @@
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using Horse.Messaging.Client;
+using Horse.Messaging.Protocol;
+using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Queues.Delivery;
+using Xunit;
+
+namespace Test.Queues.Core;
+
+public class QueueDestroyTest
+{
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Destroy_Disabled_QueueSurvives(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        await ctx.Rider.Queue.Create("dest-dis", o =>
+        {
+            o.Type = QueueType.Push;
+            o.AutoDestroy = QueueDestroy.Disabled;
+        });
+
+        HorseClient client = new HorseClient();
+        await client.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await client.Queue.Subscribe("dest-dis", true);
+        await client.Queue.Unsubscribe("dest-dis", true);
+        await Task.Delay(2000);
+
+        Assert.NotNull(ctx.Rider.Queue.Find("dest-dis"));
+        client.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Destroy_NoConsumers_QueueDestroyedWhenLastLeaves(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        await ctx.Rider.Queue.Create("dest-nc", o =>
+        {
+            o.Type = QueueType.Push;
+            o.AutoDestroy = QueueDestroy.NoConsumers;
+        });
+
+        HorseClient client = new HorseClient();
+        await client.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await client.Queue.Subscribe("dest-nc", true);
+        await Task.Delay(200);
+
+        Assert.NotNull(ctx.Rider.Queue.Find("dest-nc"));
+
+        await client.Queue.Unsubscribe("dest-nc", true);
+
+        // Wait for auto-destroy check (timer runs every 5s)
+        for (int i = 0; i < 40 && ctx.Rider.Queue.Find("dest-nc") != null; i++)
+            await Task.Delay(250);
+
+        Assert.Null(ctx.Rider.Queue.Find("dest-nc"));
+        client.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Destroy_NoMessages_QueueDestroyedWhenEmpty(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.None;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        await ctx.Rider.Queue.Create("dest-nm", o =>
+        {
+            o.Type = QueueType.Push;
+            o.AutoDestroy = QueueDestroy.NoMessages;
+        });
+
+        HorseQueue queue = ctx.Rider.Queue.Find("dest-nm");
+        Assert.NotNull(queue);
+
+        // Queue has no messages and NoMessages policy → should destroy
+        for (int i = 0; i < 40 && ctx.Rider.Queue.Find("dest-nm") != null; i++)
+            await Task.Delay(250);
+
+        Assert.Null(ctx.Rider.Queue.Find("dest-nm"));
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Destroy_Empty_BothConditionsMet(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        await ctx.Rider.Queue.Create("dest-empty", o =>
+        {
+            o.Type = QueueType.Push;
+            o.AutoDestroy = QueueDestroy.Empty;
+        });
+
+        // No consumers + no messages → should destroy
+        for (int i = 0; i < 40 && ctx.Rider.Queue.Find("dest-empty") != null; i++)
+            await Task.Delay(250);
+
+        Assert.Null(ctx.Rider.Queue.Find("dest-empty"));
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Destroy_Explicit_ViaRider_Remove(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        HorseQueue queue = await ctx.Rider.Queue.Create("dest-explicit", o => o.Type = QueueType.Push);
+        Assert.NotNull(queue);
+
+        await ctx.Rider.Queue.Remove(queue);
+        await Task.Delay(200);
+
+        Assert.Null(ctx.Rider.Queue.Find("dest-explicit"));
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Destroy_WithPendingMessages_MessagesLost(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.None;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        HorseQueue queue = await ctx.Rider.Queue.Create("dest-pending", o =>
+        {
+            o.Type = QueueType.Push;
+            o.AutoDestroy = QueueDestroy.Disabled;
+        });
+
+        // Push message without subscriber so it stays in store
+        HorseClient client = new HorseClient();
+        await client.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await client.Queue.Push("dest-pending", new MemoryStream("msg"u8.ToArray()), false);
+        await Task.Delay(500);
+
+        Assert.False(queue.IsEmpty);
+
+        await ctx.Rider.Queue.Remove(queue);
+        Assert.True(queue.IsDestroyed);
+
+        client.Disconnect();
+    }
+}
+

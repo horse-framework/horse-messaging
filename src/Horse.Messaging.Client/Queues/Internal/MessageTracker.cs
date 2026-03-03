@@ -141,7 +141,7 @@ internal class MessageTracker : IDisposable
         ResponseMessageDescriptor descriptor = new ResponseMessageDescriptor(message, expiration);
 
         lock (_sortedDescriptors)
-            _sortedDescriptors.Add(message.MessageId, descriptor);
+            _sortedDescriptors[message.MessageId] = descriptor;
 
         return await descriptor.Source.Task;
     }

@@ -79,6 +79,19 @@ public class SetMessageStore : IQueueMessageStore
         }
     }
 
+    public QueueMessage ConsumeLast()
+    {
+        lock (_messages)
+        {
+            if (_messages.Count == 0)
+                return null;
+
+            QueueMessage message = _messages.LastOrDefault();
+            _messages.Remove(message);
+            return message;
+        }
+    }
+
     public QueueMessage Find(string messageId)
     {
         lock (_messages)
