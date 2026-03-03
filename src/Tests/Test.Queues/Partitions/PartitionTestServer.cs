@@ -19,24 +19,31 @@ internal class PartitionTestContext : IAsyncDisposable
     public HorseRider Rider { get; }
     public int Port { get; }
     public string DataPath { get; }
+    public HorseServer Server { get; }
 
-    public PartitionTestContext(HorseRider rider, int port, string dataPath)
+    public PartitionTestContext(HorseRider rider, int port, string dataPath, HorseServer server)
     {
         Rider = rider;
         Port = port;
         DataPath = dataPath;
+        Server = server;
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
+        try
+        {
+            if (Server != null)
+                await Server.StopAsync();
+        }
+        catch { /* best effort */ }
+
         try
         {
             if (Directory.Exists(DataPath))
                 Directory.Delete(DataPath, true);
         }
         catch { /* best effort cleanup */ }
-
-        return ValueTask.CompletedTask;
     }
 }
 
@@ -83,8 +90,8 @@ internal static class PartitionTestServer
             })
             .Build();
 
-        int port = await StartServer(rider);
-        return new PartitionTestContext(rider, port, dataPath);
+        var (port, server) = await StartServer(rider);
+        return new PartitionTestContext(rider, port, dataPath, server);
     }
 
     private static async Task<PartitionTestContext> CreatePersistentContext(Action<QueueOptions> configureOptions)
@@ -112,8 +119,8 @@ internal static class PartitionTestServer
             })
             .Build();
 
-        int port = await StartServer(rider);
-        return new PartitionTestContext(rider, port, dataPath);
+        var (port, server) = await StartServer(rider);
+        return new PartitionTestContext(rider, port, dataPath, server);
     }
 
     // ── Legacy methods (used by existing [Fact] tests) ──────────────────
@@ -141,7 +148,8 @@ internal static class PartitionTestServer
             })
             .Build();
 
-        return (rider, await StartServer(rider), null);
+        var (port, server) = await StartServer(rider);
+        return (rider, port, server);
     }
 
     /// <summary>
@@ -171,11 +179,11 @@ internal static class PartitionTestServer
             })
             .Build();
 
-        int port = await StartServer(rider);
-        return (rider, port, null, dataPath);
+        var (port, server) = await StartServer(rider);
+        return (rider, port, server, dataPath);
     }
 
-    private static async Task<int> StartServer(HorseRider rider)
+    private static async Task<(int port, HorseServer server)> StartServer(HorseRider rider)
     {
         int port = 0;
         Random portRnd = new Random();
@@ -193,7 +201,8 @@ internal static class PartitionTestServer
                 var horseServer = new HorseServer(opts);
                 horseServer.UseRider(rider);
                 horseServer.StartAsync().GetAwaiter().GetResult();
-                break;
+                await Task.Delay(100);
+                return (port, horseServer);
             }
             catch
             {
@@ -203,6 +212,6 @@ internal static class PartitionTestServer
         }
 
         await Task.Delay(100);
-        return port;
+        return (port, null);
     }
 }
