@@ -51,8 +51,8 @@ internal static class QueueTestServer
             })
             .Build();
 
-        int port = await StartServer(rider);
-        return new QueueTestContext(rider, port, dataPath);
+        var (port, server) = await StartServer(rider);
+        return new QueueTestContext(rider, port, dataPath, server);
     }
 
     private static async Task<QueueTestContext> CreatePersistent(Action<QueueOptions> configureOptions)
@@ -80,13 +80,14 @@ internal static class QueueTestServer
             })
             .Build();
 
-        int port = await StartServer(rider);
-        return new QueueTestContext(rider, port, dataPath);
+        var (port, server) = await StartServer(rider);
+        return new QueueTestContext(rider, port, dataPath, server);
     }
 
-    private static async Task<int> StartServer(HorseRider rider)
+    private static async Task<(int port, HorseServer server)> StartServer(HorseRider rider)
     {
         int port = 0;
+        HorseServer horseServer = null;
 
         for (int i = 0; i < 50; i++)
         {
@@ -101,6 +102,7 @@ internal static class QueueTestServer
                 var server = new HorseServer(opts);
                 server.UseRider(rider);
                 server.StartAsync().GetAwaiter().GetResult();
+                horseServer = server;
                 break;
             }
             catch
@@ -111,7 +113,7 @@ internal static class QueueTestServer
         }
 
         await Task.Delay(100);
-        return port;
+        return (port, horseServer);
     }
 }
 
@@ -123,16 +125,25 @@ internal class QueueTestContext : IAsyncDisposable
     public HorseRider Rider { get; }
     public int Port { get; }
     public string DataPath { get; }
+    public HorseServer Server { get; }
 
-    public QueueTestContext(HorseRider rider, int port, string dataPath)
+    public QueueTestContext(HorseRider rider, int port, string dataPath, HorseServer server = null)
     {
         Rider = rider;
         Port = port;
         DataPath = dataPath;
+        Server = server;
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
+        try
+        {
+            if (Server != null)
+                await Server.StopAsync();
+        }
+        catch { /* best effort */ }
+
         try
         {
             if (Directory.Exists(DataPath))
@@ -142,8 +153,6 @@ internal class QueueTestContext : IAsyncDisposable
         {
             // best effort cleanup
         }
-
-        return ValueTask.CompletedTask;
     }
 }
 

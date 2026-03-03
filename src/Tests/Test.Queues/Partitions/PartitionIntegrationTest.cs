@@ -1,3 +1,4 @@
+using System;
 using System.Text;
 using System.Collections.Generic;
 using System.Linq;
@@ -5,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
-using Horse.Messaging.Server;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Partitions;
 using Xunit;
@@ -19,12 +19,14 @@ namespace Test.Queues.Partitions;
 /// </summary>
 public class PartitionIntegrationTest
 {
-    private static async Task<(HorseRider rider, int port, HorseQueue queue)> CreateServer(
+    private static async Task<(PartitionTestContext ctx, HorseQueue queue)> CreateServer(
         string queueName,
         int maxPartitions = 10,
         int subscribersPerPartition = 1)
     {
-        var (rider, port, _) = await PartitionTestServer.Create();
+        var (rider, port, server) = await PartitionTestServer.Create();
+        string dataPath = $"pt-int-{Environment.TickCount}-{Random.Shared.Next(0, 100000)}";
+        var ctx = new PartitionTestContext(rider, port, dataPath, server);
 
         await rider.Queue.Create(queueName, opts =>
         {
@@ -39,13 +41,14 @@ public class PartitionIntegrationTest
         });
 
         HorseQueue queue = rider.Queue.Find(queueName);
-        return (rider, port, queue);
+        return (ctx, queue);
     }
 
     [Fact]
     public async Task TenWorkers_TenPartitions_EachReceivesOwnMessages()
     {
-        var (rider, port, queue) = await CreateServer("FetchOrders");
+        var (ctx, queue) = await CreateServer("FetchOrders");
+        await using var _ = ctx;
 
         int[] received = new int[10];
 
@@ -54,16 +57,16 @@ public class PartitionIntegrationTest
             int idx = i;
             var client = new HorseClient();
             client.AutoAcknowledge = true;
-            await client.ConnectAsync("horse://localhost:" + port);
+            await client.ConnectAsync("horse://localhost:" + ctx.Port);
             client.MessageReceived += (_, _) => Interlocked.Increment(ref received[idx]);
             await client.Queue.Subscribe("FetchOrders", true,
                 new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"worker-{i}") });
         }
 
-        await Task.Delay(800); // let all 10 partition queues fully initialize
+        await Task.Delay(800);
 
         HorseClient producer = new HorseClient();
-        await producer.ConnectAsync("horse://localhost:" + port);
+        await producer.ConnectAsync("horse://localhost:" + ctx.Port);
 
         for (int i = 0; i < 10; i++)
             for (int m = 0; m < 5; m++)
@@ -81,15 +84,16 @@ public class PartitionIntegrationTest
     [Fact]
     public async Task ProduceToParentQueue_MessagesDistributedToCorrectPartitions()
     {
-        var (rider, port, queue) = await CreateServer("Orders");
+        var (ctx, queue) = await CreateServer("Orders");
+        await using var _ = ctx;
 
         int receivedA = 0, receivedB = 0;
         HorseClient wA = new HorseClient();
         HorseClient wB = new HorseClient();
         wA.AutoAcknowledge = true;
         wB.AutoAcknowledge = true;
-        await wA.ConnectAsync("horse://localhost:" + port);
-        await wB.ConnectAsync("horse://localhost:" + port);
+        await wA.ConnectAsync("horse://localhost:" + ctx.Port);
+        await wB.ConnectAsync("horse://localhost:" + ctx.Port);
         wA.MessageReceived += (_, _) => Interlocked.Increment(ref receivedA);
         wB.MessageReceived += (_, _) => Interlocked.Increment(ref receivedB);
 
@@ -101,7 +105,7 @@ public class PartitionIntegrationTest
         await Task.Delay(500);
 
         HorseClient producer = new HorseClient();
-        await producer.ConnectAsync("horse://localhost:" + port);
+        await producer.ConnectAsync("horse://localhost:" + ctx.Port);
 
         for (int i = 0; i < 4; i++)
             await producer.Queue.Push("Orders", Encoding.UTF8.GetBytes($"msg-{i}"), false,
@@ -116,12 +120,13 @@ public class PartitionIntegrationTest
     [Fact]
     public async Task WorkersJoinDynamically_NewPartitionOpenedPerWorker()
     {
-        var (rider, port, queue) = await CreateServer("DynQ", maxPartitions: 0);
+        var (ctx, queue) = await CreateServer("DynQ", maxPartitions: 0);
+        await using var _ = ctx;
 
         for (int i = 0; i < 3; i++)
         {
             var client = new HorseClient();
-            await client.ConnectAsync("horse://localhost:" + port);
+            await client.ConnectAsync("horse://localhost:" + ctx.Port);
             await client.Queue.Subscribe("DynQ", true,
                 new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"dyn-{i}") });
             await Task.Delay(100);
@@ -136,13 +141,14 @@ public class PartitionIntegrationTest
     [Fact]
     public async Task AllPartitionIds_AreUnique()
     {
-        var (rider, port, queue) = await CreateServer("UniqueQ", maxPartitions: 0);
+        var (ctx, queue) = await CreateServer("UniqueQ", maxPartitions: 0);
+        await using var _ = ctx;
 
         const int n = 20;
         for (int i = 0; i < n; i++)
         {
             var client = new HorseClient();
-            await client.ConnectAsync("horse://localhost:" + port);
+            await client.ConnectAsync("horse://localhost:" + ctx.Port);
             await client.Queue.Subscribe("UniqueQ", true,
                 new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"ul-{i}") });
         }
@@ -153,32 +159,34 @@ public class PartitionIntegrationTest
             .Select(p => p.PartitionId)
             .ToList();
 
-        Assert.Equal(ids.Count, ids.Distinct().Count());
+        Assert.Equal((int)ids.Count, (int)ids.Distinct().Count());
     }
 
     [Fact]
     public async Task PartitionQueueNames_FollowNamingConvention()
     {
-        var (rider, port, queue) = await CreateServer("NamingQ");
+        var (ctx, queue) = await CreateServer("NamingQ");
+        await using var _ = ctx;
 
         HorseClient client = new HorseClient();
-        await client.ConnectAsync("horse://localhost:" + port);
+        await client.ConnectAsync("horse://localhost:" + ctx.Port);
         await client.Queue.Subscribe("NamingQ", true,
             new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "naming-w") });
 
         await Task.Delay(200);
 
         foreach (var entry in queue.PartitionManager.Partitions)
-            Assert.StartsWith("NamingQ-Partition-", entry.Queue.Name);
+            Assert.StartsWith("NamingQ-Partition-", (string)entry.Queue.Name);
     }
 
     [Fact]
     public async Task DestroyParentQueue_AllPartitionsAlsoDestroyed()
     {
-        var (rider, port, queue) = await CreateServer("TeardownQ");
+        var (ctx, queue) = await CreateServer("TeardownQ");
+        await using var _ = ctx;
 
         HorseClient client = new HorseClient();
-        await client.ConnectAsync("horse://localhost:" + port);
+        await client.ConnectAsync("horse://localhost:" + ctx.Port);
         await client.Queue.Subscribe("TeardownQ", true,
             new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "td-w") });
 
@@ -188,18 +196,18 @@ public class PartitionIntegrationTest
         string labelPartName = queue.PartitionManager.Partitions
             .FirstOrDefault()?.Queue.Name;
 
-        await rider.Queue.Remove(queue);
+        await ctx.Rider.Queue.Remove(queue);
         await Task.Delay(300);
 
-        Assert.True(queue.IsDestroyed);
+        Assert.True((bool)queue.IsDestroyed);
         if (labelPartName != null)
-            Assert.Null(rider.Queue.Find(labelPartName));
+            Assert.Null(ctx.Rider.Queue.Find(labelPartName));
     }
 
     [Fact]
     public async Task CreateQueue_WithPartitionOptions_ServerQueuesHasPartitionEnabled()
     {
-        var (rider, _, _) = await PartitionTestServer.Create();
+        var (rider, _, server) = await PartitionTestServer.Create();
 
         await rider.Queue.Create("ServerPartQ", opts =>
         {
@@ -214,10 +222,11 @@ public class PartitionIntegrationTest
 
         HorseQueue q = rider.Queue.Find("ServerPartQ");
         Assert.NotNull(q);
-        Assert.True(q.IsPartitioned);
+        Assert.True((bool)q.IsPartitioned);
         Assert.NotNull(q.Options.Partition);
-        Assert.True(q.Options.Partition.Enabled);
+        Assert.True((bool)q.Options.Partition.Enabled);
         Assert.Equal(5, q.Options.Partition.MaxPartitionCount);
         Assert.Equal(1, q.Options.Partition.SubscribersPerPartition);
+        await server.StopAsync();
     }
 }

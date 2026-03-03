@@ -43,7 +43,7 @@ public class PartitionTierScenarioTest
         int maxPartitionsPerWorker = 10,
         PartitionAutoDestroy autoDestroy = PartitionAutoDestroy.Disabled)
     {
-        var (rider, port, _) = await PartitionTestServer.Create();
+        var (rider, port, server) = await PartitionTestServer.Create();
 
         // Pre-create tier queues with partition config
         foreach (string tier in new[] { "Free", "Standard", "Premium" })
@@ -76,7 +76,7 @@ public class PartitionTierScenarioTest
         string name = "FetchOrders",
         int subscribersPerPartition = 5)
     {
-        var (rider, port, _) = await PartitionTestServer.Create();
+        var (rider, port, server) = await PartitionTestServer.Create();
 
         await rider.Queue.Create(name, opts =>
         {
@@ -327,7 +327,7 @@ public class PartitionTierScenarioTest
             typeof(TestCompareOrdersConsumer),
             consumerFactoryBuilder: null,
             queueNameTransform: name => $"{name}-Free",
-            partitionLabel: null);
+            enterWorkerPool: false);
 
         // Read back the registration via reflection (Registrations is internal)
         var registrations = typeof(Horse.Messaging.Client.Queues.QueueOperator)
@@ -357,7 +357,7 @@ public class PartitionTierScenarioTest
             typeof(TestCompareOrdersConsumer),
             consumerFactoryBuilder: null,
             queueNameTransform: name => $"{name}-Premium",
-            partitionLabel: null);
+            enterWorkerPool: false);
 
         await client.ConnectAsync("horse://localhost:" + port);
         Assert.True(client.IsConnected);
@@ -408,7 +408,7 @@ public class PartitionTierScenarioTest
     [Fact]
     public async Task MixedRegistration_LabeledAndAutoAssign_OnSameWorker()
     {
-        var (rider, port, _) = await PartitionTestServer.Create();
+        var (rider, port, server) = await PartitionTestServer.Create();
 
         // Create labeled queue
         await rider.Queue.Create("FetchOrders", opts =>
@@ -551,7 +551,7 @@ public class PartitionTierScenarioTest
     [Fact]
     public async Task AutoQueueCreation_WorkerSubscribesToNonExistentQueue_CreatesIt()
     {
-        var (rider, port, _) = await PartitionTestServer.Create();
+        var (rider, port, server) = await PartitionTestServer.Create();
         // AutoQueueCreation is enabled by default in PartitionTestServer
 
         HorseClient worker = await Connect(port);
@@ -651,7 +651,7 @@ public class PartitionTierScenarioTest
     [Fact]
     public async Task FullScenario_ThreeTiers_LabeledAndAutoAssign_CompleteIsolation()
     {
-        var (rider, port, _) = await PartitionTestServer.Create();
+        var (rider, port, server) = await PartitionTestServer.Create();
 
         // Create labeled queue (FetchOrders)
         await rider.Queue.Create("FetchOrders", opts =>
@@ -1015,7 +1015,7 @@ public class PartitionTierScenarioTest
     public async Task SampleAll_GlobalPartitionConfig_TransformAndLabel_ConsumerReceives()
     {
         // ── Server: global partition config (same as Sample.All/Server.cs) ──
-        var (rider, port, _) = await PartitionTestServer.Create();
+        var (rider, port, server) = await PartitionTestServer.Create();
         // PartitionTestServer already sets AutoQueueCreation = true.
         // Set the default partition config (global) that auto-created queues will inherit.
         rider.Queue.Options.Partition = new PartitionOptions
@@ -1117,7 +1117,7 @@ public class PartitionTierScenarioTest
     public async Task AutoQueueCreation_InheritsGlobalAutoAssignWorkers()
     {
         // Verifies that auto-created queues get AutoAssignWorkers from global config
-        var (rider, port, _) = await PartitionTestServer.Create();
+        var (rider, port, server) = await PartitionTestServer.Create();
 
         rider.Queue.Options.Partition = new PartitionOptions
         {

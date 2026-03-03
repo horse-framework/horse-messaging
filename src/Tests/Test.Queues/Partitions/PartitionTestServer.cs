@@ -125,14 +125,23 @@ internal static class PartitionTestServer
 
     // ── Legacy methods (used by existing [Fact] tests) ──────────────────
 
+    /// <summary>
+    /// Creates a memory-backed server and returns a disposable PartitionTestContext.
+    /// Prefer this over the tuple-returning Create() overload.
+    /// </summary>
+    public static async Task<PartitionTestContext> CreateContext()
+    {
+        var (rider, port, server) = await Create();
+        string dataPath = $"pt-ctx-{Environment.TickCount}-{Random.Shared.Next(0, 100000)}";
+        return new PartitionTestContext(rider, port, dataPath, server);
+    }
+
     public static async Task<(HorseRider rider, int port, HorseServer server)> Create()
     {
+        string dataPath = $"pt-data-{Environment.TickCount}-{Random.Shared.Next(0, 100000)}";
+
         HorseRider rider = HorseRiderBuilder.Create()
-            .ConfigureOptions(o =>
-            {
-                Random rnd = new Random();
-                o.DataPath = $"pt-data-{Environment.TickCount}-{rnd.Next(0, 100000)}";
-            })
+            .ConfigureOptions(o => o.DataPath = dataPath)
             .ConfigureQueues(q =>
             {
                 q.Options.Type = QueueType.Push;

@@ -97,6 +97,9 @@ public class HorseClientBuilder
     /// </summary>
     public virtual HorseClient Build()
     {
+        if (_services != null && _client.Provider == null)
+            _client.Provider = _services.BuildServiceProvider();
+
         return _client;
     }
     #endregion
@@ -625,13 +628,42 @@ public class HorseClientBuilder
 
     /// <summary>
     /// Adds a queue consumer with transient life time, transforms the queue name resolved from attributes,
-    /// and optionally subscribes with a partition label.
+    /// and optionally enters the partition worker pool for auto-assignment.
     /// </summary>
     /// <param name="queueNameTransform">
     /// Receives the original queue name (from <c>[QueueName]</c> attribute or model type) and returns the final queue name.
     /// Example: <c>name => $"{name}-Free"</c>
     /// </param>
-    /// <param name="partitionLabel">Optional partition label. Pass null to enter the auto-assign worker pool.</param>
+    /// <param name="enterWorkerPool">
+    /// When true, the consumer subscribes as a partitioned worker without a label.
+    /// The server will dynamically assign it to newly created partitions.
+    /// </param>
+    public HorseClientBuilder AddTransientConsumer<TConsumer>(Func<string, string> queueNameTransform, bool enterWorkerPool = false) where TConsumer : class
+    {
+        if (_services == null)
+            throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                            "If you want to use transient queue consumers " +
+                                            "Build HorseClient with IServiceCollection");
+
+        QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+        registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient), queueNameTransform, enterWorkerPool);
+        _services.AddTransient<TConsumer>();
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a queue consumer with transient life time, transforms the queue name resolved from attributes,
+    /// and subscribes with the given partition label.
+    /// </summary>
+    /// <param name="queueNameTransform">
+    /// Receives the original queue name (from <c>[QueueName]</c> attribute or model type) and returns the final queue name.
+    /// Example: <c>name => $"{name}-Free"</c>
+    /// </param>
+    /// <param name="partitionLabel">
+    /// The partition label to subscribe with. Cannot be null or empty.
+    /// To enter the worker pool without a label, use the <c>enterWorkerPool</c> overload.
+    /// </param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="partitionLabel"/> is null or empty.</exception>
     public HorseClientBuilder AddTransientConsumer<TConsumer>(Func<string, string> queueNameTransform, string partitionLabel) where TConsumer : class
     {
         if (_services == null)
@@ -704,13 +736,42 @@ public class HorseClientBuilder
 
     /// <summary>
     /// Adds a queue consumer with scoped life time, transforms the queue name resolved from attributes,
-    /// and optionally subscribes with a partition label.
+    /// and optionally enters the partition worker pool for auto-assignment.
     /// </summary>
     /// <param name="queueNameTransform">
     /// Receives the original queue name (from <c>[QueueName]</c> attribute or model type) and returns the final queue name.
     /// Example: <c>name => $"{name}-Free"</c>
     /// </param>
-    /// <param name="partitionLabel">Optional partition label. Pass null to enter the auto-assign worker pool.</param>
+    /// <param name="enterWorkerPool">
+    /// When true, the consumer subscribes as a partitioned worker without a label.
+    /// The server will dynamically assign it to newly created partitions.
+    /// </param>
+    public HorseClientBuilder AddScopedConsumer<TConsumer>(Func<string, string> queueNameTransform, bool enterWorkerPool = false) where TConsumer : class
+    {
+        if (_services == null)
+            throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                            "If you want to use scoped queue consumers " +
+                                            "Build HorseClient with IServiceCollection");
+
+        QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+        registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped), queueNameTransform, enterWorkerPool);
+        _services.AddScoped<TConsumer>();
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a queue consumer with scoped life time, transforms the queue name resolved from attributes,
+    /// and subscribes with the given partition label.
+    /// </summary>
+    /// <param name="queueNameTransform">
+    /// Receives the original queue name (from <c>[QueueName]</c> attribute or model type) and returns the final queue name.
+    /// Example: <c>name => $"{name}-Free"</c>
+    /// </param>
+    /// <param name="partitionLabel">
+    /// The partition label to subscribe with. Cannot be null or empty.
+    /// To enter the worker pool without a label, use the <c>enterWorkerPool</c> overload.
+    /// </param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="partitionLabel"/> is null or empty.</exception>
     public HorseClientBuilder AddScopedConsumer<TConsumer>(Func<string, string> queueNameTransform, string partitionLabel) where TConsumer : class
     {
         if (_services == null)
@@ -786,13 +847,43 @@ public class HorseClientBuilder
 
     /// <summary>
     /// Adds a queue consumer with singleton life time, transforms the queue name resolved from attributes,
-    /// and optionally subscribes with a partition label.
+    /// and optionally enters the partition worker pool for auto-assignment.
     /// </summary>
     /// <param name="queueNameTransform">
     /// Receives the original queue name (from <c>[QueueName]</c> attribute or model type) and returns the final queue name.
     /// Example: <c>name => $"{name}-Free"</c>
     /// </param>
-    /// <param name="partitionLabel">Optional partition label. Pass null to enter the auto-assign worker pool.</param>
+    /// <param name="enterWorkerPool">
+    /// When true, the consumer subscribes as a partitioned worker without a label.
+    /// The server will dynamically assign it to newly created partitions.
+    /// </param>
+    public HorseClientBuilder AddSingletonConsumer<TConsumer>(Func<string, string> queueNameTransform, bool enterWorkerPool = false) where TConsumer : class
+    {
+        QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+        if (_services == null)
+            registrar.RegisterConsumer(typeof(TConsumer), null, queueNameTransform, enterWorkerPool);
+        else
+        {
+            registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), queueNameTransform, enterWorkerPool);
+            _services.AddSingleton<TConsumer>();
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a queue consumer with singleton life time, transforms the queue name resolved from attributes,
+    /// and subscribes with the given partition label.
+    /// </summary>
+    /// <param name="queueNameTransform">
+    /// Receives the original queue name (from <c>[QueueName]</c> attribute or model type) and returns the final queue name.
+    /// Example: <c>name => $"{name}-Free"</c>
+    /// </param>
+    /// <param name="partitionLabel">
+    /// The partition label to subscribe with. Cannot be null or empty.
+    /// To enter the worker pool without a label, use the <c>enterWorkerPool</c> overload.
+    /// </param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="partitionLabel"/> is null or empty.</exception>
     public HorseClientBuilder AddSingletonConsumer<TConsumer>(Func<string, string> queueNameTransform, string partitionLabel) where TConsumer : class
     {
         QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);

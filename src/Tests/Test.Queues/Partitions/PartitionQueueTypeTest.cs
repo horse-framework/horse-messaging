@@ -38,7 +38,7 @@ public class PartitionQueueTypeTest
         int subscribersPerPartition = 1,
         QueueAckDecision ack = QueueAckDecision.None)
     {
-        var (rider, port, _) = await PartitionTestServer.Create();
+        var (rider, port, server) = await PartitionTestServer.Create();
 
         await rider.Queue.Create(queueName, opts =>
         {
@@ -272,7 +272,7 @@ public class PartitionQueueTypeTest
     public async Task Partition_vs_RoundRobinQueue_MessageOwnership_UnderWaitForAck()
     {
         // ── Classic RoundRobin queue (partition yok) ──────────────────
-        var (riderRR, portRR, _) = await PartitionTestServer.Create();
+        var (riderRR, portRR, serverRR) = await PartitionTestServer.Create();
         await riderRR.Queue.Create("cmp-rr-q", opts =>
         {
             opts.Type = QueueType.RoundRobin;
@@ -300,7 +300,7 @@ public class PartitionQueueTypeTest
         Assert.True(rrW2[0] >= 1, $"RoundRobin: worker2 en az 1 mesaj almalı, rrW2={rrW2[0]}");
 
         // ── Partition queue ───────────────────────────────────────────
-        var (riderPT, portPT, _) = await PartitionTestServer.Create();
+        var (riderPT, portPT, serverPT) = await PartitionTestServer.Create();
         await riderPT.Queue.Create("cmp-pt-q", opts =>
         {
             opts.Type = QueueType.Push;
@@ -516,7 +516,7 @@ public class PartitionQueueTypeTest
     [Fact]
     public async Task TenantIsolation_SlowTenantA_DoesNotBlockTenantB()
     {
-        var (rider, port, _) = await PartitionTestServer.Create();
+        var (rider, port, server) = await PartitionTestServer.Create();
         await rider.Queue.Create("iso-q", opts =>
         {
             opts.Type = QueueType.Push;

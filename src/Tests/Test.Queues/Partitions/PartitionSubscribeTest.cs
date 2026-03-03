@@ -287,7 +287,7 @@ public class PartitionSubscribeTest
     public async Task AutoQueueCreation_WithPartitionHeaders_CreatesPartitionedQueue()
     {
         // Use PartitionTestServer which has AutoQueueCreation=true and no pre-created queues
-        var (rider, port, _) = await PartitionTestServer.Create();
+        var (rider, port, server) = await PartitionTestServer.Create();
 
         HorseClient client = new HorseClient();
         await client.ConnectAsync("horse://localhost:" + port);

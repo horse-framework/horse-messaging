@@ -156,8 +156,8 @@ public class PartitionManager
             target = entry.Queue;
             entry.LastMessageAt = DateTime.UtcNow;
 
-            // Auto-assign: if partition has no consumer, pull one from the worker pool
-            if (_options.AutoAssignWorkers && !target.HasAnyClient())
+            // Auto-assign: if partition has fewer consumers than allowed, pull one from the worker pool
+            if (_options.AutoAssignWorkers && target.Clients.Count() < _options.SubscribersPerPartition)
                 await TryAssignPooledWorker(entry);
         }
         else
@@ -347,11 +347,43 @@ public class PartitionManager
 
         foreach (IPartitionEventHandler handler in _parentQueue.Rider.Queue.PartitionEventHandlers.All())
             _ = handler.OnPartitionDestroyed(_parentQueue, entry.PartitionId);
+
+        // After returning workers to pool, try to assign them to partitions that need consumers
+        if (_options.AutoAssignWorkers)
+            _ = Task.Run(TryAssignPooledWorkersToStarvedPartitions);
+    }
+
+    /// <summary>
+    /// Scans all existing partitions and assigns pooled workers to any partition
+    /// that has fewer consumers than SubscribersPerPartition.
+    /// Called after a partition is destroyed to redistribute freed workers.
+    /// </summary>
+    private async Task TryAssignPooledWorkersToStarvedPartitions()
+    {
+        foreach (PartitionEntry entry in _partitions.Values)
+        {
+            if (_availableWorkers.IsEmpty)
+                break;
+
+            while (entry.Queue.Clients.Count() < _options.SubscribersPerPartition)
+            {
+                if (_availableWorkers.IsEmpty)
+                    break;
+
+                int beforeCount = entry.Queue.Clients.Count();
+                await TryAssignPooledWorker(entry);
+
+                // If no worker was actually assigned, break to avoid infinite loop
+                if (entry.Queue.Clients.Count() == beforeCount)
+                    break;
+            }
+        }
     }
 
     #endregion
 
     #region Helpers
+
 
     private async Task<PartitionEntry> GetOrCreateLabelPartition(string label)
     {

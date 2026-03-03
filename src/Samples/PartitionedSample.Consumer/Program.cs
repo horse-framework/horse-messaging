@@ -1,4 +1,4 @@
-﻿using Horse.Messaging.Client;
+﻿﻿using Horse.Messaging.Client;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Extensions.Client;
@@ -24,7 +24,7 @@ consumer1Builder.AddHorse(config =>
     });
     config.AddScopedConsumer<TestEventConsumer>(Label.Value, 3, 50);
     config.AddScopedConsumer<TestEvent2Consumer>(Label.Value, 3, 50);
-    config.AddScopedConsumer<TestEvent3Consumer>(queueName => $"{queueName}-Free", null);
+    config.AddScopedConsumer<TestEvent3Consumer>(queueName => $"{queueName}-Free", enterWorkerPool: false);
     config.AddScopedConsumer<TestEvent4Consumer>(Label.Value, 3, 50);
     config.OnConnected(m => { Console.WriteLine("Connected to Horse server"); });
 });

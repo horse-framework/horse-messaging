@@ -9,6 +9,7 @@ using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Partitions;
+using Horse.Server;
 using Xunit;
 
 namespace Test.Queues.Partitions;
@@ -23,7 +24,7 @@ public class PartitionAutoAssignTest
 {
     #region Helpers
 
-    private static async Task<(HorseRider rider, int port, HorseQueue queue)> CreateAutoAssignQueue(
+    private static async Task<(PartitionTestContext ctx, HorseQueue queue)> CreateAutoAssignQueue(
         string name = "aa-q",
         int maxPartitions = 0,
         int subscribersPerPartition = 1,
@@ -32,7 +33,9 @@ public class PartitionAutoAssignTest
         int autoDestroyIdleSeconds = 2,
         QueueAckDecision ack = QueueAckDecision.None)
     {
-        var (rider, port, _) = await PartitionTestServer.Create();
+        var (rider, port, server) = await PartitionTestServer.Create();
+        string dataPath = $"pt-aa-{Environment.TickCount}-{Random.Shared.Next(0, 100000)}";
+        var ctx = new PartitionTestContext(rider, port, dataPath, server);
 
         await rider.Queue.Create(name, opts =>
         {
@@ -51,7 +54,7 @@ public class PartitionAutoAssignTest
         });
 
         HorseQueue queue = rider.Queue.Find(name);
-        return (rider, port, queue);
+        return (ctx, queue);
     }
 
     private static async Task<HorseClient> ConnectWorker(int port)
@@ -95,9 +98,10 @@ public class PartitionAutoAssignTest
     [Fact]
     public async Task Subscribe_NoLabel_AutoAssign_WorkerEntersPool()
     {
-        var (rider, port, queue) = await CreateAutoAssignQueue();
+        var (ctx, queue) = await CreateAutoAssignQueue();
+        await using var __ = ctx;
 
-        HorseClient worker = await ConnectWorker(port);
+        HorseClient worker = await ConnectWorker(ctx.Port);
         HorseResult result = await worker.Queue.Subscribe("aa-q", true);
 
         Assert.Equal(HorseResultCode.Ok, result.Code);
@@ -110,12 +114,13 @@ public class PartitionAutoAssignTest
     [Fact]
     public async Task Subscribe_NoLabel_AutoAssign_MultipleWorkersEnterPool()
     {
-        var (rider, port, queue) = await CreateAutoAssignQueue();
+        var (ctx, queue) = await CreateAutoAssignQueue();
+        await using var __ = ctx;
 
         var workers = new List<HorseClient>();
         for (int i = 0; i < 5; i++)
         {
-            HorseClient w = await ConnectWorker(port);
+            HorseClient w = await ConnectWorker(ctx.Port);
             await SubscribeNoLabel(w);
             workers.Add(w);
         }
@@ -133,10 +138,11 @@ public class PartitionAutoAssignTest
     [Fact]
     public async Task Push_Labeled_AutoAssigns_PooledWorker_ToPartition()
     {
-        var (rider, port, queue) = await CreateAutoAssignQueue();
+        var (ctx, queue) = await CreateAutoAssignQueue();
+        await using var __ = ctx;
 
-        HorseClient worker = await ConnectWorker(port);
-        HorseClient producer = await ConnectWorker(port);
+        HorseClient worker = await ConnectWorker(ctx.Port);
+        HorseClient producer = await ConnectWorker(ctx.Port);
 
         int received = 0;
         worker.MessageReceived += (_, _) => Interlocked.Increment(ref received);
@@ -158,11 +164,12 @@ public class PartitionAutoAssignTest
     [Fact]
     public async Task Push_TwoLabels_MaxPerWorker1_AssignsTwoSeparateWorkers()
     {
-        var (rider, port, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 1);
+        var (ctx, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 1);
+        await using var __ = ctx;
 
-        HorseClient w1 = await ConnectWorker(port);
-        HorseClient w2 = await ConnectWorker(port);
-        HorseClient producer = await ConnectWorker(port);
+        HorseClient w1 = await ConnectWorker(ctx.Port);
+        HorseClient w2 = await ConnectWorker(ctx.Port);
+        HorseClient producer = await ConnectWorker(ctx.Port);
 
         await SubscribeNoLabel(w1);
         await SubscribeNoLabel(w2);
@@ -184,11 +191,12 @@ public class PartitionAutoAssignTest
     [Fact]
     public async Task Push_ThreeLabels_TwoWorkers_MaxPerWorker1_ThirdPartitionHasNoConsumer()
     {
-        var (rider, port, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 1);
+        var (ctx, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 1);
+        await using var __ = ctx;
 
-        HorseClient w1 = await ConnectWorker(port);
-        HorseClient w2 = await ConnectWorker(port);
-        HorseClient producer = await ConnectWorker(port);
+        HorseClient w1 = await ConnectWorker(ctx.Port);
+        HorseClient w2 = await ConnectWorker(ctx.Port);
+        HorseClient producer = await ConnectWorker(ctx.Port);
         Assert.True(producer.IsConnected);
 
         await SubscribeNoLabel(w1);
@@ -217,10 +225,11 @@ public class PartitionAutoAssignTest
     [Fact]
     public async Task Push_ThreeLabels_OneWorker_MaxPerWorker3_AllAssignedToSameWorker()
     {
-        var (rider, port, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 3);
+        var (ctx, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 3);
+        await using var __ = ctx;
 
-        HorseClient worker = await ConnectWorker(port);
-        HorseClient producer = await ConnectWorker(port);
+        HorseClient worker = await ConnectWorker(ctx.Port);
+        HorseClient producer = await ConnectWorker(ctx.Port);
 
         int received = 0;
         worker.MessageReceived += (_, _) => Interlocked.Increment(ref received);
@@ -250,11 +259,12 @@ public class PartitionAutoAssignTest
     [Fact]
     public async Task MaxPerWorker_Respected_FourthLabel_UsesSecondWorker()
     {
-        var (rider, port, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 3);
+        var (ctx, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 3);
+        await using var __ = ctx;
 
-        HorseClient w1 = await ConnectWorker(port);
-        HorseClient w2 = await ConnectWorker(port);
-        HorseClient producer = await ConnectWorker(port);
+        HorseClient w1 = await ConnectWorker(ctx.Port);
+        HorseClient w2 = await ConnectWorker(ctx.Port);
+        HorseClient producer = await ConnectWorker(ctx.Port);
 
         await SubscribeNoLabel(w1);
         await SubscribeNoLabel(w2);
@@ -284,10 +294,11 @@ public class PartitionAutoAssignTest
     [Fact]
     public async Task MaxPerWorker_Zero_Unlimited_SingleWorkerServesAll()
     {
-        var (rider, port, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 0);
+        var (ctx, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 0);
+        await using var __ = ctx;
 
-        HorseClient worker = await ConnectWorker(port);
-        HorseClient producer = await ConnectWorker(port);
+        HorseClient worker = await ConnectWorker(ctx.Port);
+        HorseClient producer = await ConnectWorker(ctx.Port);
 
         int received = 0;
         worker.MessageReceived += (_, _) => Interlocked.Increment(ref received);
@@ -322,10 +333,11 @@ public class PartitionAutoAssignTest
     [Fact]
     public async Task AutoAssigned_Worker_ReceivesMessagesFromMultiplePartitions()
     {
-        var (rider, port, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 5);
+        var (ctx, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 5);
+        await using var __ = ctx;
 
-        HorseClient worker = await ConnectWorker(port);
-        HorseClient producer = await ConnectWorker(port);
+        HorseClient worker = await ConnectWorker(ctx.Port);
+        HorseClient producer = await ConnectWorker(ctx.Port);
 
         List<string> receivedBodies = new();
         worker.MessageReceived += (_, msg) =>
@@ -352,10 +364,11 @@ public class PartitionAutoAssignTest
     [Fact]
     public async Task SameLabel_MultipleMessages_AllGoToSamePartition()
     {
-        var (rider, port, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 5);
+        var (ctx, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 5);
+        await using var __ = ctx;
 
-        HorseClient worker = await ConnectWorker(port);
-        HorseClient producer = await ConnectWorker(port);
+        HorseClient worker = await ConnectWorker(ctx.Port);
+        HorseClient producer = await ConnectWorker(ctx.Port);
 
         int received = 0;
         worker.MessageReceived += (_, _) => Interlocked.Increment(ref received);
@@ -384,13 +397,14 @@ public class PartitionAutoAssignTest
     [Fact]
     public async Task AutoDestroy_NoMessages_WorkerRecycled_AfterPartitionConsumed()
     {
-        var (rider, port, queue) = await CreateAutoAssignQueue(
+        var (ctx, queue) = await CreateAutoAssignQueue(
             maxPartitionsPerWorker: 1,
             autoDestroy: PartitionAutoDestroy.NoMessages,
             autoDestroyIdleSeconds: 2);
+        await using var __ = ctx;
 
-        HorseClient worker = await ConnectWorker(port);
-        HorseClient producer = await ConnectWorker(port);
+        HorseClient worker = await ConnectWorker(ctx.Port);
+        HorseClient producer = await ConnectWorker(ctx.Port);
 
         int received = 0;
         worker.MessageReceived += (_, _) => Interlocked.Increment(ref received);
@@ -423,13 +437,14 @@ public class PartitionAutoAssignTest
     [Fact]
     public async Task AutoDestroy_NoMessages_MultiPartitionWorker_CapacityFreed()
     {
-        var (rider, port, queue) = await CreateAutoAssignQueue(
+        var (ctx, queue) = await CreateAutoAssignQueue(
             maxPartitionsPerWorker: 2,
             autoDestroy: PartitionAutoDestroy.NoMessages,
             autoDestroyIdleSeconds: 5);
+        await using var __ = ctx;
 
-        HorseClient worker = await ConnectWorker(port);
-        HorseClient producer = await ConnectWorker(port);
+        HorseClient worker = await ConnectWorker(ctx.Port);
+        HorseClient producer = await ConnectWorker(ctx.Port);
         Assert.True(worker.IsConnected);
         Assert.True(producer.IsConnected);
 
@@ -468,12 +483,13 @@ public class PartitionAutoAssignTest
     [Fact]
     public async Task AutoDestroy_Disabled_WorkerNeverRecycled()
     {
-        var (rider, port, queue) = await CreateAutoAssignQueue(
+        var (ctx, queue) = await CreateAutoAssignQueue(
             maxPartitionsPerWorker: 1,
             autoDestroy: PartitionAutoDestroy.Disabled);
+        await using var __ = ctx;
 
-        HorseClient worker = await ConnectWorker(port);
-        HorseClient producer = await ConnectWorker(port);
+        HorseClient worker = await ConnectWorker(ctx.Port);
+        HorseClient producer = await ConnectWorker(ctx.Port);
 
         await SubscribeNoLabel(worker);
         await Task.Delay(200);
@@ -499,13 +515,14 @@ public class PartitionAutoAssignTest
     [Fact]
     public async Task AutoDestroy_NoConsumers_NotTriggered_WhileWorkerConnected()
     {
-        var (rider, port, queue) = await CreateAutoAssignQueue(
+        var (ctx, queue) = await CreateAutoAssignQueue(
             maxPartitionsPerWorker: 1,
             autoDestroy: PartitionAutoDestroy.NoConsumers,
             autoDestroyIdleSeconds: 1);
+        await using var ___ = ctx;
 
-        HorseClient worker = await ConnectWorker(port);
-        HorseClient producer = await ConnectWorker(port);
+        HorseClient worker = await ConnectWorker(ctx.Port);
+        HorseClient producer = await ConnectWorker(ctx.Port);
 
         await SubscribeNoLabel(worker);
         await Task.Delay(200);
@@ -534,11 +551,12 @@ public class PartitionAutoAssignTest
     [Fact]
     public async Task DisconnectedWorker_SkippedDuringAssignment()
     {
-        var (rider, port, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 1);
+        var (ctx, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 1);
+        await using var __ = ctx;
 
-        HorseClient w1 = await ConnectWorker(port);
-        HorseClient w2 = await ConnectWorker(port);
-        HorseClient producer = await ConnectWorker(port);
+        HorseClient w1 = await ConnectWorker(ctx.Port);
+        HorseClient w2 = await ConnectWorker(ctx.Port);
+        HorseClient producer = await ConnectWorker(ctx.Port);
 
         await SubscribeNoLabel(w1);
         await SubscribeNoLabel(w2);
@@ -566,9 +584,10 @@ public class PartitionAutoAssignTest
     [Fact]
     public async Task Worker_Arrives_AfterPartitionCreated_AssignedToExisting()
     {
-        var (rider, port, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 3);
+        var (ctx, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 3);
+        await using var __ = ctx;
 
-        HorseClient producer = await ConnectWorker(port);
+        HorseClient producer = await ConnectWorker(ctx.Port);
 
         // Push messages first — partitions created but no consumers
         await PushLabeled(producer, "t1");
@@ -580,7 +599,7 @@ public class PartitionAutoAssignTest
         Assert.True(queue.PartitionManager.Partitions.All(p => !p.Queue.Clients.Any()));
 
         // Now worker subscribes — should be assigned to existing partitions
-        HorseClient worker = await ConnectWorker(port);
+        HorseClient worker = await ConnectWorker(ctx.Port);
         int received = 0;
         worker.MessageReceived += (_, _) => Interlocked.Increment(ref received);
 
@@ -602,11 +621,12 @@ public class PartitionAutoAssignTest
     [Fact]
     public async Task MultiTenant_AutoAssign_MessagesStayIsolated()
     {
-        var (rider, port, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 1);
+        var (ctx, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 1);
+        await using var __ = ctx;
 
-        HorseClient wA = await ConnectWorker(port);
-        HorseClient wB = await ConnectWorker(port);
-        HorseClient producer = await ConnectWorker(port);
+        HorseClient wA = await ConnectWorker(ctx.Port);
+        HorseClient wB = await ConnectWorker(ctx.Port);
+        HorseClient producer = await ConnectWorker(ctx.Port);
 
         List<string> wAMessages = new();
         List<string> wBMessages = new();
@@ -656,9 +676,10 @@ public class PartitionAutoAssignTest
     [Fact]
     public async Task Subscribe_AutoAssign_ReturnsOk_WhenPooled()
     {
-        var (rider, port, queue) = await CreateAutoAssignQueue();
+        var (ctx, queue) = await CreateAutoAssignQueue();
+        await using var __ = ctx;
 
-        HorseClient worker = await ConnectWorker(port);
+        HorseClient worker = await ConnectWorker(ctx.Port);
         HorseResult result = await worker.Queue.Subscribe("aa-q", true);
 
         // Should succeed with Ok (pooled)
@@ -673,7 +694,7 @@ public class PartitionAutoAssignTest
     public async Task AutoAssign_Off_NoLabel_CreatesOwnPartition()
     {
         // Create a non-AutoAssign queue for comparison
-        var (rider, port, _) = await PartitionTestServer.Create();
+        var (rider, port, server) = await PartitionTestServer.Create();
 
         await rider.Queue.Create("normal-q", opts =>
         {
@@ -695,6 +716,7 @@ public class PartitionAutoAssignTest
 
         // Standard behavior: label-less subscribe creates its own partition
         Assert.Single(queue.PartitionManager.Partitions);
+        await server.StopAsync();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -704,11 +726,12 @@ public class PartitionAutoAssignTest
     [Fact]
     public async Task LabeledWorker_And_AutoAssignWorker_Coexist()
     {
-        var (rider, port, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 5);
+        var (ctx, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 5);
+        await using var __ = ctx;
 
-        HorseClient labeledWorker = await ConnectWorker(port);
-        HorseClient autoWorker = await ConnectWorker(port);
-        HorseClient producer = await ConnectWorker(port);
+        HorseClient labeledWorker = await ConnectWorker(ctx.Port);
+        HorseClient autoWorker = await ConnectWorker(ctx.Port);
+        HorseClient producer = await ConnectWorker(ctx.Port);
 
         int labeledReceived = 0;
         int autoReceived = 0;
@@ -743,9 +766,10 @@ public class PartitionAutoAssignTest
     [Fact]
     public async Task Push_NoWorkersInPool_MessageStoredInPartition()
     {
-        var (rider, port, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 1);
+        var (ctx, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 1);
+        await using var __ = ctx;
 
-        HorseClient producer = await ConnectWorker(port);
+        HorseClient producer = await ConnectWorker(ctx.Port);
 
         // Push without any worker subscribed
         await PushLabeled(producer, "lonely");
@@ -763,9 +787,10 @@ public class PartitionAutoAssignTest
     [Fact]
     public async Task Push_NoWorkers_ThenWorkerArrives_MessageDelivered()
     {
-        var (rider, port, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 3);
+        var (ctx, queue) = await CreateAutoAssignQueue(maxPartitionsPerWorker: 3);
+        await using var __ = ctx;
 
-        HorseClient producer = await ConnectWorker(port);
+        HorseClient producer = await ConnectWorker(ctx.Port);
 
         // Push first — no consumers
         await PushLabeled(producer, "late-tenant");
@@ -773,7 +798,7 @@ public class PartitionAutoAssignTest
         Assert.Single(queue.PartitionManager.Partitions);
 
         // Worker arrives
-        HorseClient worker = await ConnectWorker(port);
+        HorseClient worker = await ConnectWorker(ctx.Port);
         int received = 0;
         worker.MessageReceived += (_, _) => Interlocked.Increment(ref received);
 
@@ -793,7 +818,7 @@ public class PartitionAutoAssignTest
     {
         // MaxPartitionCount applies to label-less subscribes.
         // Labeled pushes always create partitions for routing (by design).
-        var (rider, port, _) = await PartitionTestServer.Create();
+        var (rider, port, server) = await PartitionTestServer.Create();
 
         await rider.Queue.Create("limit-q", opts =>
         {
@@ -823,6 +848,7 @@ public class PartitionAutoAssignTest
         Assert.Equal(HorseResultCode.LimitExceeded, r3.Code);
 
         Assert.Equal(2, queue.PartitionManager.Partitions.Count());
+        await server.StopAsync();
     }
 }
 

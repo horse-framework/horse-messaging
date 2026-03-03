@@ -39,7 +39,7 @@ consumerBuilder.AddHorse((config, configuration, _, services) =>
     });
     config.AddScopedConsumer<TestEventConsumer>("Free", 1, 50);
     config.AddScopedConsumer<TestEvent2Consumer>("Free", 1, 50);
-    config.AddScopedConsumer<TestEvent3Consumer>(queueName => $"{queueName}-Free", null);
+    config.AddScopedConsumer<TestEvent3Consumer>(queueName => $"{queueName}-Free", true);
     config.AddScopedConsumer<TestEvent4Consumer>("Free", 1, 50);
     config.OnConnected(m => { Console.WriteLine("Connected to Horse server"); });
 });

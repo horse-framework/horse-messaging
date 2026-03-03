@@ -120,11 +120,50 @@ public class QueueConsumerRegistrar
     }
 
     /// <summary>
-    /// Registers a single consumer with a queue name transform function and optional partition label.
+    /// Registers a single consumer with a queue name transform and an explicit partition label.
     /// The transform receives the original queue name (resolved from attributes) and returns the final name.
+    /// The consumer subscribes as a partitioned consumer with the given label.
     /// </summary>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="partitionLabel"/> is null or empty.
+    /// Use the <c>enterWorkerPool</c> overload to enter the worker pool without a label.</exception>
     public void RegisterConsumer(Type consumerType, Func<IHandlerFactory> consumerFactoryBuilder,
         Func<string, string> queueNameTransform, string partitionLabel)
+    {
+        if (string.IsNullOrEmpty(partitionLabel))
+            throw new ArgumentException(
+                "Partition label cannot be null or empty. " +
+                "To enter the auto-assign worker pool without a label, use the enterWorkerPool overload instead.",
+                nameof(partitionLabel));
+
+        List<ModelTypeInfo> types = FindModelTypes(consumerType);
+
+        foreach (ModelTypeInfo typeInfo in types)
+        {
+            QueueConsumerRegistration registration = CreateConsumerRegistration(typeInfo, consumerFactoryBuilder);
+            if (registration == null)
+                throw new TypeLoadException("Cant resolve consumer type");
+
+            if (queueNameTransform != null)
+                registration.QueueName = queueNameTransform(registration.QueueName);
+
+            registration.PartitionLabel = partitionLabel;
+            registration.MaxPartitions = 0;
+            registration.SubscribersPerPartition = 0;
+
+            lock (_operator.Registrations)
+                _operator.Registrations.Add(registration);
+        }
+    }
+
+    /// <summary>
+    /// Registers a single consumer with a queue name transform function.
+    /// The transform receives the original queue name (resolved from attributes) and returns the final name.
+    /// When <paramref name="enterWorkerPool"/> is true, the consumer subscribes as a partitioned worker
+    /// without a label — it enters the auto-assign worker pool so the server can dynamically assign
+    /// it to newly created partitions.
+    /// </summary>
+    public void RegisterConsumer(Type consumerType, Func<IHandlerFactory> consumerFactoryBuilder,
+        Func<string, string> queueNameTransform, bool enterWorkerPool)
     {
         List<ModelTypeInfo> types = FindModelTypes(consumerType);
 
@@ -137,9 +176,10 @@ public class QueueConsumerRegistrar
             if (queueNameTransform != null)
                 registration.QueueName = queueNameTransform(registration.QueueName);
 
-            if (partitionLabel != null)
+            if (enterWorkerPool)
             {
-                registration.PartitionLabel = partitionLabel;
+                // Empty string = label-less partitioned subscribe (worker pool entry)
+                registration.PartitionLabel = string.Empty;
                 registration.MaxPartitions = 0;
                 registration.SubscribersPerPartition = 0;
             }

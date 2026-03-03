@@ -24,7 +24,7 @@ public class PartitionMetricsTest
         int maxPartitions = 10,
         string name = "met-q")
     {
-        var (rider, port, _) = await PartitionTestServer.Create();
+        var (rider, port, server) = await PartitionTestServer.Create();
 
         await rider.Queue.Create(name, opts =>
         {
