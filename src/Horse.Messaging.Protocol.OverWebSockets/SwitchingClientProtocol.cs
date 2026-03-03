@@ -194,7 +194,7 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
             throw new InvalidOperationException("Connection Error: " + statusCode);
 
         string[] responseLines = response.Split(["\r\n"], StringSplitOptions.RemoveEmptyEntries);
-        string acceptLine = responseLines.FirstOrDefault(x => x.StartsWith(HttpHeaders.WEBSOCKET_ACCEPT, StringComparison.InvariantCultureIgnoreCase));
+        string acceptLine = responseLines.FirstOrDefault(x => x.StartsWith(HttpHeaders.WEBSOCKET_ACCEPT, StringComparison.OrdinalIgnoreCase));
 
         if (acceptLine == null)
             throw new InvalidOperationException("Handshaking error, server didn't response Sec-WebSocket-Accept");

@@ -1,7 +1,6 @@
-﻿﻿﻿using System;
+﻿using System;
 using EnumsNET;
 using Horse.Messaging.Protocol;
-using Horse.Messaging.Server.Queues.Partitions;
 
 namespace Horse.Messaging.Server.Queues;
 

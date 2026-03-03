@@ -61,8 +61,8 @@ internal class QueueMessageHandler : INetworkMessageHandler
         List<KeyValuePair<string, string>> additionalHeaders = null;
         if (message.HasHeader && message.FindHeader(HorseHeaders.CC) != null)
         {
-            additionalHeaders = message.Headers.Where(x => !x.Key.Equals(HorseHeaders.CC, StringComparison.InvariantCultureIgnoreCase)).ToList();
-            ccList = new List<string>(message.Headers.Where(x => x.Key.Equals(HorseHeaders.CC, StringComparison.InvariantCultureIgnoreCase)).Select(x => x.Value));
+            additionalHeaders = message.Headers.Where(x => !x.Key.Equals(HorseHeaders.CC, StringComparison.OrdinalIgnoreCase)).ToList();
+            ccList = new List<string>(message.Headers.Where(x => x.Key.Equals(HorseHeaders.CC, StringComparison.OrdinalIgnoreCase)).Select(x => x.Value));
             clone = message.Clone(false, true, _rider.MessageIdGenerator.Create(), additionalHeaders);
         }
 

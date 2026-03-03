@@ -76,15 +76,15 @@ public class PullContainer
     {
         if (string.IsNullOrEmpty(noContentReason))
             Status = PullProcess.Timeout;
-        else if (noContentReason.Equals(HorseHeaders.END, StringComparison.InvariantCultureIgnoreCase))
+        else if (noContentReason.Equals(HorseHeaders.END, StringComparison.OrdinalIgnoreCase))
             Status = PullProcess.Completed;
-        else if (noContentReason.Equals(HorseHeaders.EMPTY, StringComparison.InvariantCultureIgnoreCase))
+        else if (noContentReason.Equals(HorseHeaders.EMPTY, StringComparison.OrdinalIgnoreCase))
             Status = PullProcess.Empty;
-        else if (noContentReason.Equals("Error", StringComparison.InvariantCultureIgnoreCase))
+        else if (noContentReason.Equals("Error", StringComparison.OrdinalIgnoreCase))
             Status = PullProcess.NetworkError;
-        else if (noContentReason.Equals(HorseHeaders.UNACCEPTABLE, StringComparison.InvariantCultureIgnoreCase))
+        else if (noContentReason.Equals(HorseHeaders.UNACCEPTABLE, StringComparison.OrdinalIgnoreCase))
             Status = PullProcess.Unacceptable;
-        else if (noContentReason.Equals(HorseHeaders.UNAUTHORIZED, StringComparison.InvariantCultureIgnoreCase))
+        else if (noContentReason.Equals(HorseHeaders.UNAUTHORIZED, StringComparison.OrdinalIgnoreCase))
             Status = PullProcess.Unauthorized;
         else
             Status = PullProcess.Completed;

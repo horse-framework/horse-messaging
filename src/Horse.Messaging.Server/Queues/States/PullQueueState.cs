@@ -55,13 +55,13 @@ internal class PullQueueState : IQueueState
 
         clearStr = clearStr.Trim();
 
-        if (clearStr.Equals("all", StringComparison.InvariantCultureIgnoreCase))
+        if (clearStr.Equals("all", StringComparison.OrdinalIgnoreCase))
             return ClearDecision.All;
 
-        if (clearStr.Equals("high-priority", StringComparison.InvariantCultureIgnoreCase))
+        if (clearStr.Equals("high-priority", StringComparison.OrdinalIgnoreCase))
             return ClearDecision.Priority;
 
-        if (clearStr.Equals("default-priority", StringComparison.InvariantCultureIgnoreCase))
+        if (clearStr.Equals("default-priority", StringComparison.OrdinalIgnoreCase))
             return ClearDecision.Regular;
 
         return ClearDecision.None;
@@ -73,7 +73,7 @@ internal class PullQueueState : IQueueState
     private static bool FindInfoRequest(HorseMessage request)
     {
         string infoStr = request.FindHeader(HorseHeaders.INFO);
-        return !string.IsNullOrEmpty(infoStr) && infoStr.Trim().Equals("Yes", StringComparison.InvariantCultureIgnoreCase);
+        return !string.IsNullOrEmpty(infoStr) && infoStr.Trim().Equals("Yes", StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task<PullResult> Pull(QueueClient client, HorseMessage request)

@@ -10,15 +10,15 @@ internal class Filter
         bool jend = filter.EndsWith('*');
 
         if (jstart && jend)
-            return value.Contains(filter.Substring(1, filter.Length - 2), StringComparison.InvariantCultureIgnoreCase);
+            return value.Contains(filter.Substring(1, filter.Length - 2), StringComparison.OrdinalIgnoreCase);
 
         if (jstart)
-            return value.EndsWith(filter.Substring(1), StringComparison.InvariantCultureIgnoreCase);
+            return value.EndsWith(filter.Substring(1), StringComparison.OrdinalIgnoreCase);
 
         if (jend)
-            return value.StartsWith(filter.Substring(0, filter.Length - 1), StringComparison.InvariantCultureIgnoreCase);
+            return value.StartsWith(filter.Substring(0, filter.Length - 1), StringComparison.OrdinalIgnoreCase);
 
-        return value.Equals(filter, StringComparison.InvariantCultureIgnoreCase);
+        return value.Equals(filter, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

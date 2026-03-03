@@ -437,8 +437,8 @@ internal class ServerMessageHandler : INetworkMessageHandler
 
         string prio = message.FindHeader(HorseHeaders.PRIORITY_MESSAGES);
         string msgs = message.FindHeader(HorseHeaders.MESSAGES);
-        bool clearPrio = !string.IsNullOrEmpty(prio) && prio.Equals("yes", StringComparison.InvariantCultureIgnoreCase);
-        bool clearMsgs = !string.IsNullOrEmpty(msgs) && msgs.Equals("yes", StringComparison.InvariantCultureIgnoreCase);
+        bool clearPrio = !string.IsNullOrEmpty(prio) && prio.Equals("yes", StringComparison.OrdinalIgnoreCase);
+        bool clearMsgs = !string.IsNullOrEmpty(msgs) && msgs.Equals("yes", StringComparison.OrdinalIgnoreCase);
 
         foreach (IAdminAuthorization authorization in _rider.Client.AdminAuthorizations.All())
         {

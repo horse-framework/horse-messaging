@@ -71,7 +71,7 @@ public class HorseQueueConfigurator
 
         Rider.Queue.QueueManagerFactories.Add(name, queueManager);
 
-        if (!name.Equals("DEFAULT", StringComparison.InvariantCultureIgnoreCase) && !Rider.Queue.QueueManagerFactories.ContainsKey("DEFAULT"))
+        if (!name.Equals("DEFAULT", StringComparison.OrdinalIgnoreCase) && !Rider.Queue.QueueManagerFactories.ContainsKey("DEFAULT"))
             Rider.Queue.QueueManagerFactories.Add("DEFAULT", Rider.Queue.QueueManagerFactories[name]);
 
         return this;
@@ -104,7 +104,7 @@ public class HorseQueueConfigurator
             return Task.FromResult<IHorseQueueManager>(queueManager);
         });
 
-        if (!name.Equals("DEFAULT", StringComparison.InvariantCultureIgnoreCase) && !Rider.Queue.QueueManagerFactories.ContainsKey("DEFAULT"))
+        if (!name.Equals("DEFAULT", StringComparison.OrdinalIgnoreCase) && !Rider.Queue.QueueManagerFactories.ContainsKey("DEFAULT"))
             Rider.Queue.QueueManagerFactories.Add("DEFAULT", Rider.Queue.QueueManagerFactories[name]);
 
         return this;

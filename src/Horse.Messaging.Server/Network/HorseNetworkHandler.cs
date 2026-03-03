@@ -83,7 +83,7 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
         }
 
         string nodeValue = data.Properties.GetStringValue(HorseHeaders.HORSE_NODE);
-        bool isNode = nodeValue != null && nodeValue.Equals(HorseHeaders.YES, StringComparison.InvariantCultureIgnoreCase);
+        bool isNode = nodeValue != null && nodeValue.Equals(HorseHeaders.YES, StringComparison.OrdinalIgnoreCase);
 
         if (!isNode && _rider.Options.ClientLimit > 0 && _rider.Client.GetOnlineClients() >= _rider.Options.ClientLimit)
             return null;

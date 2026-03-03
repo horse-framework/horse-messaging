@@ -117,7 +117,7 @@ internal class CacheNetworkHandler : INetworkMessageHandler
                     warning = TimeSpan.FromSeconds(Convert.ToInt32(warningDuration));
 
                 if (!string.IsNullOrEmpty(persistentCache))
-                    persistent = string.Equals(persistentCache, "1") || string.Equals(persistentCache, "true", StringComparison.InvariantCultureIgnoreCase);
+                    persistent = string.Equals(persistentCache, "1") || string.Equals(persistentCache, "true", StringComparison.OrdinalIgnoreCase);
 
                 CacheOperation operation = await _cache.Set(client, !client.IsNodeClient, message.Target, message.Content, timeout, warning, tagNames, persistent);
                 switch (operation.Result)

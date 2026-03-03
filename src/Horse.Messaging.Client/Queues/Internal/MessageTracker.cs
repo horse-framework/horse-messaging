@@ -17,7 +17,7 @@ internal class MessageTracker : IDisposable
     /// Sent messages
     /// </summary>
     //private readonly List<MessageDescriptor> _descriptors = new List<MessageDescriptor>();
-    private readonly SortedDictionary<string, MessageDescriptor> _sortedDescriptors = new(StringComparer.InvariantCultureIgnoreCase);
+    private readonly SortedDictionary<string, MessageDescriptor> _sortedDescriptors = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Temp message descriptor list

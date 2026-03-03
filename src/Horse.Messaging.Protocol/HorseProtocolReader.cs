@@ -152,14 +152,13 @@ public class HorseProtocolReader
     /// <summary>
     /// Reads and process header data of the message
     /// </summary>
-    private static async Task<bool> ReadHeader(HorseMessage message, Stream stream)
+    private async Task<bool> ReadHeader(HorseMessage message, Stream stream)
     {
-        byte[] size = new byte[2];
-        bool read = await ReadCertainBytes(stream, size, 0, size.Length);
+        bool read = await ReadCertainBytes(stream, _frameBuffer, 0, 2);
         if (!read)
             return false;
 
-        int headerLength = BinaryPrimitives.ReadUInt16LittleEndian(size);
+        int headerLength = BinaryPrimitives.ReadUInt16LittleEndian(_frameBuffer.AsSpan(0, 2));
         byte[] data = ArrayPool<byte>.Shared.Rent(headerLength);
         try
         {

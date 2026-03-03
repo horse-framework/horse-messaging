@@ -435,7 +435,7 @@ public class HorseClient : IDisposable
 
         lock (RemoteHosts)
         {
-            if (!RemoteHosts.Contains(hostname, StringComparer.InvariantCultureIgnoreCase))
+            if (!RemoteHosts.Contains(hostname, StringComparer.OrdinalIgnoreCase))
                 RemoteHosts.Add(hostname);
         }
     }
@@ -546,7 +546,12 @@ public class HorseClient : IDisposable
             _data.Properties.Add(HorseHeaders.CLIENT_NAME, name);
     }
 
-    internal void SetClientId(string id)
+    /// <summary>
+    /// Sets client unique id.
+    /// If not set, a unique id will be generated automatically on connect.
+    /// Must be called before Connect/ConnectAsync.
+    /// </summary>
+    public void SetClientId(string id)
     {
         _clientId = id;
     }
@@ -602,7 +607,7 @@ public class HorseClient : IDisposable
                 throw new Exception("Remote host name is empty");
 
             lock (RemoteHosts)
-                if (!RemoteHosts.Contains(host, StringComparer.InvariantCultureIgnoreCase))
+                if (!RemoteHosts.Contains(host, StringComparer.OrdinalIgnoreCase))
                     RemoteHosts.Add(host);
 
             SetAutoReconnect(true);
@@ -707,7 +712,7 @@ public class HorseClient : IDisposable
                 throw new Exception("Remote host name is empty");
 
             lock (RemoteHosts)
-                if (!RemoteHosts.Contains(host, StringComparer.InvariantCultureIgnoreCase))
+                if (!RemoteHosts.Contains(host, StringComparer.OrdinalIgnoreCase))
                     RemoteHosts.Add(host);
 
             SetAutoReconnect(true);

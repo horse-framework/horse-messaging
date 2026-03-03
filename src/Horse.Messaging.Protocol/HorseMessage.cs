@@ -12,7 +12,7 @@ namespace Horse.Messaging.Protocol;
 /// <summary>
 /// Horse Protocol message
 /// </summary>
-public class HorseMessage
+public class HorseMessage : IDisposable
 {
     #region Properties
 
@@ -153,6 +153,15 @@ public class HorseMessage
     #region Methods
 
     /// <summary>
+    /// Disposes message content streams to release memory
+    /// </summary>
+    public void Dispose()
+    {
+        Content?.Dispose();
+        AdditionalContent?.Dispose();
+    }
+
+    /// <summary>
     /// Changes id of the message
     /// </summary>
     public void SetMessageId(string id)
@@ -215,9 +224,9 @@ public class HorseMessage
 
         int byteCount = Encoding.UTF8.GetByteCount(content);
         Content = new MemoryStream(byteCount);
+        Content.SetLength(byteCount);
         Span<byte> span = Content.GetBuffer().AsSpan(0, byteCount);
         Encoding.UTF8.GetBytes(content.AsSpan(), span);
-        Content.SetLength(byteCount);
         Length = (ulong)byteCount;
     }
 

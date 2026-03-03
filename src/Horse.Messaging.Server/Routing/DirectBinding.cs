@@ -110,12 +110,12 @@ public class DirectBinding : Binding
         {
             MessagingClient[] clients;
 
-            if (Target.StartsWith("@type:", StringComparison.InvariantCultureIgnoreCase))
+            if (Target.StartsWith("@type:", StringComparison.OrdinalIgnoreCase))
             {
                 var list = Router.Rider.Client.FindByType(Target.Substring(6));
                 clients = list == null ? Array.Empty<MessagingClient>() : list.ToArray();
             }
-            else if (Target.StartsWith("@name:", StringComparison.InvariantCultureIgnoreCase))
+            else if (Target.StartsWith("@name:", StringComparison.OrdinalIgnoreCase))
             {
                 var list = Router.Rider.Client.FindClientByName(Target.Substring(6));
                 clients = list == null ? Array.Empty<MessagingClient>() : list.ToArray();
