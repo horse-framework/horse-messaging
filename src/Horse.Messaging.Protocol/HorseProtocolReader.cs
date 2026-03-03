@@ -1,5 +1,4 @@
 using System;
-using System.Buffers;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
@@ -13,8 +12,8 @@ namespace Horse.Messaging.Protocol;
 /// </summary>
 public class HorseProtocolReader
 {
-    private const int RequiredSize = 8;
-
+    private const int REQUIRED_SIZE = 8;
+    
     /// <summary>
     /// Reusable frame buffer for small reads (connection-scoped)
     /// </summary>
@@ -25,7 +24,7 @@ public class HorseProtocolReader
     /// </summary>
     public async Task<HorseMessage> Read(Stream stream)
     {
-        bool done = await ReadCertainBytes(stream, _frameBuffer, 0, RequiredSize);
+        bool done = await ReadCertainBytes(stream, _frameBuffer, 0, REQUIRED_SIZE);
         if (!done)
             return null;
 
@@ -159,14 +158,13 @@ public class HorseProtocolReader
             return false;
 
         int headerLength = BinaryPrimitives.ReadUInt16LittleEndian(_frameBuffer.AsSpan(0, 2));
-        byte[] data = ArrayPool<byte>.Shared.Rent(headerLength);
-        try
-        {
-            read = await ReadCertainBytes(stream, data, 0, headerLength);
-            if (!read)
-                return false;
+        byte[] data = new byte[headerLength];
 
-            ReadOnlySpan<byte> dataSpan = data.AsSpan(0, headerLength);
+        read = await ReadCertainBytes(stream, data, 0, headerLength);
+        if (!read)
+            return false;
+
+        ReadOnlySpan<byte> dataSpan = data.AsSpan(0, headerLength);
         int start = 0;
 
         for (int i = 0; i < dataSpan.Length - 1; i++)
@@ -191,12 +189,7 @@ public class HorseProtocolReader
             }
         }
 
-            return true;
-        }
-        finally
-        {
-            ArrayPool<byte>.Shared.Return(data);
-        }
+        return true;
     }
 
     /// <summary>
@@ -212,25 +205,19 @@ public class HorseProtocolReader
         if (message.Content == null)
             message.Content = new MemoryStream(left);
 
-        byte[] readBuffer = ArrayPool<byte>.Shared.Rent(left);
-        try
-        {
-            do
-            {
-                int read = await stream.ReadAsync(readBuffer.AsMemory(0, left));
-                if (read == 0)
-                    return false;
+        byte[] readBuffer = new byte[left];
 
-                left -= read;
-                await message.Content.WriteAsync(readBuffer.AsMemory(0, read));
-            } while (left > 0);
-
-            return true;
-        }
-        finally
+        do
         {
-            ArrayPool<byte>.Shared.Return(readBuffer);
-        }
+            int read = await stream.ReadAsync(readBuffer.AsMemory(0, left));
+            if (read == 0)
+                return false;
+
+            left -= read;
+            await message.Content.WriteAsync(readBuffer.AsMemory(0, read));
+        } while (left > 0);
+
+        return true;
     }
 
     /// <summary>
@@ -246,25 +233,19 @@ public class HorseProtocolReader
         if (message.AdditionalContent == null)
             message.AdditionalContent = new MemoryStream(left);
 
-        byte[] readBuffer = ArrayPool<byte>.Shared.Rent(left);
-        try
-        {
-            do
-            {
-                int read = await stream.ReadAsync(readBuffer.AsMemory(0, left));
-                if (read == 0)
-                    return false;
+        byte[] readBuffer = new byte[left];
 
-                left -= read;
-                await message.AdditionalContent.WriteAsync(readBuffer.AsMemory(0, read));
-            } while (left > 0);
-
-            return true;
-        }
-        finally
+        do
         {
-            ArrayPool<byte>.Shared.Return(readBuffer);
-        }
+            int read = await stream.ReadAsync(readBuffer.AsMemory(0, left));
+            if (read == 0)
+                return false;
+
+            left -= read;
+            await message.AdditionalContent.WriteAsync(readBuffer.AsMemory(0, read));
+        } while (left > 0);
+
+        return true;
     }
 
     /// <summary>
