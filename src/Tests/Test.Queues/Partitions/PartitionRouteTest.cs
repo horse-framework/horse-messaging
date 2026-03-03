@@ -19,14 +19,15 @@ namespace Test.Queues.Partitions;
 /// </summary>
 public class PartitionRouteTest
 {
-    private static async Task<(HorseRider rider, int port, HorseQueue queue)> CreateServer(
+    private static async Task<(PartitionTestContext ctx, HorseQueue queue)> CreateServer(
+        string mode,
         string name = "route-q",
         int maxPartitions = 10,
         int subscribersPerPartition = 1)
     {
-        var (rider, port, _) = await PartitionTestServer.Create();
+        var ctx = await PartitionTestServer.Create(mode);
 
-        await rider.Queue.Create(name, opts =>
+        await ctx.Rider.Queue.Create(name, opts =>
         {
             opts.Type = QueueType.Push;
             opts.Partition = new PartitionOptions
@@ -38,22 +39,25 @@ public class PartitionRouteTest
             };
         });
 
-        HorseQueue queue = rider.Queue.Find(name);
-        return (rider, port, queue);
+        HorseQueue queue = ctx.Rider.Queue.Find(name);
+        return (ctx, queue);
     }
 
     // ── Label → partition routing ─────────────────────────────────────────────
 
-    [Fact]
-    public async Task Push_WithMatchingLabel_MessageGoesToLabelPartition()
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Push_WithMatchingLabel_MessageGoesToLabelPartition(string mode)
     {
-        var (rider, port, queue) = await CreateServer();
+        var (ctx, queue) = await CreateServer(mode);
+        await using var _ = ctx;
 
         HorseClient worker = new HorseClient();
         HorseClient producer = new HorseClient();
         worker.AutoAcknowledge = true;
-        await worker.ConnectAsync("horse://localhost:" + port);
-        await producer.ConnectAsync("horse://localhost:" + port);
+        await worker.ConnectAsync("horse://localhost:" + ctx.Port);
+        await producer.ConnectAsync("horse://localhost:" + ctx.Port);
 
         int received = 0;
         worker.MessageReceived += (_, _) => Interlocked.Increment(ref received);
@@ -70,16 +74,19 @@ public class PartitionRouteTest
         Assert.Equal(1, received);
     }
 
-    [Fact]
-    public async Task Push_WithLabel_MessageHasPartitionIdHeader()
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Push_WithLabel_MessageHasPartitionIdHeader(string mode)
     {
-        var (rider, port, queue) = await CreateServer();
+        var (ctx, queue) = await CreateServer(mode);
+        await using var _ = ctx;
 
         HorseClient worker = new HorseClient();
         HorseClient producer = new HorseClient();
         worker.AutoAcknowledge = true;
-        await worker.ConnectAsync("horse://localhost:" + port);
-        await producer.ConnectAsync("horse://localhost:" + port);
+        await worker.ConnectAsync("horse://localhost:" + ctx.Port);
+        await producer.ConnectAsync("horse://localhost:" + ctx.Port);
 
         string receivedPartitionId = null;
         worker.MessageReceived += (_, msg) =>
@@ -100,16 +107,19 @@ public class PartitionRouteTest
         Assert.NotEmpty(receivedPartitionId);
     }
 
-    [Fact]
-    public async Task Push_LabelStrippedFromMessageBeforeConsumerReceives()
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Push_LabelStrippedFromMessageBeforeConsumerReceives(string mode)
     {
-        var (rider, port, queue) = await CreateServer();
+        var (ctx, queue) = await CreateServer(mode);
+        await using var _ = ctx;
 
         HorseClient worker = new HorseClient();
         HorseClient producer = new HorseClient();
         worker.AutoAcknowledge = true;
-        await worker.ConnectAsync("horse://localhost:" + port);
-        await producer.ConnectAsync("horse://localhost:" + port);
+        await worker.ConnectAsync("horse://localhost:" + ctx.Port);
+        await producer.ConnectAsync("horse://localhost:" + ctx.Port);
 
         string labelHeader = "NOT_CHECKED";
         worker.MessageReceived += (_, msg) =>
@@ -128,19 +138,22 @@ public class PartitionRouteTest
         Assert.Null(labelHeader);
     }
 
-    [Fact]
-    public async Task Push_TwoWorkersWithDifferentLabels_EachReceivesOwnMessages()
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Push_TwoWorkersWithDifferentLabels_EachReceivesOwnMessages(string mode)
     {
-        var (rider, port, queue) = await CreateServer();
+        var (ctx, queue) = await CreateServer(mode);
+        await using var _ = ctx;
 
         HorseClient w1 = new HorseClient();
         HorseClient w2 = new HorseClient();
         HorseClient producer = new HorseClient();
         w1.AutoAcknowledge = true;
         w2.AutoAcknowledge = true;
-        await w1.ConnectAsync("horse://localhost:" + port);
-        await w2.ConnectAsync("horse://localhost:" + port);
-        await producer.ConnectAsync("horse://localhost:" + port);
+        await w1.ConnectAsync("horse://localhost:" + ctx.Port);
+        await w2.ConnectAsync("horse://localhost:" + ctx.Port);
+        await producer.ConnectAsync("horse://localhost:" + ctx.Port);
 
         int receivedW1 = 0, receivedW2 = 0;
         w1.MessageReceived += (_, _) => Interlocked.Increment(ref receivedW1);
@@ -167,16 +180,19 @@ public class PartitionRouteTest
 
     // ── Label-less round-robin routing ────────────────────────────────────────
 
-    [Fact]
-    public async Task Push_NoLabel_RoutesRoundRobinAcrossPartitions()
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Push_NoLabel_RoutesRoundRobinAcrossPartitions(string mode)
     {
-        var (rider, port, queue) = await CreateServer();
+        var (ctx, queue) = await CreateServer(mode);
+        await using var _ = ctx;
 
         HorseClient worker = new HorseClient();
         HorseClient producer = new HorseClient();
         worker.AutoAcknowledge = true;
-        await worker.ConnectAsync("horse://localhost:" + port);
-        await producer.ConnectAsync("horse://localhost:" + port);
+        await worker.ConnectAsync("horse://localhost:" + ctx.Port);
+        await producer.ConnectAsync("horse://localhost:" + ctx.Port);
 
         int received = 0;
         worker.MessageReceived += (_, _) => Interlocked.Increment(ref received);
@@ -191,13 +207,16 @@ public class PartitionRouteTest
         Assert.Equal(1, received);
     }
 
-    [Fact]
-    public async Task Push_LabelHasNoSubscriber_MessageStoredInLabeledPartition()
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Push_LabelHasNoSubscriber_MessageStoredInLabeledPartition(string mode)
     {
-        var (rider, port, queue) = await CreateServer();
+        var (ctx, queue) = await CreateServer(mode);
+        await using var _ = ctx;
 
         HorseClient producer = new HorseClient();
-        await producer.ConnectAsync("horse://localhost:" + port);
+        await producer.ConnectAsync("horse://localhost:" + ctx.Port);
 
         // Push to a label that has no subscriber yet
         await producer.Queue.Push("route-q", Encoding.UTF8.GetBytes("msg"), false, new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "unknown-label") });
@@ -205,7 +224,7 @@ public class PartitionRouteTest
         await Task.Delay(600);
 
         // A new partition should have been created for "unknown-label"
-        HorseQueue parent = rider.Queue.Find("route-q");
+        HorseQueue parent = ctx.Rider.Queue.Find("route-q");
         PartitionEntry entry = parent.PartitionManager.Partitions
             .FirstOrDefault(p => string.Equals(p.Label, "unknown-label", StringComparison.OrdinalIgnoreCase));
 
@@ -214,16 +233,14 @@ public class PartitionRouteTest
         Assert.Equal(1, entry.Queue.Manager.MessageStore.Count());
     }
 
-    /// <summary>
-    /// Round-robin + label-less subscribe: her worker kendi partition'ını alır.
-    /// Partition sayısı subscriber sayısına eşit olmalı.
-    /// </summary>
-    [Fact]
-    public async Task Push_NoLabel_RoundRobin_RoutesToPartitions()
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Push_NoLabel_RoundRobin_RoutesToPartitions(string mode)
     {
-        var (rider, port, _) = await PartitionTestServer.Create();
+        await using var ctx = await PartitionTestServer.Create(mode);
 
-        await rider.Queue.Create("noorp-q", opts =>
+        await ctx.Rider.Queue.Create("noorp-q", opts =>
         {
             opts.Type = QueueType.Push;
             opts.Acknowledge = QueueAckDecision.None;
@@ -236,7 +253,7 @@ public class PartitionRouteTest
             };
         });
 
-        HorseQueue queue = rider.Queue.Find("noorp-q");
+        HorseQueue queue = ctx.Rider.Queue.Find("noorp-q");
 
         HorseClient worker1 = new HorseClient();
         HorseClient worker2 = new HorseClient();
@@ -247,8 +264,8 @@ public class PartitionRouteTest
         worker1.MessageReceived += (_, _) => Interlocked.Increment(ref w1Count);
         worker2.MessageReceived += (_, _) => Interlocked.Increment(ref w2Count);
 
-        await worker1.ConnectAsync("horse://localhost:" + port);
-        await worker2.ConnectAsync("horse://localhost:" + port);
+        await worker1.ConnectAsync("horse://localhost:" + ctx.Port);
+        await worker2.ConnectAsync("horse://localhost:" + ctx.Port);
 
         // Label-less subscribe — each worker gets its own partition
         await worker1.Queue.Subscribe("noorp-q", true);
@@ -262,15 +279,14 @@ public class PartitionRouteTest
             $"Expected clients in all partitions. p0={parts[0].Queue.ClientsCount()}, p1={parts[1].Queue.ClientsCount()}");
     }
 
-    /// <summary>
-    /// No subscribers + label-less push → NoConsumers.
-    /// </summary>
-    [Fact]
-    public async Task Push_NoLabel_NoSubscribers_ReturnsNoConsumers()
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Push_NoLabel_NoSubscribers_ReturnsNoConsumers(string mode)
     {
-        var (rider, port, _) = await PartitionTestServer.Create();
+        await using var ctx = await PartitionTestServer.Create(mode);
 
-        await rider.Queue.Create("noorp2-q", opts =>
+        await ctx.Rider.Queue.Create("noorp2-q", opts =>
         {
             opts.Type = QueueType.Push;
             opts.Acknowledge = QueueAckDecision.None;
@@ -284,7 +300,7 @@ public class PartitionRouteTest
         });
 
         HorseClient producer = new HorseClient();
-        await producer.ConnectAsync("horse://localhost:" + port);
+        await producer.ConnectAsync("horse://localhost:" + ctx.Port);
 
         // No subscriber, label-less push
         HorseResult result = await producer.Queue.Push("noorp2-q", Encoding.UTF8.GetBytes("hello"), true);

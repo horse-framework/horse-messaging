@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -363,6 +364,127 @@ public class MessageStoreTest
 
         Assert.Equal(1, mainCount);
         Assert.Equal(1, priorityCount);
+
+        producer.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Store_PutDuplicate_SecondIgnored(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.None;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        await ctx.Rider.Queue.Create("store-dup", o => o.Type = QueueType.Push);
+
+        HorseClient producer = new HorseClient();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await producer.Queue.Push("store-dup", new MemoryStream("first"u8.ToArray()), false);
+        await Task.Delay(500);
+
+        HorseQueue queue = ctx.Rider.Queue.Find("store-dup");
+        var msg = queue.Manager.MessageStore.ReadFirst();
+        Assert.NotNull(msg);
+
+        // Try to Put the same message again (IsInQueue guard should prevent)
+        queue.Manager.MessageStore.Put(msg);
+        Assert.Equal(1, queue.Manager.MessageStore.Count());
+
+        producer.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Store_GetUnsafe_ReturnsAllMessages(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.None;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        await ctx.Rider.Queue.Create("store-unsafe", o => o.Type = QueueType.Push);
+
+        HorseClient producer = new HorseClient();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        for (int i = 0; i < 3; i++)
+            await producer.Queue.Push("store-unsafe", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"u-{i}")), false);
+        await Task.Delay(500);
+
+        HorseQueue queue = ctx.Rider.Queue.Find("store-unsafe");
+        var all = queue.Manager.MessageStore.GetUnsafe();
+        Assert.Equal(3, all.Count());
+
+        producer.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Store_Destroy_ClearsResources(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.None;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        HorseQueue queue = await ctx.Rider.Queue.Create("store-destroy", o => o.Type = QueueType.Push);
+
+        HorseClient producer = new HorseClient();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await producer.Queue.Push("store-destroy", new MemoryStream("data"u8.ToArray()), false);
+        await Task.Delay(500);
+
+        Assert.False(queue.Manager.MessageStore.IsEmpty);
+
+        // Full queue destroy via QueueRider.Remove — proper lifecycle teardown
+        await ctx.Rider.Queue.Remove(queue);
+
+        Assert.True(queue.IsDestroyed);
+
+        // After destroy, store should be empty (give persistent mode time for async cleanup)
+        for (int i = 0; i < 20 && !queue.Manager.MessageStore.IsEmpty; i++)
+            await Task.Delay(100);
+
+        Assert.True(queue.Manager.MessageStore.IsEmpty);
+        Assert.Equal(0, queue.Manager.MessageStore.Count());
+
+        producer.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Store_ReadFirst_DoesNotRemove(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.None;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        await ctx.Rider.Queue.Create("store-peek", o => o.Type = QueueType.Push);
+
+        HorseClient producer = new HorseClient();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await producer.Queue.Push("store-peek", new MemoryStream("peek"u8.ToArray()), false);
+        await Task.Delay(500);
+
+        HorseQueue queue = ctx.Rider.Queue.Find("store-peek");
+
+        var first = queue.Manager.MessageStore.ReadFirst();
+        Assert.NotNull(first);
+        Assert.Equal(1, queue.Manager.MessageStore.Count()); // still there
+
+        var again = queue.Manager.MessageStore.ReadFirst();
+        Assert.NotNull(again);
+        Assert.Equal(first.Message.MessageId, again.Message.MessageId);
 
         producer.Disconnect();
     }

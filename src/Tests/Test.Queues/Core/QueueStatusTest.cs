@@ -214,5 +214,51 @@ public class QueueStatusTest
         producer.Disconnect();
         consumer.Disconnect();
     }
-}
 
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Status_SetToNotInitialized_Ignored(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        HorseQueue queue = await ctx.Rider.Queue.Create("status-noinit", o => o.Type = QueueType.Push);
+        Assert.Equal(QueueStatus.Running, queue.Status);
+
+        queue.SetStatus(QueueStatus.NotInitialized);
+        Assert.Equal(QueueStatus.Running, queue.Status);
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Status_SameStatus_NoOp(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        HorseQueue queue = await ctx.Rider.Queue.Create("status-same", o => o.Type = QueueType.Push);
+        Assert.Equal(QueueStatus.Running, queue.Status);
+
+        // Setting same status should be no-op (no exception, no change)
+        queue.SetStatus(QueueStatus.Running);
+        Assert.Equal(QueueStatus.Running, queue.Status);
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Status_OnlyConsume_NewPush_Rejected(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.AfterReceived;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        HorseQueue queue = await ctx.Rider.Queue.Create("status-oc-reject", o => o.Type = QueueType.Push);
+        queue.SetStatus(QueueStatus.OnlyConsume);
+
+        PushResult result = await queue.Push("rejected-msg");
+        Assert.Equal(PushResult.StatusNotSupported, result);
+    }
+}

@@ -341,5 +341,79 @@ public class PullDeliveryTest
         producer.Disconnect();
         consumer.Disconnect();
     }
-}
 
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Pull_HighPriority_ServedFirst(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.None;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        await ctx.Rider.Queue.Create("pull-pri", o => o.Type = QueueType.Pull);
+
+        HorseClient producer = new HorseClient();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+
+        // Push normal then high-priority
+        await producer.Queue.Push("pull-pri", new MemoryStream("normal"u8.ToArray()), false);
+
+        HorseMessage hiMsg = new HorseMessage(MessageType.QueueMessage, "pull-pri");
+        hiMsg.HighPriority = true;
+        hiMsg.SetStringContent("priority");
+        await producer.SendAsync(hiMsg);
+        await Task.Delay(500);
+
+        // Pull → should get priority first
+        HorseClient consumer = new HorseClient();
+        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await consumer.Queue.Subscribe("pull-pri", true);
+
+        var result1 = await consumer.Queue.Pull(new PullRequest { Queue = "pull-pri", Count = 1 });
+        Assert.NotNull(result1);
+        Assert.Equal(PullProcess.Completed, result1.Status);
+        Assert.Equal("priority", result1.ReceivedMessages.First().ToString());
+
+        var result2 = await consumer.Queue.Pull(new PullRequest { Queue = "pull-pri", Count = 1 });
+        Assert.NotNull(result2);
+        Assert.Equal(PullProcess.Completed, result2.Status);
+        Assert.Equal("normal", result2.ReceivedMessages.First().ToString());
+
+        producer.Disconnect();
+        consumer.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Pull_ClearAll_EmptiesBothStores(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.None;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        await ctx.Rider.Queue.Create("pull-clear", o => o.Type = QueueType.Pull);
+
+        HorseClient producer = new HorseClient();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+
+        for (int i = 0; i < 5; i++)
+            await producer.Queue.Push("pull-clear", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false);
+        await Task.Delay(500);
+
+        HorseQueue queue = ctx.Rider.Queue.Find("pull-clear");
+        Assert.Equal(5, queue.Manager.MessageStore.Count());
+
+        // Clear via ClearMessages
+        queue.ClearMessages();
+        Assert.Equal(0, queue.Manager.MessageStore.Count());
+        Assert.Equal(0, queue.Manager.PriorityMessageStore.Count());
+
+        producer.Disconnect();
+    }
+}

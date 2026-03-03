@@ -103,5 +103,48 @@ public class ClientLimitTest
         foreach (var c in clients)
             c.Disconnect();
     }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task ClientLimit_AfterOneLeaves_NewOneAccepted(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        await ctx.Rider.Queue.Create("cl-leave", o =>
+        {
+            o.Type = QueueType.Push;
+            o.ClientLimit = 2;
+        });
+
+        HorseClient c1 = new HorseClient();
+        await c1.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await c1.Queue.Subscribe("cl-leave", true);
+
+        HorseClient c2 = new HorseClient();
+        await c2.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await c2.Queue.Subscribe("cl-leave", true);
+
+        // Third client should be rejected
+        HorseClient c3 = new HorseClient();
+        await c3.ConnectAsync($"horse://localhost:{ctx.Port}");
+        HorseResult r3 = await c3.Queue.Subscribe("cl-leave", true);
+        Assert.NotEqual(HorseResultCode.Ok, r3.Code);
+
+        // c1 leaves
+        await c1.Queue.Unsubscribe("cl-leave", true);
+        await Task.Delay(300);
+
+        // Now c3 should be accepted
+        HorseResult r3Again = await c3.Queue.Subscribe("cl-leave", true);
+        Assert.Equal(HorseResultCode.Ok, r3Again.Code);
+
+        HorseQueue queue = ctx.Rider.Queue.Find("cl-leave");
+        Assert.Equal(2, queue.Clients.Count());
+
+        c1.Disconnect();
+        c2.Disconnect();
+        c3.Disconnect();
+    }
 }
 

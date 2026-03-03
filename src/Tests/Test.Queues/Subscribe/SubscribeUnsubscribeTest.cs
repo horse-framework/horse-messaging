@@ -198,5 +198,45 @@ public class SubscribeUnsubscribeTest
         client.Disconnect();
         producer.Disconnect();
     }
-}
 
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Subscribe_MultipleQueues_IndependentSubscriptions(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.AfterReceived;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        await ctx.Rider.Queue.Create("multi-q1", o => o.Type = QueueType.Push);
+        await ctx.Rider.Queue.Create("multi-q2", o => o.Type = QueueType.Push);
+
+        int fromQ1 = 0, fromQ2 = 0;
+        HorseClient client = new HorseClient();
+        await client.ConnectAsync($"horse://localhost:{ctx.Port}");
+        client.MessageReceived += (_, m) =>
+        {
+            if (m.Target == "multi-q1") System.Threading.Interlocked.Increment(ref fromQ1);
+            if (m.Target == "multi-q2") System.Threading.Interlocked.Increment(ref fromQ2);
+        };
+
+        await client.Queue.Subscribe("multi-q1", true);
+        await client.Queue.Subscribe("multi-q2", true);
+
+        HorseClient producer = new HorseClient();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await producer.Queue.Push("multi-q1", new MemoryStream("q1"u8.ToArray()), true);
+        await producer.Queue.Push("multi-q2", new MemoryStream("q2"u8.ToArray()), true);
+
+        for (int i = 0; i < 30 && (fromQ1 < 1 || fromQ2 < 1); i++)
+            await Task.Delay(100);
+
+        Assert.Equal(1, fromQ1);
+        Assert.Equal(1, fromQ2);
+
+        client.Disconnect();
+        producer.Disconnect();
+    }
+}

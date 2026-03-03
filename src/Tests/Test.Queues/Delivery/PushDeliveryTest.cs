@@ -321,5 +321,146 @@ public class PushDeliveryTest
         producer.Disconnect();
         consumer.Disconnect();
     }
-}
 
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Push_StatusPaused_Rejected(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        HorseQueue queue = await ctx.Rider.Queue.Create("push-paused", o => o.Type = QueueType.Push);
+        queue.SetStatus(QueueStatus.Paused);
+
+        PushResult result = await queue.Push("rejected");
+        Assert.Equal(PushResult.StatusNotSupported, result);
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Push_StatusOnlyConsume_Rejected(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        HorseQueue queue = await ctx.Rider.Queue.Create("push-oc", o => o.Type = QueueType.Push);
+        queue.SetStatus(QueueStatus.OnlyConsume);
+
+        PushResult result = await queue.Push("rejected-oc");
+        Assert.Equal(PushResult.StatusNotSupported, result);
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Push_EmptyContent_Delivered(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.AfterReceived;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        await ctx.Rider.Queue.Create("push-empty", o => o.Type = QueueType.Push);
+
+        HorseClient consumer = new HorseClient();
+        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await consumer.Queue.Subscribe("push-empty", true);
+
+        HorseMessage received = null;
+        consumer.MessageReceived += (_, m) => received = m;
+
+        HorseClient producer = new HorseClient();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await producer.Queue.Push("push-empty", new MemoryStream(System.Array.Empty<byte>()), true);
+
+        for (int i = 0; i < 30 && received == null; i++)
+            await Task.Delay(100);
+
+        Assert.NotNull(received);
+        Assert.Equal(0UL, received.Length);
+
+        producer.Disconnect();
+        consumer.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Push_LargePayload_Delivered(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.AfterReceived;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        await ctx.Rider.Queue.Create("push-large", o => o.Type = QueueType.Push);
+
+        HorseClient consumer = new HorseClient();
+        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await consumer.Queue.Subscribe("push-large", true);
+
+        HorseMessage received = null;
+        consumer.MessageReceived += (_, m) => received = m;
+
+        byte[] largeData = new byte[128 * 1024]; // 128KB
+        System.Random.Shared.NextBytes(largeData);
+
+        HorseClient producer = new HorseClient();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await producer.Queue.Push("push-large", new MemoryStream(largeData), true);
+
+        for (int i = 0; i < 50 && received == null; i++)
+            await Task.Delay(100);
+
+        Assert.NotNull(received);
+        Assert.Equal(largeData.Length, (int)received.Length);
+
+        producer.Disconnect();
+        consumer.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Push_ConsumerDisconnects_NextMessageStored(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.AfterReceived;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        await ctx.Rider.Queue.Create("push-disc", o => o.Type = QueueType.Push);
+
+        HorseClient consumer = new HorseClient();
+        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await consumer.Queue.Subscribe("push-disc", true);
+
+        // First message delivered
+        HorseMessage received = null;
+        consumer.MessageReceived += (_, m) => received = m;
+
+        HorseClient producer = new HorseClient();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await producer.Queue.Push("push-disc", new MemoryStream("msg1"u8.ToArray()), true);
+
+        for (int i = 0; i < 30 && received == null; i++)
+            await Task.Delay(100);
+        Assert.NotNull(received);
+
+        // Consumer disconnects
+        consumer.Disconnect();
+        await Task.Delay(500);
+
+        // Second message should be stored
+        await producer.Queue.Push("push-disc", new MemoryStream("msg2"u8.ToArray()), false);
+        await Task.Delay(500);
+
+        HorseQueue queue = ctx.Rider.Queue.Find("push-disc");
+        Assert.False(queue.IsEmpty);
+
+        producer.Disconnect();
+    }
+}

@@ -191,5 +191,67 @@ public class QueueDestroyTest
         Assert.NotNull(recreated);
         Assert.Equal(QueueType.RoundRobin, recreated.Type);
     }
-}
 
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Destroy_Empty_WithConsumer_SurvivesUntilConsumerLeaves(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        await ctx.Rider.Queue.Create("dest-empty-sub", o =>
+        {
+            o.Type = QueueType.Push;
+            o.AutoDestroy = QueueDestroy.Empty;
+        });
+
+        HorseClient client = new HorseClient();
+        await client.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await client.Queue.Subscribe("dest-empty-sub", true);
+        await Task.Delay(500);
+
+        // Queue has no messages but has consumer → should survive with Empty policy
+        // (Empty = NoMessages AND NoConsumers)
+        for (int i = 0; i < 12; i++)
+            await Task.Delay(500);
+
+        Assert.NotNull(ctx.Rider.Queue.Find("dest-empty-sub"));
+
+        // Now unsubscribe → should destroy
+        await client.Queue.Unsubscribe("dest-empty-sub", true);
+
+        for (int i = 0; i < 40 && ctx.Rider.Queue.Find("dest-empty-sub") != null; i++)
+            await Task.Delay(250);
+
+        Assert.Null(ctx.Rider.Queue.Find("dest-empty-sub"));
+        client.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Destroy_IsDestroyed_Flag_Set(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        HorseQueue queue = await ctx.Rider.Queue.Create("dest-flag", o => o.Type = QueueType.Push);
+        Assert.False(queue.IsDestroyed);
+
+        await ctx.Rider.Queue.Remove(queue);
+        Assert.True(queue.IsDestroyed);
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Destroy_RemoveByName_Works(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        await ctx.Rider.Queue.Create("dest-byname", o => o.Type = QueueType.Push);
+        Assert.NotNull(ctx.Rider.Queue.Find("dest-byname"));
+
+        await ctx.Rider.Queue.Remove("dest-byname");
+        Assert.Null(ctx.Rider.Queue.Find("dest-byname"));
+    }
+}

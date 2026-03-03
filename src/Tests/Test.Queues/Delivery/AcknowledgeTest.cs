@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
@@ -214,6 +215,60 @@ public class AcknowledgeTest
             await Task.Delay(100);
 
         Assert.True(receivedCount >= 2);
+
+        producer.Disconnect();
+        consumer.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Ack_WaitForAck_PushType_BlocksNextMessage(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.AfterReceived;
+            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+        });
+
+        await ctx.Rider.Queue.Create("ack-block-push", o => o.Type = QueueType.Push);
+
+        List<string> received = new List<string>();
+        HorseClient consumer = new HorseClient();
+        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        consumer.MessageReceived += (_, m) =>
+        {
+            lock (received) received.Add(m.ToString());
+            // Ack the first message only after delay
+            if (m.ToString() == "msg-0")
+            {
+                Task.Run(async () =>
+                {
+                    await Task.Delay(500);
+                    await consumer.SendAsync(m.CreateAcknowledge());
+                });
+            }
+            else
+            {
+                consumer.SendAsync(m.CreateAcknowledge()).GetAwaiter().GetResult();
+            }
+        };
+        await consumer.Queue.Subscribe("ack-block-push", true);
+
+        HorseClient producer = new HorseClient();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+
+        // Push two messages rapidly
+        await producer.Queue.Push("ack-block-push", new MemoryStream("msg-0"u8.ToArray()), false);
+        await producer.Queue.Push("ack-block-push", new MemoryStream("msg-1"u8.ToArray()), false);
+
+        // Wait for both to be delivered
+        for (int i = 0; i < 50 && received.Count < 2; i++)
+            await Task.Delay(100);
+
+        Assert.Equal(2, received.Count);
+        Assert.Equal("msg-0", received[0]);
+        Assert.Equal("msg-1", received[1]);
 
         producer.Disconnect();
         consumer.Disconnect();

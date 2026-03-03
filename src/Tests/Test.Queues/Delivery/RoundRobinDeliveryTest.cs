@@ -307,5 +307,50 @@ public class RoundRobinDeliveryTest
         c1.Disconnect();
         c2.Disconnect();
     }
-}
 
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task RoundRobin_ConsumerReconnects_GetsNewMessages(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.AfterReceived;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        await ctx.Rider.Queue.Create("rr-reconn", o => o.Type = QueueType.RoundRobin);
+
+        int count = 0;
+        HorseClient consumer = new HorseClient();
+        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        consumer.MessageReceived += (_, _) => System.Threading.Interlocked.Increment(ref count);
+        await consumer.Queue.Subscribe("rr-reconn", true);
+
+        HorseClient producer = new HorseClient();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await producer.Queue.Push("rr-reconn", new MemoryStream("msg1"u8.ToArray()), true);
+
+        for (int i = 0; i < 30 && count < 1; i++)
+            await Task.Delay(100);
+        Assert.Equal(1, count);
+
+        // Disconnect and reconnect
+        consumer.Disconnect();
+        await Task.Delay(500);
+
+        consumer = new HorseClient();
+        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        consumer.MessageReceived += (_, _) => System.Threading.Interlocked.Increment(ref count);
+        await consumer.Queue.Subscribe("rr-reconn", true);
+
+        await producer.Queue.Push("rr-reconn", new MemoryStream("msg2"u8.ToArray()), true);
+
+        for (int i = 0; i < 30 && count < 2; i++)
+            await Task.Delay(100);
+        Assert.Equal(2, count);
+
+        producer.Disconnect();
+        consumer.Disconnect();
+    }
+}

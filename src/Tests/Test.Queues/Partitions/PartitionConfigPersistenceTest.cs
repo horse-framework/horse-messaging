@@ -119,13 +119,15 @@ public class PartitionConfigPersistenceTest : IDisposable
     // 1. QueueConfiguration round-trip: serialize → deserialize
     // ═════════════════════════════════════════════════════════════════════
 
-    [Fact]
-    public async Task QueueConfiguration_Roundtrip_AllPartitionFields_Preserved()
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task QueueConfiguration_Roundtrip_AllPartitionFields_Preserved(string mode)
     {
         // Arrange: create a queue with all partition fields set
-        var (rider, _, _) = await PartitionTestServer.Create();
+        await using var ctx = await PartitionTestServer.Create(mode);
 
-        await rider.Queue.Create("cfg-roundtrip", opts =>
+        await ctx.Rider.Queue.Create("cfg-roundtrip", opts =>
         {
             opts.Type = QueueType.RoundRobin;
             opts.Partition = new PartitionOptions
@@ -140,7 +142,7 @@ public class PartitionConfigPersistenceTest : IDisposable
             };
         });
 
-        HorseQueue queue = rider.Queue.Find("cfg-roundtrip");
+        HorseQueue queue = ctx.Rider.Queue.Find("cfg-roundtrip");
 
         // Act: serialize to QueueConfiguration
         QueueConfiguration config = QueueConfiguration.Create(queue);
@@ -229,13 +231,15 @@ public class PartitionConfigPersistenceTest : IDisposable
     // 3. Auto-queue-creation via subscribe inherits global AutoAssignWorkers
     // ═════════════════════════════════════════════════════════════════════
 
-    [Fact]
-    public async Task AutoQueueCreation_Subscribe_InheritsGlobalPartitionOptions()
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task AutoQueueCreation_Subscribe_InheritsGlobalPartitionOptions(string mode)
     {
-        var (rider, port, _) = await PartitionTestServer.Create();
+        await using var ctx = await PartitionTestServer.Create(mode);
 
         // Set global partition options
-        rider.Queue.Options.Partition = new PartitionOptions
+        ctx.Rider.Queue.Options.Partition = new PartitionOptions
         {
             Enabled = true,
             AutoAssignWorkers = true,
@@ -245,11 +249,11 @@ public class PartitionConfigPersistenceTest : IDisposable
         };
 
         // Subscribe triggers auto-creation
-        HorseClient client = await Connect(port);
+        HorseClient client = await Connect(ctx.Port);
         await client.Queue.Subscribe("inherit-sub-q", true);
         await Task.Delay(300);
 
-        HorseQueue queue = rider.Queue.Find("inherit-sub-q");
+        HorseQueue queue = ctx.Rider.Queue.Find("inherit-sub-q");
         Assert.NotNull(queue);
         Assert.NotNull(queue.Options.Partition);
         Assert.True(queue.Options.Partition.Enabled);
@@ -263,12 +267,14 @@ public class PartitionConfigPersistenceTest : IDisposable
     // 4. Auto-queue-creation via push inherits global AutoAssignWorkers
     // ═════════════════════════════════════════════════════════════════════
 
-    [Fact]
-    public async Task AutoQueueCreation_Push_InheritsGlobalPartitionOptions()
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task AutoQueueCreation_Push_InheritsGlobalPartitionOptions(string mode)
     {
-        var (rider, port, _) = await PartitionTestServer.Create();
+        await using var ctx = await PartitionTestServer.Create(mode);
 
-        rider.Queue.Options.Partition = new PartitionOptions
+        ctx.Rider.Queue.Options.Partition = new PartitionOptions
         {
             Enabled = true,
             AutoAssignWorkers = true,
@@ -278,12 +284,12 @@ public class PartitionConfigPersistenceTest : IDisposable
         };
 
         // Push triggers auto-creation via QueueMessageHandler.FindQueue
-        HorseClient producer = await Connect(port);
+        HorseClient producer = await Connect(ctx.Port);
         await producer.Queue.Push("inherit-push-q", Encoding.UTF8.GetBytes("test"), false,
             new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "t1") });
         await Task.Delay(400);
 
-        HorseQueue queue = rider.Queue.Find("inherit-push-q");
+        HorseQueue queue = ctx.Rider.Queue.Find("inherit-push-q");
         Assert.NotNull(queue);
         Assert.NotNull(queue.Options.Partition);
         Assert.True(queue.Options.Partition.AutoAssignWorkers, "AutoAssignWorkers must be inherited on push-created queue");
@@ -296,13 +302,15 @@ public class PartitionConfigPersistenceTest : IDisposable
     //    existing global partition options
     // ═════════════════════════════════════════════════════════════════════
 
-    [Fact]
-    public async Task PartitionHeaders_PreserveGlobalAutoAssignWorkers()
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task PartitionHeaders_PreserveGlobalAutoAssignWorkers(string mode)
     {
-        var (rider, port, _) = await PartitionTestServer.Create();
+        await using var ctx = await PartitionTestServer.Create(mode);
 
         // Global config with AutoAssignWorkers=true
-        rider.Queue.Options.Partition = new PartitionOptions
+        ctx.Rider.Queue.Options.Partition = new PartitionOptions
         {
             Enabled = true,
             AutoAssignWorkers = true,
@@ -311,9 +319,7 @@ public class PartitionConfigPersistenceTest : IDisposable
             SubscribersPerPartition = 1
         };
 
-        // Subscribe with PARTITION_LIMIT and PARTITION_SUBSCRIBERS headers
-        // These should OVERRIDE those two values but NOT clobber AutoAssignWorkers
-        HorseClient client = await Connect(port);
+        HorseClient client = await Connect(ctx.Port);
         await client.Queue.SubscribePartitioned(
             "header-preserve-q",
             partitionLabel: "w1",
@@ -322,16 +328,14 @@ public class PartitionConfigPersistenceTest : IDisposable
             subscribersPerPartition: 3);
         await Task.Delay(400);
 
-        HorseQueue queue = rider.Queue.Find("header-preserve-q");
+        HorseQueue queue = ctx.Rider.Queue.Find("header-preserve-q");
         Assert.NotNull(queue);
         Assert.NotNull(queue.Options.Partition);
         Assert.True(queue.Options.Partition.Enabled);
 
-        // Header values should be applied
         Assert.Equal(10, queue.Options.Partition.MaxPartitionCount);
         Assert.Equal(3, queue.Options.Partition.SubscribersPerPartition);
 
-        // Global values must NOT be clobbered
         Assert.True(queue.Options.Partition.AutoAssignWorkers, "AutoAssignWorkers must survive header override");
         Assert.Equal(12, queue.Options.Partition.MaxPartitionsPerWorker);
     }
@@ -341,15 +345,17 @@ public class PartitionConfigPersistenceTest : IDisposable
     //    creates new PartitionOptions with default AutoAssignWorkers=false
     // ═════════════════════════════════════════════════════════════════════
 
-    [Fact]
-    public async Task PartitionHeaders_NullGlobalPartition_CreatesNewPartitionOptions()
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task PartitionHeaders_NullGlobalPartition_CreatesNewPartitionOptions(string mode)
     {
-        var (rider, port, _) = await PartitionTestServer.Create();
+        await using var ctx = await PartitionTestServer.Create(mode);
 
         // Global has NO partition config
-        rider.Queue.Options.Partition = null;
+        ctx.Rider.Queue.Options.Partition = null;
 
-        HorseClient client = await Connect(port);
+        HorseClient client = await Connect(ctx.Port);
         await client.Queue.SubscribePartitioned(
             "header-null-q",
             partitionLabel: "w1",
@@ -358,7 +364,7 @@ public class PartitionConfigPersistenceTest : IDisposable
             subscribersPerPartition: 2);
         await Task.Delay(400);
 
-        HorseQueue queue = rider.Queue.Find("header-null-q");
+        HorseQueue queue = ctx.Rider.Queue.Find("header-null-q");
         Assert.NotNull(queue);
         Assert.NotNull(queue.Options.Partition);
         Assert.True(queue.Options.Partition.Enabled);
@@ -375,12 +381,14 @@ public class PartitionConfigPersistenceTest : IDisposable
     //    (the exact scenario from Sample.All that failed before the fix)
     // ═════════════════════════════════════════════════════════════════════
 
-    [Fact]
-    public async Task EndToEnd_AutoAssignWorker_ReceivesLabeledMessage()
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task EndToEnd_AutoAssignWorker_ReceivesLabeledMessage(string mode)
     {
-        var (rider, port, _) = await PartitionTestServer.Create();
+        await using var ctx = await PartitionTestServer.Create(mode);
 
-        rider.Queue.Options.Partition = new PartitionOptions
+        ctx.Rider.Queue.Options.Partition = new PartitionOptions
         {
             Enabled = true,
             AutoAssignWorkers = true,
@@ -390,12 +398,12 @@ public class PartitionConfigPersistenceTest : IDisposable
 
         // Worker subscribes without label → enters pool
         int received = 0;
-        HorseClient worker = await Connect(port);
+        HorseClient worker = await Connect(ctx.Port);
         worker.MessageReceived += (_, _) => Interlocked.Increment(ref received);
         await worker.Queue.Subscribe("e2e-aa-q", true);
         await Task.Delay(300);
 
-        HorseQueue queue = rider.Queue.Find("e2e-aa-q");
+        HorseQueue queue = ctx.Rider.Queue.Find("e2e-aa-q");
         Assert.NotNull(queue);
         Assert.NotNull(queue.PartitionManager);
         Assert.True(queue.Options.Partition.AutoAssignWorkers, "Queue must inherit AutoAssignWorkers from global");
@@ -404,7 +412,7 @@ public class PartitionConfigPersistenceTest : IDisposable
         Assert.Empty(queue.PartitionManager.Partitions);
 
         // Push labeled message
-        HorseClient producer = await Connect(port);
+        HorseClient producer = await Connect(ctx.Port);
         await producer.Queue.Push("e2e-aa-q", Encoding.UTF8.GetBytes("hello"), false,
             new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "tenant-x") });
         await Task.Delay(600);

@@ -186,5 +186,45 @@ public class QueueCreateTest
         Assert.Equal(QueueType.RoundRobin, ctx.Rider.Queue.Find("rr-q2").Type);
         Assert.Equal(QueueType.Pull, ctx.Rider.Queue.Find("pull-q2").Type);
     }
-}
 
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Create_AutoQueueCreation_Disabled_SubscribeDoesNotCreate(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.AutoQueueCreation = false;
+        });
+
+        HorseClient client = new HorseClient();
+        await client.ConnectAsync($"horse://localhost:{ctx.Port}");
+
+        HorseResult result = await client.Queue.Subscribe("no-auto-q", true);
+        // When auto creation is off, subscribe should not silently create
+        HorseQueue queue = ctx.Rider.Queue.Find("no-auto-q");
+        Assert.Null(queue);
+
+        client.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Create_InvalidName_WithSpecialChars_Rejected(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        await Assert.ThrowsAsync<System.InvalidOperationException>(
+            async () => await ctx.Rider.Queue.Create("bad@name"));
+
+        await Assert.ThrowsAsync<System.InvalidOperationException>(
+            async () => await ctx.Rider.Queue.Create("bad name"));
+
+        await Assert.ThrowsAsync<System.InvalidOperationException>(
+            async () => await ctx.Rider.Queue.Create("bad;name"));
+
+        await Assert.ThrowsAsync<System.InvalidOperationException>(
+            async () => await ctx.Rider.Queue.Create("bad*name"));
+    }
+}
