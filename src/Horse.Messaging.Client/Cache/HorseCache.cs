@@ -134,7 +134,10 @@ internal class HorseCache : IHorseCache
         message.Type = MessageType.Cache;
         message.SetMessageId(_client.UniqueIdGenerator.Create());
         message.ContentType = KnownContentTypes.GetCacheList;
-        message.AddHeader(HorseHeaders.FILTER, filter);
+        
+        if (!string.IsNullOrEmpty(filter))
+            message.AddHeader(HorseHeaders.FILTER, filter);
+        
         return await _client.SendAndGet<List<CacheInformation>>(message);
     }
 
