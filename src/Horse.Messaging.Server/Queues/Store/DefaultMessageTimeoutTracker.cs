@@ -1,6 +1,7 @@
-﻿﻿using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Logging;
 
@@ -18,7 +19,8 @@ public class DefaultMessageTimeoutTracker : IMessageTimeoutTracker
     public IQueueMessageStore Store { get; }
 
     private readonly HorseQueue _queue;
-    private Timer _timer;
+    private PeriodicTimer _timer;
+    private CancellationTokenSource _cts = new();
 
     /// <summary>
     /// Creates new default message timeout tracker
@@ -29,59 +31,78 @@ public class DefaultMessageTimeoutTracker : IMessageTimeoutTracker
         _queue = queue;
     }
 
-    private void CheckTimeouts(object state)
+    private async Task RunTimer()
     {
-        try
+        while (await _timer.WaitForNextTickAsync(_cts.Token))
         {
-            if (_queue.Options.MessageTimeout.Policy == MessageTimeoutPolicy.NoTimeout || _queue.Options.MessageTimeout.MessageDuration == 0)
-                return;
-
-            QueueMessage message;
-            do
+            try
             {
-                message = Store.ReadFirst();
+                MessageTimeoutStrategy strategy = _queue.Options.MessageTimeout;
 
-                if (message == null)
-                    break;
+                if (strategy.Policy == MessageTimeoutPolicy.NoTimeout || strategy.MessageDuration == 0)
+                    continue;
 
-                if (!message.Deadline.HasValue)
-                    break;
+                QueueMessage message;
+                do
+                {
+                    message = Store.ReadFirst();
 
-                if (message.Deadline.Value > DateTime.UtcNow)
-                    break;
+                    if (message?.Deadline == null)
+                        break;
 
-                Store.Remove(message);
+                    if (message.Deadline.Value > DateTime.UtcNow)
+                        break;
 
-                _queue.Info.AddMessageTimeout();
-                message.MarkAsTimedOut();
+                    if (!string.IsNullOrEmpty(strategy.TargetName))
+                    {
+                        if (strategy.Policy == MessageTimeoutPolicy.PushQueue)
+                        {
+                            var queue = _queue.Rider.Queue.Find(strategy.TargetName);
+                            await queue.Push(message.Message);
+                        }
+                        else if (strategy.Policy == MessageTimeoutPolicy.PublishRouter)
+                        {
+                            var router = _queue.Rider.Router.Find(strategy.TargetName);
+                            await router.Publish(null, message.Message);
+                        }
+                    }
 
-                _ = Store.Manager.OnMessageTimeout(message);
+                    Store.Remove(message);
 
-                foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
-                    _ = handler.MessageTimedOut(_queue, message);
+                    _queue.Info.AddMessageTimeout();
+                    message.MarkAsTimedOut();
 
-                _queue.MessageTimeoutEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
+                    await Store.Manager.OnMessageTimeout(message);
 
-                message = Store.ReadFirst();
-            } while (message != null && message.Deadline.HasValue);
-        }
-        catch (Exception e)
-        {
-            _queue.Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueCheckMessageTimeout, "CheckMessageTimeout: " + _queue.Name, e);
+                    foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
+                        _ = handler.MessageTimedOut(_queue, message);
+
+                    _queue.MessageTimeoutEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
+
+                    message = Store.ReadFirst();
+                } while (message != null && message.Deadline.HasValue);
+            }
+            catch (Exception e)
+            {
+                _queue.Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueCheckMessageTimeout, "CheckMessageTimeout: " + _queue.Name, e);
+            }
         }
     }
 
     /// <inheritdoc />
     public void Start()
     {
-        _timer = new Timer(CheckTimeouts, null, 1000, 1000);
+        _timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
+        _ = RunTimer();
     }
 
     /// <inheritdoc />
     public void Stop()
     {
-        _timer?.Change(Timeout.Infinite, Timeout.Infinite);
+        _cts?.Cancel();
+        _cts?.Dispose();
         _timer?.Dispose();
         _timer = null;
+        _cts = null;
     }
 }
