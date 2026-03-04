@@ -223,6 +223,8 @@ public class OrderConsumer : IQueueConsumer<OrderEvent> { ... }
 
 If all retries are exhausted and `[MoveOnError]` is set, the message is moved to the error queue.
 
+For full details on retry mechanics, ignored exceptions, and interaction with redelivery tracking, see [Retry & Redelivery](retry-redelivery.md). For dead-letter queue patterns and `[PushExceptions]`, see [Dead-Letter Queues & Exception Handling](dead-letter-exceptions.md).
+
 ## Reliability Patterns Summary
 
 | Pattern | Configuration |

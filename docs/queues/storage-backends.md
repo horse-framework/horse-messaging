@@ -146,13 +146,13 @@ cfg.UsePersistentQueues(
 
 ## Redelivery Tracking
 
-When using persistent queues, you can enable redelivery tracking. This adds a header to each message indicating how many times it has been delivered:
+When using persistent queues, you can enable redelivery tracking. Each time a message is delivered to a consumer, its delivery count is incremented and persisted. On the second delivery and beyond, a `Delivery` header is added to the message with the current count:
 
 ```csharp
 cfg.UsePersistentQueues(useRedelivery: true);
 ```
 
-Consumers see the `Redelivery-Count` header on the message, allowing them to implement dead-letter logic or handle retries differently.
+Consumers can read the `Delivery` header to detect redeliveries and implement poison message detection. For full details, see [Retry & Redelivery](retry-redelivery.md).
 
 ## Custom Queue Managers
 

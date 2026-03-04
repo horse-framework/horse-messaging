@@ -162,8 +162,8 @@ public class OrderConsumer : IQueueConsumer<OrderCreatedEvent>
 | `[AcknowledgeTimeout(seconds)]` | Acknowledge timeout for the queue. |
 | `[DelayBetweenMessages(ms)]` | Throttle delivery between messages. |
 | `[MessageTimeout(policy, seconds)]` | Message expiration configuration. |
-| `[Retry(count, delayMs)]` | Retry the consume operation up to `count` times with `delayMs` between retries. Max 100 retries. |
-| `[MoveOnError("queue")]` | On unhandled exception, moves the message to the specified error queue. |
+| `[Retry(count, delayMs)]` | Retry the consume operation up to `count` times with `delayMs` between retries. Max 100 retries. See [Retry & Redelivery](retry-redelivery.md). |
+| `[MoveOnError("queue")]` | On unhandled exception, moves the message to the specified error queue. See [Dead-Letter Queues & Exception Handling](dead-letter-exceptions.md). |
 | `[HighPriorityMessage]` | Marks messages of this type as high priority. |
 | `[QueueManager("name")]` | Targets a specific storage backend. |
 | `[QueueTopic("topic")]` | Sets a topic string on the queue. Used for topic-based routing. See [Queue Topics](queue-topics.md). |
