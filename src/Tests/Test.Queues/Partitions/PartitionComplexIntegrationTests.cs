@@ -1465,6 +1465,118 @@ public class PartitionComplexIntegrationTests
         w2.Disconnect();
     }
 
+    /// <summary>
+    /// Two separate parent queues each with their own worker pool.
+    /// Worker 1 subscribes (pool) to IsolatedQ-A only.
+    /// Worker 2 subscribes (pool) to IsolatedQ-B only.
+    /// Messages pushed to IsolatedQ-A must ONLY be consumed by Worker 1.
+    /// Messages pushed to IsolatedQ-B must ONLY be consumed by Worker 2.
+    /// Worker pools are per-PartitionManager (per-queue) — no cross-queue assignment should occur.
+    /// </summary>
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task WorkerPool_Isolation_AcrossParentQueues_NoCrossAssignment(string mode)
+    {
+        // Create server with 2 separate partitioned queues
+        PartitionTestContext ctx = await PartitionTestServer.Create(mode, opts =>
+        {
+            opts.Type = QueueType.RoundRobin;
+            opts.Acknowledge = QueueAckDecision.JustRequest;
+            opts.AutoQueueCreation = false;
+        });
+        await using var _ = ctx;
+
+        PartitionOptions partOpts = new()
+        {
+            Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 1,
+            AutoAssignWorkers = true, MaxPartitionsPerWorker = 5, AutoDestroy = PartitionAutoDestroy.Disabled
+        };
+
+        await ctx.Rider.Queue.Create("IsolatedQ-A", o =>
+        {
+            o.Type = QueueType.RoundRobin;
+            o.Acknowledge = QueueAckDecision.JustRequest;
+            o.Partition = partOpts;
+        });
+
+        await ctx.Rider.Queue.Create("IsolatedQ-B", o =>
+        {
+            o.Type = QueueType.RoundRobin;
+            o.Acknowledge = QueueAckDecision.JustRequest;
+            o.Partition = partOpts;
+        });
+
+        HorseQueue queueA = ctx.Rider.Queue.Find("IsolatedQ-A");
+        HorseQueue queueB = ctx.Rider.Queue.Find("IsolatedQ-B");
+        Assert.NotNull(queueA);
+        Assert.NotNull(queueB);
+
+        // Track which clientType received messages from which queue
+        ConcurrentBag<string> receivedByW1 = new();
+        ConcurrentBag<string> receivedByW2 = new();
+
+        // Worker 1: subscribes to IsolatedQ-A pool only
+        HorseClient w1 = new();
+        w1.SetClientType("w1");
+        w1.AutoAcknowledge = true;
+        w1.MessageReceived += (_, msg) =>
+        {
+            receivedByW1.Add(msg.Target); // partition queue name contains parent info
+        };
+        await w1.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await w1.Queue.Subscribe("IsolatedQ-A", true);
+        await Task.Delay(200);
+
+        // Worker 2: subscribes to IsolatedQ-B pool only
+        HorseClient w2 = new();
+        w2.SetClientType("w2");
+        w2.AutoAcknowledge = true;
+        w2.MessageReceived += (_, msg) =>
+        {
+            receivedByW2.Add(msg.Target);
+        };
+        await w2.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await w2.Queue.Subscribe("IsolatedQ-B", true);
+        await Task.Delay(200);
+
+        // Push labeled messages to each queue
+        HorseClient producer = await CreateProducer(ctx.Port);
+
+        for (int i = 0; i < 5; i++)
+        {
+            await producer.Queue.Push("IsolatedQ-A",
+                System.Text.Encoding.UTF8.GetBytes($"a-msg-{i}"), false,
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"tenant-a-{i}") });
+
+            await producer.Queue.Push("IsolatedQ-B",
+                System.Text.Encoding.UTF8.GetBytes($"b-msg-{i}"), false,
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"tenant-b-{i}") });
+        }
+
+        await WaitUntil(() => receivedByW1.Count >= 5 && receivedByW2.Count >= 5, 10_000);
+
+        // W1 should only have received messages from IsolatedQ-A partitions
+        Assert.True(receivedByW1.Count >= 5, $"W1 expected ≥5, got {receivedByW1.Count}");
+        Assert.All(receivedByW1, target => Assert.Contains("IsolatedQ-A", target));
+
+        // W2 should only have received messages from IsolatedQ-B partitions
+        Assert.True(receivedByW2.Count >= 5, $"W2 expected ≥5, got {receivedByW2.Count}");
+        Assert.All(receivedByW2, target => Assert.Contains("IsolatedQ-B", target));
+
+        // Cross check: no IsolatedQ-B in W1, no IsolatedQ-A in W2
+        Assert.DoesNotContain(receivedByW1, t => t.Contains("IsolatedQ-B"));
+        Assert.DoesNotContain(receivedByW2, t => t.Contains("IsolatedQ-A"));
+
+        // Verify partition counts
+        Assert.Equal(5, queueA.PartitionManager.Partitions.Count());
+        Assert.Equal(5, queueB.PartitionManager.Partitions.Count());
+
+        producer.Disconnect();
+        w1.Disconnect();
+        w2.Disconnect();
+    }
+
     #endregion
 
     // ═══════════════════════════════════════════════════════════════════════
