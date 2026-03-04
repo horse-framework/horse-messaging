@@ -51,7 +51,7 @@ HorseRider rider = HorseRiderBuilder.Create()
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `Enabled` | `bool` | `false` | Activates partitioning on the queue. |
-| `MaxPartitionCount` | `int` | `0` (unlimited) | Maximum number of partition sub-queues. |
+| `MaxPartitionCount` | `int` | `0` (unlimited) | Maximum number of partition sub-queues. Applies to **both** labeled and label-less partitions. When the limit is reached, new labels are rejected (`LimitExceeded`) and new label-less subscribers cannot create additional partitions. Pushing to an **existing** label still works. `0` = unlimited. |
 | `SubscribersPerPartition` | `int` | `1` | Maximum consumers per partition (maps to `ClientLimit` on each sub-queue). |
 | `AutoDestroy` | `PartitionAutoDestroy` | `Disabled` | When to automatically destroy idle partitions. |
 | `AutoDestroyIdleSeconds` | `int` | `30` | Idle time (in seconds) before the auto-destroy check triggers. |
@@ -215,9 +215,16 @@ HorseResult result = await client.Queue.SubscribePartitioned(
     queue:                  "auto-part-q",   // doesn't exist yet
     partitionLabel:         "worker-1",
     verifyResponse:         true,
-    maxPartitions:          10,              // → Partition-Limit header
-    subscribersPerPartition: 1);             // → Partition-Subscribers header
+    maxPartitions:          10,              // → Partition-Limit: 10 header
+    subscribersPerPartition: 1);             // → Partition-Subscribers: 1 header
 // Server creates queue with PartitionOptions.Enabled=true, MaxPartitionCount=10
+
+// To auto-create with unlimited partitions (override server default):
+HorseResult r2 = await client.Queue.SubscribePartitioned(
+    queue:          "unlimited-q",
+    partitionLabel: "worker-1",
+    verifyResponse: true,
+    maxPartitions:  0);                      // → Partition-Limit: 0 header → unlimited
 ```
 
 ---
@@ -259,6 +266,8 @@ After routing, the message's `Target` is rewritten to the partition sub-queue na
 
 The `Partition-Label` header is stripped from the message before forwarding to consumers. A `Partition-Id` header is stamped on the message to indicate which partition handled it.
 
+> **MaxPartitionCount enforcement:** When `MaxPartitionCount > 0` and the limit is reached, a push with a **new** label returns `LimitExceeded` (the message is rejected). A push to an **existing** label still works — no new partition is created, the message goes to the existing one. Similarly, a subscribe with a new label returns `LimitExceeded`. This applies to both labeled and label-less partitions.
+
 ---
 
 ## Subscribing with Labels
@@ -286,10 +295,12 @@ public class JobConsumer : IQueueConsumer<JobEvent> { ... }
 
 | Syntax | Effect |
 |--------|--------|
-| `[PartitionedQueue("label")]` | Sends `Partition-Label` header on subscribe |
-| `[PartitionedQueue("label", MaxPartitions = N)]` | Also sends `Partition-Limit: N` for auto-create |
+| `[PartitionedQueue("label")]` | Sends `Partition-Label` header on subscribe. `MaxPartitions` and `SubscribersPerPartition` not sent (server default used). |
+| `[PartitionedQueue("label", MaxPartitions = N)]` | Also sends `Partition-Limit: N` for auto-create. `N = 0` means unlimited. |
 | `[PartitionedQueue("label", MaxPartitions = N, SubscribersPerPartition = M)]` | Sends all three partition headers |
 | `[PartitionedQueue]` or `[PartitionedQueue(null)]` | Label-less partitioned subscribe (round-robin) |
+
+> **Attribute default values:** `MaxPartitions` and `SubscribersPerPartition` default to `-1` which means "not set — use server default". Setting `0` explicitly means **unlimited** (no limit enforced). Any value `> 0` sets an explicit limit.
 
 When `AutoSubscribe = true`, the client automatically calls `SubscribePartitioned` with the declared values on every reconnect.
 
@@ -300,6 +311,8 @@ await client.Queue.SubscribePartitioned("orders", "tenant-42", verifyResponse: t
     maxPartitions: 50, 
     subscribersPerPartition: 1);
 ```
+
+> **API note:** `maxPartitions` and `subscribersPerPartition` are `int?` (nullable). `null` = not sent (server default used), `0` = unlimited, `> 0` = explicit limit.
 
 **Subscribe response headers:**
 ```
@@ -317,6 +330,8 @@ services.AddHorseClient(b => b
     .AddSingletonConsumer<OrderConsumer>()
     // Explicit partition label (overrides any attribute)
     .AddSingletonConsumer<OrderConsumer>("tenant-42", maxPartitions: 10, subscribersPerPartition: 1)
+    // Unlimited partitions (overrides server default)
+    .AddSingletonConsumer<OrderConsumer>("tenant-42", maxPartitions: 0)
     // Enter the auto-assign worker pool (label-less, server assigns partitions on demand)
     .AddSingletonConsumer<JobConsumer>(queueNameTransform: n => n, enterWorkerPool: true));
 
@@ -324,6 +339,8 @@ services.AddHorseClient(b => b
 .AddTransientConsumer<OrderConsumer>("tenant-42", maxPartitions: 10, subscribersPerPartition: 1)
 .AddScopedConsumer<OrderConsumer>("tenant-42", maxPartitions: 10, subscribersPerPartition: 1)
 ```
+
+> **Parameter types:** `maxPartitions` and `subscribersPerPartition` are `int?` (nullable). `null` (default) = not sent (server default used), `0` = unlimited, `> 0` = explicit limit.
 
 > **Note:** The `partitionLabel` parameter cannot be `null` or empty string on the `queueNameTransform` overloads — it throws `ArgumentException`. To enter the worker pool without a label, use the `enterWorkerPool` overload instead.
 
@@ -712,7 +729,7 @@ foreach (var snapshot in manager.GetMetrics())
 |--------|-----------|-------------|
 | `Partition-Label` | Client → Server | Routing label for subscribe or push |
 | `Partition-Id` | Server → Client | Partition ID assigned in the subscribe response |
-| `Partition-Limit` | Client → Server | Max partition count for auto-create |
+| `Partition-Limit` | Client → Server | Max partition count for auto-create. `0` = unlimited. Not sent when `null` (server default used). |
 | `Partition-Subscribers` | Client → Server | Max subscribers per partition for auto-create |
 
 ---

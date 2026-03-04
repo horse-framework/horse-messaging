@@ -671,8 +671,8 @@ public class QueueOperator : IDisposable
         string queue,
         string partitionLabel,
         bool verifyResponse,
-        int maxPartitions = 0,
-        int subscribersPerPartition = 0,
+        int? maxPartitions = null,
+        int? subscribersPerPartition = null,
         IEnumerable<KeyValuePair<string, string>> additionalHeaders = null,
         CancellationToken cancellationToken = default)
     {
@@ -681,11 +681,11 @@ public class QueueOperator : IDisposable
         if (!string.IsNullOrEmpty(partitionLabel))
             headers.Add(new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, partitionLabel));
 
-        if (maxPartitions > 0)
-            headers.Add(new KeyValuePair<string, string>(HorseHeaders.PARTITION_LIMIT, maxPartitions.ToString()));
+        if (maxPartitions.HasValue)
+            headers.Add(new KeyValuePair<string, string>(HorseHeaders.PARTITION_LIMIT, maxPartitions.Value.ToString()));
 
-        if (subscribersPerPartition > 0)
-            headers.Add(new KeyValuePair<string, string>(HorseHeaders.PARTITION_SUBSCRIBERS, subscribersPerPartition.ToString()));
+        if (subscribersPerPartition is > 0)
+            headers.Add(new KeyValuePair<string, string>(HorseHeaders.PARTITION_SUBSCRIBERS, subscribersPerPartition.Value.ToString()));
 
         if (additionalHeaders != null)
             headers.AddRange(additionalHeaders);

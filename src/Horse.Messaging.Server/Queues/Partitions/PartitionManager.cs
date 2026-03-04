@@ -71,6 +71,9 @@ public class PartitionManager
         if (!string.IsNullOrEmpty(partitionLabel))
         {
             entry = await GetOrCreateLabelPartition(partitionLabel);
+            if (entry == null)
+                return null;
+
             SubscriptionResult result = await entry.Queue.AddClient(client);
             if (result == SubscriptionResult.Full)
                 return null;
@@ -153,6 +156,9 @@ public class PartitionManager
         if (!string.IsNullOrEmpty(label))
         {
             PartitionEntry entry = await GetOrCreateLabelPartition(label);
+            if (entry == null)
+                return (null, PushResult.LimitExceeded);
+
             target = entry.Queue;
             entry.LastMessageAt = DateTime.UtcNow;
 
@@ -237,6 +243,10 @@ public class PartitionManager
         {
             if (!string.IsNullOrEmpty(label) && _labelIndex.TryGetValue(label, out PartitionEntry existing))
                 return existing;
+
+            // Enforce MaxPartitionCount for all partition types (labeled and label-less)
+            if (_options.MaxPartitionCount > 0 && _partitions.Count >= _options.MaxPartitionCount)
+                return null;
 
             string partitionId;
             string queueName;

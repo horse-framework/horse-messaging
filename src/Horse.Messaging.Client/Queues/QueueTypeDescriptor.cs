@@ -30,14 +30,14 @@ public class QueueTypeDescriptor : ITypeDescriptor
     public string PartitionLabel { get; set; }
 
     /// <summary>
-    /// Maximum partition count for auto-create. 0 = server default.
+    /// Maximum partition count for auto-create. null = not set (server default), 0 = unlimited.
     /// </summary>
-    public int MaxPartitions { get; set; }
+    public int? MaxPartitions { get; set; }
 
     /// <summary>
-    /// Max subscribers per partition for auto-create. 0 = server default.
+    /// Max subscribers per partition for auto-create. null = not set (server default).
     /// </summary>
-    public int SubscribersPerPartition { get; set; }
+    public int? SubscribersPerPartition { get; set; }
 
     /// <summary>
     /// If queue is created with a message push and that value is not null, that option will be used

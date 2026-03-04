@@ -589,12 +589,13 @@ public class HorseClientBuilder
     /// Pass <c>null</c> or empty string for label-less (round-robin) partitioned subscribe.
     /// </param>
     /// <param name="maxPartitions">
-    /// Maximum partitions forwarded as <c>Partition-Limit</c> header for auto-create. 0 = server default.
+    /// Maximum partitions forwarded as <c>Partition-Limit</c> header for auto-create.
+    /// <c>null</c> = not set (server default), <c>0</c> = unlimited.
     /// </param>
     /// <param name="subscribersPerPartition">
-    /// Max subscribers per partition for auto-create. 0 = server default.
+    /// Max subscribers per partition for auto-create. <c>null</c> = not set (server default).
     /// </param>
-    public HorseClientBuilder AddTransientConsumer<TConsumer>(string partitionLabel, int maxPartitions = 0, int subscribersPerPartition = 0) where TConsumer : class
+    public HorseClientBuilder AddTransientConsumer<TConsumer>(string partitionLabel, int? maxPartitions = null, int? subscribersPerPartition = null) where TConsumer : class
     {
         if (_services == null)
             throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
@@ -700,9 +701,9 @@ public class HorseClientBuilder
     /// Routing label sent as <c>Partition-Label</c> header.
     /// Pass <c>null</c> or empty string for label-less partitioned subscribe.
     /// </param>
-    /// <param name="maxPartitions">Maximum partitions for auto-create. 0 = server default.</param>
-    /// <param name="subscribersPerPartition">Max subscribers per partition. 0 = server default.</param>
-    public HorseClientBuilder AddScopedConsumer<TConsumer>(string partitionLabel, int maxPartitions = 0, int subscribersPerPartition = 0) where TConsumer : class
+    /// <param name="maxPartitions">Maximum partitions for auto-create. <c>null</c> = not set (server default), <c>0</c> = unlimited.</param>
+    /// <param name="subscribersPerPartition">Max subscribers per partition. <c>null</c> = not set (server default).</param>
+    public HorseClientBuilder AddScopedConsumer<TConsumer>(string partitionLabel, int? maxPartitions = null, int? subscribersPerPartition = null) where TConsumer : class
     {
         if (_services == null)
             throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
@@ -809,9 +810,9 @@ public class HorseClientBuilder
     /// Routing label sent as <c>Partition-Label</c> header.
     /// Pass <c>null</c> or empty string for label-less partitioned subscribe.
     /// </param>
-    /// <param name="maxPartitions">Maximum partitions for auto-create. 0 = server default.</param>
-    /// <param name="subscribersPerPartition">Max subscribers per partition. 0 = server default.</param>
-    public HorseClientBuilder AddSingletonConsumer<TConsumer>(string partitionLabel, int maxPartitions = 0, int subscribersPerPartition = 0) where TConsumer : class
+    /// <param name="maxPartitions">Maximum partitions for auto-create. <c>null</c> = not set (server default), <c>0</c> = unlimited.</param>
+    /// <param name="subscribersPerPartition">Max subscribers per partition. <c>null</c> = not set (server default).</param>
+    public HorseClientBuilder AddSingletonConsumer<TConsumer>(string partitionLabel, int? maxPartitions = null, int? subscribersPerPartition = null) where TConsumer : class
     {
         QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
         if (_services == null)

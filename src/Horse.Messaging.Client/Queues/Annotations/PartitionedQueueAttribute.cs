@@ -33,15 +33,15 @@ public class PartitionedQueueAttribute : Attribute
 
     /// <summary>
     /// Maximum number of partitions forwarded as <c>Partition-Limit</c> header for
-    /// auto-create. <c>0</c> = server default.
+    /// auto-create. <c>-1</c> = not set (server default), <c>0</c> = unlimited, <c>&gt;0</c> = explicit limit.
     /// </summary>
-    public int MaxPartitions { get; init; }
+    public int MaxPartitions { get; init; } = -1;
 
     /// <summary>
     /// Maximum subscribers per partition forwarded as <c>Partition-Subscribers</c> header
-    /// for auto-create. <c>0</c> = server default.
+    /// for auto-create. <c>-1</c> = not set (server default), <c>&gt;0</c> = explicit value.
     /// </summary>
-    public int SubscribersPerPartition { get; init; }
+    public int SubscribersPerPartition { get; init; } = -1;
 
     /// <summary>
     /// Creates a new <see cref="PartitionedQueueAttribute"/> with an optional routing label.

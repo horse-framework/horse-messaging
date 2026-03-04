@@ -45,15 +45,15 @@ internal class QueueConsumerRegistration
 
     /// <summary>
     /// Maximum number of partitions forwarded as <c>Partition-Limit</c> header during
-    /// auto-create. 0 = server default / not set.
+    /// auto-create. null = not set (server default), 0 = unlimited, >0 = explicit limit.
     /// </summary>
-    public int MaxPartitions { get; set; }
+    public int? MaxPartitions { get; set; }
 
     /// <summary>
     /// Maximum subscribers per partition forwarded as <c>Partition-Subscribers</c> header
-    /// during auto-create. 0 = server default / not set.
+    /// during auto-create. null = not set (server default), >0 = explicit value.
     /// </summary>
-    public int SubscribersPerPartition { get; set; }
+    public int? SubscribersPerPartition { get; set; }
 
     /// <summary>Returns true when this registration uses partitioned subscribe.</summary>
     public bool IsPartitioned => PartitionLabel != null;

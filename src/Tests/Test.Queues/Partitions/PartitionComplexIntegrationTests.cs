@@ -53,6 +53,32 @@ public class QueueDModel
     public int Sequence { get; set; }
 }
 
+/// <summary>
+/// Model whose attribute overrides server default MaxPartitionCount to 1.
+/// Queue auto-created with MaxPartitionCount=1 → only 1 partition allowed.
+/// </summary>
+[QueueName("LimitedQ")]
+[QueueType(MessagingQueueType.RoundRobin)]
+[Acknowledge(QueueAckDecision.JustRequest)]
+[PartitionedQueue(MaxPartitions = 1, SubscribersPerPartition = 1)]
+public class LimitedPartitionModel
+{
+    public string Data { get; set; }
+}
+
+/// <summary>
+/// Model whose attribute overrides server default MaxPartitionCount to 0 (unlimited).
+/// Queue auto-created with MaxPartitionCount=0 → unlimited partitions.
+/// </summary>
+[QueueName("UnlimitedQ")]
+[QueueType(MessagingQueueType.RoundRobin)]
+[Acknowledge(QueueAckDecision.JustRequest)]
+[PartitionedQueue(MaxPartitions = 0, SubscribersPerPartition = 1)]
+public class UnlimitedPartitionModel
+{
+    public string Data { get; set; }
+}
+
 #endregion
 
 #region Per-Test Tracking Infrastructure
@@ -144,6 +170,26 @@ public class QueueDConsumer(TrackerAccessor accessor) : IQueueConsumer<QueueDMod
     public Task Consume(HorseMessage message, QueueDModel model, HorseClient client, CancellationToken cancellationToken = default)
     {
         accessor.Tracker.Record("QueueD", model.TenantId, model.Sequence);
+        return Task.CompletedTask;
+    }
+}
+
+[AutoAck]
+public class LimitedPartitionConsumer(TrackerAccessor accessor) : IQueueConsumer<LimitedPartitionModel>
+{
+    public Task Consume(HorseMessage message, LimitedPartitionModel model, HorseClient client, CancellationToken cancellationToken = default)
+    {
+        accessor.Tracker.Record("LimitedQ", model.Data, 0);
+        return Task.CompletedTask;
+    }
+}
+
+[AutoAck]
+public class UnlimitedPartitionConsumer(TrackerAccessor accessor) : IQueueConsumer<UnlimitedPartitionModel>
+{
+    public Task Consume(HorseMessage message, UnlimitedPartitionModel model, HorseClient client, CancellationToken cancellationToken = default)
+    {
+        accessor.Tracker.Record("UnlimitedQ", model.Data, 0);
         return Task.CompletedTask;
     }
 }
@@ -1417,6 +1463,221 @@ public class PartitionComplexIntegrationTests
         producer.Disconnect();
         w1.Disconnect();
         w2.Disconnect();
+    }
+
+    #endregion
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // 20. MaxPartitionCount Override via Attribute
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #region MaxPartitionCount Attribute Override
+
+    /// <summary>
+    /// Server default MaxPartitionCount=3. PartitionedQueueAttribute on model sets MaxPartitions=1.
+    /// Auto-created queue should have MaxPartitionCount=1.
+    /// 1st label push → partition created (ok).
+    /// 2nd label push → partition creation blocked (MaxPartitionCount reached).
+    /// </summary>
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task AttributeOverride_MaxPartitions1_SecondLabelBlocked(string mode)
+    {
+        // Server default: partitions enabled with MaxPartitionCount=3
+        PartitionTestContext ctx = await PartitionTestServer.Create(mode, opts =>
+        {
+            opts.Type = QueueType.RoundRobin;
+            opts.Acknowledge = QueueAckDecision.JustRequest;
+            opts.AutoQueueCreation = true;
+            opts.Partition = new PartitionOptions
+            {
+                Enabled = true,
+                MaxPartitionCount = 3,
+                SubscribersPerPartition = 1,
+                AutoAssignWorkers = true,
+                MaxPartitionsPerWorker = 10,
+                AutoDestroy = PartitionAutoDestroy.Disabled
+            };
+        });
+        await using var _ = ctx;
+
+        ConsumeTracker tracker = new();
+        TrackerAccessor accessor = new(tracker);
+
+        // Worker subscribes via DI with LimitedPartitionConsumer
+        // PartitionedQueueAttribute(MaxPartitions=1) on the model class
+        // → SubscribePartitioned header sends Partition-Limit=1
+        // → Queue auto-created with MaxPartitionCount=1
+        ServiceCollection services = new();
+        services.AddSingleton(accessor);
+        HorseClientBuilder builder = new(services);
+        builder.AddHost($"horse://localhost:{ctx.Port}");
+        builder.SetClientType("limited-worker");
+        builder.AutoSubscribe(true);
+        builder.AddScopedConsumer<LimitedPartitionConsumer>("label-a", maxPartitions: 1, subscribersPerPartition: 1);
+
+        HorseClient worker = builder.Build();
+        await worker.ConnectAsync();
+        await Task.Delay(500);
+
+        // "LimitedQ" should now be auto-created with MaxPartitionCount=1
+        HorseQueue queue = ctx.Rider.Queue.Find("LimitedQ");
+        Assert.NotNull(queue);
+        Assert.True(queue.IsPartitioned);
+        Assert.Equal(1, queue.Options.Partition.MaxPartitionCount);
+
+        // 1 partition exists (label-a)
+        Assert.Single(queue.PartitionManager.Partitions);
+
+        // Push with a new label → should be blocked (MaxPartitionCount=1 reached)
+        HorseClient producer = await CreateProducer(ctx.Port);
+        IHorseQueueBus bus = new HorseQueueBus(producer);
+        HorseResult result = await bus.Push("LimitedQ",
+            new LimitedPartitionModel { Data = "test" },
+            waitForCommit: true,
+            partitionLabel: "label-b");
+
+        Assert.NotEqual(HorseResultCode.Ok, result.Code);
+
+        // Still only 1 partition
+        Assert.Single(queue.PartitionManager.Partitions);
+
+        producer.Disconnect();
+        worker.Disconnect();
+    }
+
+    /// <summary>
+    /// Server default MaxPartitionCount=3. PartitionedQueueAttribute on model sets MaxPartitions=0 (unlimited).
+    /// MaxPartitions=0 means "unlimited" → Partition-Limit=0 header IS sent.
+    /// Queue auto-created with MaxPartitionCount=0 (unlimited).
+    /// More than 3 labels should all create partitions.
+    /// </summary>
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task AttributeOverride_MaxPartitions0_Unlimited_MoreThan3Allowed(string mode)
+    {
+        // Server default: partitions enabled with MaxPartitionCount=3
+        PartitionTestContext ctx = await PartitionTestServer.Create(mode, opts =>
+        {
+            opts.Type = QueueType.RoundRobin;
+            opts.Acknowledge = QueueAckDecision.JustRequest;
+            opts.AutoQueueCreation = true;
+            opts.Partition = new PartitionOptions
+            {
+                Enabled = true,
+                MaxPartitionCount = 3,
+                SubscribersPerPartition = 1,
+                AutoAssignWorkers = true,
+                MaxPartitionsPerWorker = 10,
+                AutoDestroy = PartitionAutoDestroy.Disabled
+            };
+        });
+        await using var _ = ctx;
+
+        ConsumeTracker tracker = new();
+        TrackerAccessor accessor = new(tracker);
+
+        // Worker subscribes with MaxPartitions=0 → header sent as "0" → server creates with unlimited
+        ServiceCollection services = new();
+        services.AddSingleton(accessor);
+        HorseClientBuilder builder = new(services);
+        builder.AddHost($"horse://localhost:{ctx.Port}");
+        builder.SetClientType("unlimited-worker");
+        builder.AutoSubscribe(true);
+        builder.AddScopedConsumer<UnlimitedPartitionConsumer>("label-1", maxPartitions: 0, subscribersPerPartition: 1);
+
+        HorseClient worker = builder.Build();
+        await worker.ConnectAsync();
+        await Task.Delay(500);
+
+        // "UnlimitedQ" should be auto-created with MaxPartitionCount=0 (unlimited)
+        HorseQueue queue = ctx.Rider.Queue.Find("UnlimitedQ");
+        Assert.NotNull(queue);
+        Assert.True(queue.IsPartitioned);
+        Assert.Equal(0, queue.Options.Partition.MaxPartitionCount);
+
+        // Push 4 more labels (total 5 including label-1 from subscribe)
+        HorseClient producer = await CreateProducer(ctx.Port);
+        IHorseQueueBus bus = new HorseQueueBus(producer);
+        await bus.Push("UnlimitedQ", new UnlimitedPartitionModel { Data = "t2" }, partitionLabel: "label-2");
+        await bus.Push("UnlimitedQ", new UnlimitedPartitionModel { Data = "t3" }, partitionLabel: "label-3");
+        await bus.Push("UnlimitedQ", new UnlimitedPartitionModel { Data = "t4" }, partitionLabel: "label-4");
+        await bus.Push("UnlimitedQ", new UnlimitedPartitionModel { Data = "t5" }, partitionLabel: "label-5");
+        await Task.Delay(500);
+
+        // All 5 partitions should exist (no limit since MaxPartitionCount=0)
+        Assert.Equal(5, queue.PartitionManager.Partitions.Count());
+
+        producer.Disconnect();
+        worker.Disconnect();
+    }
+
+    /// <summary>
+    /// Server default MaxPartitionCount=3. Queue created via server API with MaxPartitionCount=0 (unlimited).
+    /// 4+ labels should all create partitions without limit.
+    /// </summary>
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task ServerAPI_MaxPartitionCount0_UnlimitedPartitions(string mode)
+    {
+        PartitionTestContext ctx = await PartitionTestServer.Create(mode, opts =>
+        {
+            opts.Type = QueueType.RoundRobin;
+            opts.Acknowledge = QueueAckDecision.JustRequest;
+            opts.AutoQueueCreation = true;
+        });
+        await using var _ = ctx;
+
+        // Create queue explicitly via server API with MaxPartitionCount=0 (unlimited)
+        await ctx.Rider.Queue.Create("Unlimited-Direct-Q", o =>
+        {
+            o.Type = QueueType.RoundRobin;
+            o.Acknowledge = QueueAckDecision.JustRequest;
+            o.Partition = new PartitionOptions
+            {
+                Enabled = true,
+                MaxPartitionCount = 0, // unlimited
+                SubscribersPerPartition = 1,
+                AutoAssignWorkers = true,
+                MaxPartitionsPerWorker = 10,
+                AutoDestroy = PartitionAutoDestroy.Disabled
+            };
+        });
+
+        HorseQueue queue = ctx.Rider.Queue.Find("Unlimited-Direct-Q");
+        Assert.NotNull(queue);
+
+        // Worker: subscribe to pool via raw API
+        HorseClient worker = new HorseClient();
+        worker.AutoAcknowledge = true;
+        int received = 0;
+        worker.MessageReceived += (_, _) => Interlocked.Increment(ref received);
+        await worker.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await worker.Queue.Subscribe("Unlimited-Direct-Q", true);
+        await Task.Delay(300);
+
+        HorseClient producer = await CreateProducer(ctx.Port);
+
+        // Push 5 different labels — all should succeed (no limit)
+        for (int i = 1; i <= 5; i++)
+        {
+            await producer.Queue.Push("Unlimited-Direct-Q",
+                System.Text.Encoding.UTF8.GetBytes($"msg-{i}"), false,
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"label-{i}") });
+        }
+
+        await WaitUntil(() => queue.PartitionManager.Partitions.Count() >= 5, 5_000);
+        Assert.Equal(5, queue.PartitionManager.Partitions.Count());
+
+        // All messages consumed
+        await WaitUntil(() => received >= 5, 5_000);
+        Assert.True(received >= 5, $"Expected ≥5, got {received}");
+
+        producer.Disconnect();
+        worker.Disconnect();
     }
 
     #endregion

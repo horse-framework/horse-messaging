@@ -152,7 +152,7 @@ internal class ServerMessageHandler : INetworkMessageHandler
             string partitionLimitHeader = message.FindHeader(HorseHeaders.PARTITION_LIMIT);
             string partitionSubscribersHeader = message.FindHeader(HorseHeaders.PARTITION_SUBSCRIBERS);
 
-            if (!string.IsNullOrEmpty(partitionLimitHeader) && int.TryParse(partitionLimitHeader, out int partitionLimit) && partitionLimit > 0)
+            if (!string.IsNullOrEmpty(partitionLimitHeader) && int.TryParse(partitionLimitHeader, out int partitionLimit) && partitionLimit >= 0)
             {
                 options.Partition ??= new PartitionOptions();
                 options.Partition.Enabled = true;

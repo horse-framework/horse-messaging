@@ -306,4 +306,127 @@ public class PartitionRouteTest
         HorseResult result = await producer.Queue.Push("noorp2-q", Encoding.UTF8.GetBytes("hello"), true);
         Assert.NotEqual(HorseResultCode.Ok, result.Code);
     }
+
+    // ── MaxPartitionCount enforcement for labeled partitions ─────────────────
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Push_LabeledPartitions_ExceedMaxPartitionCount_FourthLabelRejected(string mode)
+    {
+        // MaxPartitionCount=3, push 4 different labels → 4th should fail
+        var (ctx, queue) = await CreateServer(mode, "limit-q", maxPartitions: 3);
+        await using var _ = ctx;
+
+        HorseClient worker = new HorseClient();
+        HorseClient producer = new HorseClient();
+        worker.AutoAcknowledge = true;
+        await worker.ConnectAsync("horse://localhost:" + ctx.Port);
+        await producer.ConnectAsync("horse://localhost:" + ctx.Port);
+
+        // Subscribe to 3 labeled partitions (fills MaxPartitionCount)
+        await worker.Queue.Subscribe("limit-q", true,
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "l1") });
+        await Task.Delay(200);
+
+        // Push messages with labels l1, l2, l3 → create partitions via push
+        await producer.Queue.Push("limit-q", Encoding.UTF8.GetBytes("msg"), false,
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "l2") });
+        await producer.Queue.Push("limit-q", Encoding.UTF8.GetBytes("msg"), false,
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "l3") });
+
+        await Task.Delay(300);
+
+        // 3 partitions should exist
+        Assert.Equal(3, queue.PartitionManager.Partitions.Count());
+
+        // 4th label push should fail (MaxPartitionCount reached)
+        HorseResult result = await producer.Queue.Push("limit-q", Encoding.UTF8.GetBytes("msg"), true,
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "l4") });
+
+        Assert.NotEqual(HorseResultCode.Ok, result.Code);
+
+        // Still only 3 partitions
+        Assert.Equal(3, queue.PartitionManager.Partitions.Count());
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Push_LabeledPartitions_ExistingLabelStillWorksAtMax(string mode)
+    {
+        // MaxPartitionCount=2, push 2 different labels → push to existing label still works
+        var (ctx, queue) = await CreateServer(mode, "reuse-q", maxPartitions: 2);
+        await using var _ = ctx;
+
+        HorseClient worker = new HorseClient();
+        HorseClient producer = new HorseClient();
+        worker.AutoAcknowledge = true;
+        await worker.ConnectAsync("horse://localhost:" + ctx.Port);
+        await producer.ConnectAsync("horse://localhost:" + ctx.Port);
+
+        await worker.Queue.Subscribe("reuse-q", true,
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "a") });
+        await Task.Delay(200);
+
+        // Create 2nd partition via push
+        await producer.Queue.Push("reuse-q", Encoding.UTF8.GetBytes("msg"), false,
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "b") });
+        await Task.Delay(200);
+
+        Assert.Equal(2, queue.PartitionManager.Partitions.Count());
+
+        // Push to existing label "a" should still work (no new partition created)
+        int received = 0;
+        worker.MessageReceived += (_, _) => Interlocked.Increment(ref received);
+
+        await producer.Queue.Push("reuse-q", Encoding.UTF8.GetBytes("reuse"), false,
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "a") });
+
+        await Task.Delay(600);
+
+        Assert.Equal(1, received);
+        Assert.Equal(2, queue.PartitionManager.Partitions.Count());
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Subscribe_LabeledPartitions_ExceedMaxPartitionCount_FourthSubscribeRejected(string mode)
+    {
+        var (ctx, queue) = await CreateServer(mode, "sublimit-q", maxPartitions: 3);
+        await using var _ = ctx;
+
+        HorseClient c1 = new HorseClient();
+        HorseClient c2 = new HorseClient();
+        HorseClient c3 = new HorseClient();
+        HorseClient c4 = new HorseClient();
+        await c1.ConnectAsync("horse://localhost:" + ctx.Port);
+        await c2.ConnectAsync("horse://localhost:" + ctx.Port);
+        await c3.ConnectAsync("horse://localhost:" + ctx.Port);
+        await c4.ConnectAsync("horse://localhost:" + ctx.Port);
+
+        // Subscribe 3 different labels → fills MaxPartitionCount
+        HorseResult r1 = await c1.Queue.Subscribe("sublimit-q", true,
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "x1") });
+        HorseResult r2 = await c2.Queue.Subscribe("sublimit-q", true,
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "x2") });
+        HorseResult r3 = await c3.Queue.Subscribe("sublimit-q", true,
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "x3") });
+
+        Assert.Equal(HorseResultCode.Ok, r1.Code);
+        Assert.Equal(HorseResultCode.Ok, r2.Code);
+        Assert.Equal(HorseResultCode.Ok, r3.Code);
+
+        await Task.Delay(200);
+        Assert.Equal(3, queue.PartitionManager.Partitions.Count());
+
+        // 4th label subscribe → should be rejected (MaxPartitionCount reached)
+        HorseResult r4 = await c4.Queue.Subscribe("sublimit-q", true,
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "x4") });
+        Assert.Equal(HorseResultCode.LimitExceeded, r4.Code);
+
+        // Still only 3 partitions
+        Assert.Equal(3, queue.PartitionManager.Partitions.Count());
+    }
 }

@@ -54,9 +54,9 @@ public class QueueConsumerRegistrar
     /// attributes (or no partition). Use <see cref="string.Empty"/> for label-less
     /// partitioned subscribe (round-robin path).
     /// </param>
-    /// <param name="maxPartitions">Maximum partitions for auto-create. 0 = server default.</param>
-    /// <param name="subscribersPerPartition">Max subscribers per partition. 0 = server default.</param>
-    public void RegisterConsumer<TConsumer>(Func<IHandlerFactory> consumerFactoryBuilder, string partitionLabel, int maxPartitions = 0, int subscribersPerPartition = 0)
+    /// <param name="maxPartitions">Maximum partitions for auto-create. <c>null</c> = not set (server default), <c>0</c> = unlimited.</param>
+    /// <param name="subscribersPerPartition">Max subscribers per partition. <c>null</c> = not set (server default).</param>
+    public void RegisterConsumer<TConsumer>(Func<IHandlerFactory> consumerFactoryBuilder, string partitionLabel, int? maxPartitions = null, int? subscribersPerPartition = null)
     {
         RegisterConsumer(typeof(TConsumer), consumerFactoryBuilder, partitionLabel, maxPartitions, subscribersPerPartition);
     }
@@ -98,14 +98,14 @@ public class QueueConsumerRegistrar
     /// </summary>
     public void RegisterConsumer(Type consumerType, Func<IHandlerFactory> consumerFactoryBuilder = null)
     {
-        RegisterConsumer(consumerType, consumerFactoryBuilder, queueName: null, partitionLabel: null, 0, 0, overridePartition: false);
+        RegisterConsumer(consumerType, consumerFactoryBuilder, queueName: null, partitionLabel: null, null, null, overridePartition: false);
     }
 
     /// <summary>
     /// Registers a single consumer with explicit partition options that override any attributes on the type.
     /// </summary>
     public void RegisterConsumer(Type consumerType, Func<IHandlerFactory> consumerFactoryBuilder,
-        string partitionLabel, int maxPartitions = 0, int subscribersPerPartition = 0)
+        string partitionLabel, int? maxPartitions = null, int? subscribersPerPartition = null)
     {
         RegisterConsumer(consumerType, consumerFactoryBuilder, queueName: null, partitionLabel, maxPartitions, subscribersPerPartition, overridePartition: true);
     }
@@ -114,7 +114,7 @@ public class QueueConsumerRegistrar
     /// Registers a single consumer with an explicit queue name override and optional partition options.
     /// </summary>
     public void RegisterConsumer(Type consumerType, Func<IHandlerFactory> consumerFactoryBuilder,
-        string queueName, string partitionLabel, int maxPartitions = 0, int subscribersPerPartition = 0)
+        string queueName, string partitionLabel, int? maxPartitions = null, int? subscribersPerPartition = null)
     {
         RegisterConsumer(consumerType, consumerFactoryBuilder, queueName, partitionLabel, maxPartitions, subscribersPerPartition, overridePartition: partitionLabel != null);
     }
@@ -147,8 +147,8 @@ public class QueueConsumerRegistrar
                 registration.QueueName = queueNameTransform(registration.QueueName);
 
             registration.PartitionLabel = partitionLabel;
-            registration.MaxPartitions = 0;
-            registration.SubscribersPerPartition = 0;
+            registration.MaxPartitions = null;
+            registration.SubscribersPerPartition = null;
 
             lock (_operator.Registrations)
                 _operator.Registrations.Add(registration);
@@ -180,8 +180,8 @@ public class QueueConsumerRegistrar
             {
                 // Empty string = label-less partitioned subscribe (worker pool entry)
                 registration.PartitionLabel = string.Empty;
-                registration.MaxPartitions = 0;
-                registration.SubscribersPerPartition = 0;
+                registration.MaxPartitions = null;
+                registration.SubscribersPerPartition = null;
             }
 
             lock (_operator.Registrations)
@@ -190,7 +190,7 @@ public class QueueConsumerRegistrar
     }
 
     private void RegisterConsumer(Type consumerType, Func<IHandlerFactory> consumerFactoryBuilder,
-        string queueName, string partitionLabel, int maxPartitions, int subscribersPerPartition, bool overridePartition)
+        string queueName, string partitionLabel, int? maxPartitions, int? subscribersPerPartition, bool overridePartition)
     {
         List<ModelTypeInfo> types = FindModelTypes(consumerType);
 

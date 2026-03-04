@@ -160,8 +160,8 @@ internal class QueueTypeResolver : ITypeDescriptorResolver<QueueTypeDescriptor>
         if (partAttr != null)
         {
             descriptor.PartitionLabel = partAttr.Label ?? string.Empty;
-            descriptor.MaxPartitions = partAttr.MaxPartitions;
-            descriptor.SubscribersPerPartition = partAttr.SubscribersPerPartition;
+            descriptor.MaxPartitions = partAttr.MaxPartitions >= 0 ? partAttr.MaxPartitions : null;
+            descriptor.SubscribersPerPartition = partAttr.SubscribersPerPartition >= 0 ? partAttr.SubscribersPerPartition : null;
         }
     }
 }

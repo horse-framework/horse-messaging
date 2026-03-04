@@ -188,15 +188,28 @@ await client.Queue.SubscribePartitioned(
     maxPartitions:           10,
     subscribersPerPartition: 1);
 
+// Unlimited partitions (overrides server default)
+await client.Queue.SubscribePartitioned("FetchOrders", "tenant-42", true, maxPartitions: 0);
+
 // Label-less (round-robin distribution across partitions)
 await client.Queue.SubscribePartitioned("JobQueue", null, true, maxPartitions: 5);
+
+// Server default (maxPartitions not sent)
+await client.Queue.SubscribePartitioned("JobQueue", "label", true);
 ```
 
 **Attribute-based (auto-subscribe on connect):**
 ```csharp
+// Explicit limit: 10 partitions, 1 subscriber each
 [PartitionedQueue("tenant-42", MaxPartitions = 10, SubscribersPerPartition = 1)]
 public class FetchOrderConsumer : IQueueConsumer<FetchOrderEvent> { ... }
+
+// Unlimited partitions (override server default)
+[PartitionedQueue("tenant-42", MaxPartitions = 0)]
+public class UnlimitedConsumer : IQueueConsumer<FetchOrderEvent> { ... }
 ```
+
+> **Attribute defaults:** `MaxPartitions` and `SubscribersPerPartition` default to `-1` (not set — server default used). `0` = unlimited. `> 0` = explicit limit. The API parameters (`SubscribePartitioned`, builder overloads) use `int?` where `null` = not sent (server default).
 
 **Produce (unchanged — producer writes to the parent queue name):**
 ```csharp
@@ -208,7 +221,7 @@ await client.Queue.Push("FetchOrders", message, false,
     new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "tenant-42") });
 ```
 
-> Full details: [`docs/queue-partition-system-summary.md`](docs/queue-partition-system-summary.md)
+> Full details: [`docs/queues/partitioned-queues.md`](docs/queues/partitioned-queues.md)
 
 ---
 
