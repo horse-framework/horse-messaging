@@ -171,7 +171,7 @@ Queues can now be automatically split into physical sub-queues (partitions). Fro
 | **Auto-assign workers** | `AutoAssignWorkers = true` — label-less workers are pooled and assigned to labeled partitions on demand. `MaxPartitionsPerWorker` controls how many partitions a single worker serves simultaneously (0 = unlimited). |
 | **Per-partition AutoDestroy** | `NoConsumers` / `NoMessages` / `Empty` — only the affected partition is destroyed |
 | **Metrics** | Partition count, message count, consumer count per partition via `QueueInfo` |
-| **Events** | `IPartitionEventHandler.OnPartitionCreated/OnPartitionDestroyed` on server; `client.Event.SubscribeToQueuePartitionCreated` on client |
+| **Events** | `IPartitionEventHandler.OnPartitionCreated/OnPartitionDestroyed` on server |
 
 **Server-side setup:**
 ```csharp
