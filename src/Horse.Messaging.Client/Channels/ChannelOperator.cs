@@ -179,7 +179,10 @@ public class ChannelOperator
         message.Type = MessageType.Channel;
         message.SetMessageId(Client.UniqueIdGenerator.Create());
         message.ContentType = KnownContentTypes.ChannelList;
-        message.AddHeader(HorseHeaders.FILTER, filter);
+
+        if (!string.IsNullOrEmpty(filter))
+            message.AddHeader(HorseHeaders.FILTER, filter);
+
         return await Client.SendAndGet<List<ChannelInformation>>(message);
     }
 

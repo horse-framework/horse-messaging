@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -273,5 +274,106 @@ public class AcknowledgeTest
         producer.Disconnect();
         consumer.Disconnect();
     }
-}
 
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Ack_WaitForAck_Push_MultipleConsumers_NextMessageReleasedAfterFirstAck(string mode)
+    {
+        // Push + WaitForAcknowledge + multiple consumers:
+        // The message is sent to ALL consumers (fan-out).
+        // The queue uses a single TaskCompletionSource for the ack lock.
+        // The FIRST consumer ack releases the lock and the next message is dispatched.
+        // It does NOT wait for ALL consumers to ack.
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.AfterReceived;
+            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+            o.AcknowledgeTimeout = TimeSpan.FromSeconds(15);
+        });
+
+        await ctx.Rider.Queue.Create("ack-push-multi", o => o.Type = QueueType.Push);
+
+        var c1Messages = new List<string>();
+        var c2Messages = new List<string>();
+        HorseMessage c1Pending = null;
+        HorseMessage c2Pending = null;
+
+        // Consumer 1: holds ack for first message
+        HorseClient consumer1 = new HorseClient();
+        consumer1.ClientId = "c1";
+        await consumer1.ConnectAsync($"horse://localhost:{ctx.Port}");
+        consumer1.MessageReceived += (_, m) =>
+        {
+            string body = m.GetStringContent();
+            lock (c1Messages) c1Messages.Add(body);
+            if (body == "msg-0")
+                c1Pending = m; // hold ack
+            else
+                consumer1.SendAsync(m.CreateAcknowledge()).GetAwaiter().GetResult();
+        };
+        await consumer1.Queue.Subscribe("ack-push-multi", true);
+
+        // Consumer 2: holds ack for first message
+        HorseClient consumer2 = new HorseClient();
+        consumer2.ClientId = "c2";
+        await consumer2.ConnectAsync($"horse://localhost:{ctx.Port}");
+        consumer2.MessageReceived += (_, m) =>
+        {
+            string body = m.GetStringContent();
+            lock (c2Messages) c2Messages.Add(body);
+            if (body == "msg-0")
+                c2Pending = m; // hold ack
+            else
+                consumer2.SendAsync(m.CreateAcknowledge()).GetAwaiter().GetResult();
+        };
+        await consumer2.Queue.Subscribe("ack-push-multi", true);
+
+        HorseClient producer = new HorseClient();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+
+        // Push first message — delivered to both consumers (fan-out)
+        await producer.Queue.Push("ack-push-multi", new MemoryStream("msg-0"u8.ToArray()), false);
+
+        // Wait for both consumers to receive msg-0
+        for (int i = 0; i < 30 && (c1Messages.Count < 1 || c2Messages.Count < 1); i++)
+            await Task.Delay(100);
+
+        Assert.Contains("msg-0", c1Messages);
+        Assert.Contains("msg-0", c2Messages);
+
+        // Push second message
+        await producer.Queue.Push("ack-push-multi", new MemoryStream("msg-1"u8.ToArray()), false);
+
+        // Neither consumer has acked msg-0 → msg-1 should be blocked
+        await Task.Delay(500);
+        Assert.DoesNotContain("msg-1", c1Messages);
+        Assert.DoesNotContain("msg-1", c2Messages);
+
+        // Consumer 1 acks msg-0
+        Assert.NotNull(c1Pending);
+        await consumer1.SendAsync(c1Pending.CreateAcknowledge());
+
+        // After one consumer acks, the next message should be dispatched.
+        // The server uses a single TaskCompletionSource — the first ack releases the lock.
+        await Task.Delay(500);
+        bool msg1DeliveredAfterOneAck = c1Messages.Contains("msg-1") || c2Messages.Contains("msg-1");
+        Assert.True(msg1DeliveredAfterOneAck, "Next message should be dispatched after the first consumer acks");
+
+        // Consumer 2 acks msg-0
+        Assert.NotNull(c2Pending);
+        await consumer2.SendAsync(c2Pending.CreateAcknowledge());
+
+        // Wait for msg-1 to be delivered to both
+        for (int i = 0; i < 50 && (!c1Messages.Contains("msg-1") || !c2Messages.Contains("msg-1")); i++)
+            await Task.Delay(100);
+
+        // Both consumers should have received both messages
+        Assert.Contains("msg-1", c1Messages);
+        Assert.Contains("msg-1", c2Messages);
+
+        producer.Disconnect();
+        consumer1.Disconnect();
+        consumer2.Disconnect();
+    }
+}

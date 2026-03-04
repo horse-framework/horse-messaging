@@ -343,10 +343,14 @@ public class HorseMessage : IDisposable
     #region Header
 
     /// <summary>
-    /// Adds new header key value pair
+    /// Adds new header key value pair.
+    /// If key or value is null, the header is silently skipped.
     /// </summary>
     public void AddHeader(string key, string value)
     {
+        if (key == null || value == null)
+            return;
+
         if (!HasHeader)
             HasHeader = true;
 
