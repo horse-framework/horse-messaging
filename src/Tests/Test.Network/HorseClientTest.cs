@@ -229,7 +229,7 @@ public class HorseClientTest
         HorseMessage msg = new HorseMessage(MessageType.DirectMessage, "target");
         msg.SetStringContent("test");
 
-        HorseResult result = await client.SendAsync(msg);
+        HorseResult result = await client.SendAsync(msg, CancellationToken.None);
 
         Assert.Equal(HorseResultCode.SendError, result.Code);
     }
@@ -308,7 +308,7 @@ public class HorseClientTest
             HorseMessage msg = new HorseMessage(MessageType.DirectMessage, receiver.ClientId);
             msg.SetStringContent("ack test");
 
-            HorseResult result = await sender.SendAndGetAck(msg);
+            HorseResult result = await sender.SendAsync(msg, true, CancellationToken.None);
 
             // Should succeed because receiver has AutoAcknowledge on
             Assert.Equal(HorseResultCode.Ok, result.Code);

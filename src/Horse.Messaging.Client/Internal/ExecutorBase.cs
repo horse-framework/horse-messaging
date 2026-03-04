@@ -69,7 +69,7 @@ public abstract class ExecutorBase
     /// <summary>
     /// Sends negative ack
     /// </summary>
-    protected Task SendNegativeAck(HorseMessage message, HorseClient client, Exception exception)
+    protected Task SendNegativeAck(HorseMessage message, HorseClient client, Exception exception, CancellationToken cancellationToken)
     {
         string reason = NegativeReason switch
         {
@@ -79,7 +79,7 @@ public abstract class ExecutorBase
             _                               => HorseHeaders.NACK_REASON_NONE
         };
 
-        return client.SendNegativeAck(message, reason);
+        return client.SendNegativeAck(message, reason, cancellationToken);
     }
 
     /// <summary>

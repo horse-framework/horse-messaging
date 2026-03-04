@@ -76,7 +76,7 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
                 throw new NullReferenceException("There is no consumer defined");
 
             if (SendPositiveResponse)
-                await client.SendAck(message);
+                await client.SendAck(message, cancellationToken);
         }
         catch (Exception e)
         {
@@ -87,15 +87,15 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
                 clone.Type = MessageType.QueueMessage;
                 clone.SetTarget(_moveOnError.QueueName);
 
-                var ack = await client.SendAndGetAck(clone);
+                var ack = await client.SendAsync(clone, true, cancellationToken);
 
                 if (ack.Code == HorseResultCode.Ok)
-                    await client.SendAck(message);
+                    await client.SendAck(message, cancellationToken);
                 else if (SendNegativeResponse)
-                    await SendNegativeAck(message, client, e);
+                    await SendNegativeAck(message, client, e, cancellationToken);
             }
             else if (SendNegativeResponse)
-                await SendNegativeAck(message, client, e);
+                await SendNegativeAck(message, client, e, cancellationToken);
 
             await SendExceptions(message, client, e);
         }

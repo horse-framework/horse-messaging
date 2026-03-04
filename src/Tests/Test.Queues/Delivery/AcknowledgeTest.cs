@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -129,7 +130,7 @@ public class AcknowledgeTest
         // Send acknowledge for first message
         Assert.NotNull(lastReceived);
         HorseMessage ack = lastReceived.CreateAcknowledge();
-        await consumer.SendAsync(ack);
+        await consumer.SendAsync(ack, CancellationToken.None);
 
         // Now second message should arrive
         for (int i = 0; i < 30 && receivedCount < 2; i++)
@@ -203,7 +204,7 @@ public class AcknowledgeTest
             receivedCount++;
             // Send negative ack
             HorseMessage nack = m.CreateAcknowledge("rejected");
-            consumer.SendAsync(nack).GetAwaiter().GetResult();
+            consumer.SendAsync(nack, CancellationToken.None).GetAwaiter().GetResult();
         };
 
         HorseClient producer = new HorseClient();
@@ -246,12 +247,12 @@ public class AcknowledgeTest
                 Task.Run(async () =>
                 {
                     await Task.Delay(500);
-                    await consumer.SendAsync(m.CreateAcknowledge());
+                    await consumer.SendAsync(m.CreateAcknowledge(), CancellationToken.None);
                 });
             }
             else
             {
-                consumer.SendAsync(m.CreateAcknowledge()).GetAwaiter().GetResult();
+                consumer.SendAsync(m.CreateAcknowledge(), CancellationToken.None).GetAwaiter().GetResult();
             }
         };
         await consumer.Queue.Subscribe("ack-block-push", true);
@@ -310,7 +311,7 @@ public class AcknowledgeTest
             if (body == "msg-0")
                 c1Pending = m; // hold ack
             else
-                consumer1.SendAsync(m.CreateAcknowledge()).GetAwaiter().GetResult();
+                consumer1.SendAsync(m.CreateAcknowledge(), CancellationToken.None).GetAwaiter().GetResult();
         };
         await consumer1.Queue.Subscribe("ack-push-multi", true);
 
@@ -325,7 +326,7 @@ public class AcknowledgeTest
             if (body == "msg-0")
                 c2Pending = m; // hold ack
             else
-                consumer2.SendAsync(m.CreateAcknowledge()).GetAwaiter().GetResult();
+                consumer2.SendAsync(m.CreateAcknowledge(), CancellationToken.None).GetAwaiter().GetResult();
         };
         await consumer2.Queue.Subscribe("ack-push-multi", true);
 
@@ -352,7 +353,7 @@ public class AcknowledgeTest
 
         // Consumer 1 acks msg-0
         Assert.NotNull(c1Pending);
-        await consumer1.SendAsync(c1Pending.CreateAcknowledge());
+        await consumer1.SendAsync(c1Pending.CreateAcknowledge(), CancellationToken.None);
 
         // After one consumer acks, the next message should be dispatched.
         // The server uses a single TaskCompletionSource — the first ack releases the lock.
@@ -362,7 +363,7 @@ public class AcknowledgeTest
 
         // Consumer 2 acks msg-0
         Assert.NotNull(c2Pending);
-        await consumer2.SendAsync(c2Pending.CreateAcknowledge());
+        await consumer2.SendAsync(c2Pending.CreateAcknowledge(), CancellationToken.None);
 
         // Wait for msg-1 to be delivered to both
         for (int i = 0; i < 50 && (!c1Messages.Contains("msg-1") || !c2Messages.Contains("msg-1")); i++)

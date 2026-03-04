@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -252,14 +253,14 @@ public class PushDeliveryTest
         {
             HorseMessage msg = new HorseMessage(MessageType.QueueMessage, "push-pri");
             msg.SetStringContent($"regular-{i}");
-            await producer.SendAsync(msg);
+            await producer.SendAsync(msg, CancellationToken.None);
         }
 
         // High priority message
         HorseMessage hiMsg = new HorseMessage(MessageType.QueueMessage, "push-pri");
         hiMsg.HighPriority = true;
         hiMsg.SetStringContent("priority-first");
-        await producer.SendAsync(hiMsg);
+        await producer.SendAsync(hiMsg, CancellationToken.None);
 
         await Task.Delay(500);
 

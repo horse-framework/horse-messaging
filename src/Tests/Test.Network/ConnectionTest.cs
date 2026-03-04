@@ -241,7 +241,7 @@ public class ConnectionTest
             HorseMessage msg = new HorseMessage(MessageType.DirectMessage, receiver.ClientId);
             msg.SetStringContent("hello from sender");
 
-            HorseResult result = await sender.SendAsync(msg);
+            HorseResult result = await sender.SendAsync(msg, CancellationToken.None);
 
             await Task.Delay(2000);
 
@@ -275,7 +275,7 @@ public class ConnectionTest
             msg.SetStringContent("hello");
             msg.WaitResponse = true;
 
-            HorseResult result = await client.SendAsync(msg);
+            HorseResult result = await client.SendAsync(msg, CancellationToken.None);
 
             // Message sent successfully to server (no delivery guarantee without ack)
             Assert.NotNull(result);

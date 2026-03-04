@@ -373,12 +373,12 @@ public class RedeliveryTest
                 if (count <= 2)
                 {
                     // NACK first 2 deliveries → put-back
-                    await client.SendNegativeAck(msg);
+                    await client.SendNegativeAck(msg, CancellationToken.None);
                 }
                 else
                 {
                     // ACK on 3rd delivery
-                    await client.SendAck(msg);
+                    await client.SendAck(msg, CancellationToken.None);
                 }
             };
             await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
@@ -488,9 +488,9 @@ public class RedeliveryTest
             {
                 int count = Interlocked.Increment(ref consumeCount);
                 if (count == 1)
-                    await client.SendNegativeAck(msg); // NACK → put-back → redeliver
+                    await client.SendNegativeAck(msg, CancellationToken.None); // NACK → put-back → redeliver
                 else
-                    await client.SendAck(msg); // ACK → remove from redelivery
+                    await client.SendAck(msg, CancellationToken.None); // ACK → remove from redelivery
             };
             await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
             await consumer.Queue.Subscribe("redeliver-q", true);
@@ -555,12 +555,12 @@ public class RedeliveryTest
 
                 if (shouldAck)
                 {
-                    await client.SendAck(msg);
+                    await client.SendAck(msg, CancellationToken.None);
                     Interlocked.Increment(ref totalConsumed);
                 }
                 else
                 {
-                    await client.SendNegativeAck(msg);
+                    await client.SendNegativeAck(msg, CancellationToken.None);
                 }
             };
             await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");

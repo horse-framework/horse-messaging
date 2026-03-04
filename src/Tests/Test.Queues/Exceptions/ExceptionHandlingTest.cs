@@ -416,7 +416,7 @@ public class ExceptionHandlingTest
     /// the CLONE (with error queue target and ExceptionDescription) is sent
     /// to "error-q" — not the original message.
     ///
-    /// Previous bug: Line 90 was `client.SendAndGetAck(message)` instead of `client.SendAndGetAck(clone)`.
+    /// Previous bug: Line 90 was `client.SendAsync(message, true, CancellationToken.None)` instead of `client.SendAsync(clone, true, CancellationToken.None)`.
     /// Now fixed: clone is sent to the error queue with the exception metadata.
     /// </summary>
     [Theory]

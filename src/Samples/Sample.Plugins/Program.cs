@@ -36,7 +36,7 @@ while (true)
 
     HorseMessage msg = new HorseMessage(MessageType.Plugin, pluginName);
     msg.SetStringContent("This is a sample plugin request message");
-    HorseResult result = await client.SendAndGetAck(msg);
+    HorseResult result = await client.SendAsync(msg, true, CancellationToken.None);
     Console.WriteLine($"Result code is {result.Code}");
     if (result.Message != null)
         Console.WriteLine($"Response message is: {result.Message.GetStringContent()}");

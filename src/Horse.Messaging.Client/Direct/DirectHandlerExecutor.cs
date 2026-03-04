@@ -71,12 +71,12 @@ internal class DirectHandlerExecutor<TModel> : ExecutorBase
                 throw new InvalidOperationException("There is no handler defined");
 
             if (SendPositiveResponse)
-                await client.SendAck(message);
+                await client.SendAck(message, cancellationToken);
         }
         catch (Exception e)
         {
             if (SendNegativeResponse)
-                await SendNegativeAck(message, client, e);
+                await SendNegativeAck(message, client, e, cancellationToken);
 
             await SendExceptions(message, client, e);
         }

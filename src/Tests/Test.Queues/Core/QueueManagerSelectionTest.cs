@@ -114,7 +114,7 @@ public class QueueManagerSelectionTest
         try
         {
             var client = await ConnectClient(port);
-            var result = await client.Queue.Create("q-default", o => o.Type = MessagingQueueType.Push);
+            var result = await client.Queue.Create("q-default", o => o.Type = MessagingQueueType.Push, null, null, CancellationToken.None);
             Assert.Equal(HorseResultCode.Ok, result.Code);
 
             HorseQueue queue = rider.Queue.Find("q-default");
@@ -136,7 +136,7 @@ public class QueueManagerSelectionTest
         try
         {
             var client = await ConnectClient(port);
-            var result = await client.Queue.Create("q-mem", o => o.Type = MessagingQueueType.Push, queueManagerName: "Memory");
+            var result = await client.Queue.Create("q-mem", o => o.Type = MessagingQueueType.Push, "Memory", null, CancellationToken.None);
             Assert.Equal(HorseResultCode.Ok, result.Code);
 
             HorseQueue queue = rider.Queue.Find("q-mem");
@@ -158,7 +158,7 @@ public class QueueManagerSelectionTest
         try
         {
             var client = await ConnectClient(port);
-            var result = await client.Queue.Create("q-persist", o => o.Type = MessagingQueueType.Push, queueManagerName: "Persistent");
+            var result = await client.Queue.Create("q-persist", o => o.Type = MessagingQueueType.Push, "Persistent", null, CancellationToken.None);
             Assert.Equal(HorseResultCode.Ok, result.Code);
 
             HorseQueue queue = rider.Queue.Find("q-persist");
@@ -241,8 +241,8 @@ public class QueueManagerSelectionTest
         {
             var client = await ConnectClient(port);
 
-            await client.Queue.Create("q-fast", o => o.Type = MessagingQueueType.Push, queueManagerName: "Memory");
-            await client.Queue.Create("q-durable", o => o.Type = MessagingQueueType.Push, queueManagerName: "Persistent");
+            await client.Queue.Create("q-fast", o => o.Type = MessagingQueueType.Push, "Memory", null, CancellationToken.None);
+            await client.Queue.Create("q-durable", o => o.Type = MessagingQueueType.Push, "Persistent", null, CancellationToken.None);
 
             HorseQueue fast = rider.Queue.Find("q-fast");
             HorseQueue durable = rider.Queue.Find("q-durable");
@@ -293,7 +293,7 @@ public class QueueManagerSelectionTest
             var client = await ConnectClient(port);
 
             // Create queue with Memory manager
-            await client.Queue.Create("q-fixed", o => o.Type = MessagingQueueType.Push, queueManagerName: "Memory");
+            await client.Queue.Create("q-fixed", o => o.Type = MessagingQueueType.Push, "Memory", null, CancellationToken.None);
 
             HorseQueue queue = rider.Queue.Find("q-fixed");
             Assert.IsType<MemoryQueueManager>(queue.Manager);

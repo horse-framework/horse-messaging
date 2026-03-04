@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -76,7 +77,7 @@ public class PartitionUnsubscribeTest
         HorseMessage msg = new HorseMessage(MessageType.QueueMessage, "unsub-q");
         msg.SetStringContent("for-remaining");
         msg.AddHeader(HorseHeaders.PARTITION_LABEL, "w1");
-        await producer.SendAsync(msg);
+        await producer.SendAsync(msg, CancellationToken.None);
 
         for (int i = 0; i < 30 && received == 0; i++)
             await Task.Delay(100);
@@ -111,7 +112,7 @@ public class PartitionUnsubscribeTest
         HorseMessage msg = new HorseMessage(MessageType.QueueMessage, "unsub-q");
         msg.SetStringContent("buffered");
         msg.AddHeader(HorseHeaders.PARTITION_LABEL, "w2");
-        await producer.SendAsync(msg);
+        await producer.SendAsync(msg, CancellationToken.None);
         await Task.Delay(500);
 
         PartitionEntry entry = queue.PartitionManager.Partitions.FirstOrDefault(p => p.Label == "w2");

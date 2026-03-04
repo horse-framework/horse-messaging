@@ -1,7 +1,8 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using EnumsNET;
 using Horse.Core;
@@ -588,7 +589,7 @@ public class NodeClient
     {
         if (_outgoingClient != null && _outgoingClient.IsConnected)
         {
-            HorseResult result = await _outgoingClient.SendAsync(message);
+            HorseResult result = await _outgoingClient.SendAsync(message, CancellationToken.None);
             return result.Code == HorseResultCode.Ok;
         }
 

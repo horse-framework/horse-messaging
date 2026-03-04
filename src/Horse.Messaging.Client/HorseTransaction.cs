@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 
@@ -89,10 +90,10 @@ public class HorseTransaction : IDisposable
     /// </summary>
     /// <param name="client">Transaction client</param>
     /// <param name="name">Transaction name</param>
-    public static async Task<HorseTransaction> Begin(HorseClient client, string name)
+    public static async Task<HorseTransaction> Begin(HorseClient client, string name, CancellationToken cancellationToken)
     {
         HorseTransaction transaction = new HorseTransaction(client, name);
-        await transaction.Begin();
+        await transaction.Begin(cancellationToken);
 
         return transaction;
     }
@@ -104,7 +105,7 @@ public class HorseTransaction : IDisposable
     public void Dispose()
     {
         if (Status == TransactionStatus.Begin)
-            Rollback().GetAwaiter().GetResult();
+            Rollback(Client.ConsumeToken).GetAwaiter().GetResult();
     }
 
     /// <summary>
@@ -122,9 +123,9 @@ public class HorseTransaction : IDisposable
     /// <exception cref="InvalidOperationException">Thrown if transaction already began, committed or rolled back</exception>
     /// <exception cref="KeyNotFoundException">Thrown when the transaction name is not defined on server</exception>
     /// <exception cref="Exception">Thrown when begin operation is failed</exception>
-    public Task Begin()
+    public Task Begin(CancellationToken cancellationToken)
     {
-        return Begin<object>(null);
+        return Begin<object>(null, cancellationToken);
     }
 
     /// <summary>
@@ -135,7 +136,7 @@ public class HorseTransaction : IDisposable
     /// <exception cref="InvalidOperationException">Thrown if transaction already began, committed or rolled back</exception>
     /// <exception cref="KeyNotFoundException">Thrown when the transaction name is not defined on server</exception>
     /// <exception cref="Exception">Thrown when begin operation is failed</exception>
-    public async Task Begin<TModel>(TModel model)
+    public async Task Begin<TModel>(TModel model, CancellationToken cancellationToken)
     {
         if (Status != TransactionStatus.None)
             throw new InvalidOperationException($"{Name} Transaction already began ({Id})");
@@ -148,7 +149,7 @@ public class HorseTransaction : IDisposable
         else if (_transactionContent != null)
             message.Content = _transactionContent;
 
-        HorseMessage response = await Client.Request(message);
+        HorseMessage response = await Client.Request(message, cancellationToken);
         HorseResultCode code = (HorseResultCode) response.ContentType;
 
         if (code == HorseResultCode.Ok)
@@ -168,7 +169,7 @@ public class HorseTransaction : IDisposable
     /// Commits a transaction.
     /// Successful result returns true
     /// </summary>
-    public async Task<bool> Commit()
+    public async Task<bool> Commit(CancellationToken cancellationToken)
     {
         if (Status != TransactionStatus.Begin)
             throw new InvalidOperationException($"{Name} Transaction in {Status} status cannot be commited ({Id})");
@@ -176,7 +177,7 @@ public class HorseTransaction : IDisposable
         HorseMessage message = new(MessageType.Transaction, Name, KnownContentTypes.TransactionCommit);
         message.SetMessageId(Id);
 
-        HorseMessage response = await Client.Request(message);
+        HorseMessage response = await Client.Request(message, cancellationToken);
         HorseResultCode code = (HorseResultCode) response.ContentType;
 
         bool success = code == HorseResultCode.Ok;
@@ -190,7 +191,7 @@ public class HorseTransaction : IDisposable
     /// Rollbacks a transaction.
     /// Successful result returns true
     /// </summary>
-    public async Task<bool> Rollback()
+    public async Task<bool> Rollback(CancellationToken cancellationToken)
     {
         if (Status != TransactionStatus.Begin)
             throw new InvalidOperationException($"{Name} Transaction in {Status} status cannot be rolled back ({Id})");
@@ -198,7 +199,7 @@ public class HorseTransaction : IDisposable
         HorseMessage message = new HorseMessage(MessageType.Transaction, Name, KnownContentTypes.TransactionRollback);
         message.SetMessageId(Id);
 
-        HorseMessage response = await Client.Request(message);
+        HorseMessage response = await Client.Request(message, cancellationToken);
         HorseResultCode code = (HorseResultCode) response.ContentType;
 
         bool success = code == HorseResultCode.Ok;

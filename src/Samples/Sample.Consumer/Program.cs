@@ -1,3 +1,4 @@
+using System.Threading;
 ﻿using System;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
@@ -51,7 +52,7 @@ class Program
                 ClearAfter = ClearDecision.None,
                 GetQueueMessageCounts = false,
                 Order = MessageOrder.Default
-            }, async (i, message) => { await client.SendAck(message); });
+            }, async (i, message) => { await client.SendAck(message, CancellationToken.None); });
 
             Console.WriteLine($"pull response is {response.Status} and received {response.ReceivedCount} messages.");
         }

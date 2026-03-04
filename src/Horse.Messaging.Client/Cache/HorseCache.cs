@@ -32,7 +32,7 @@ internal class HorseCache : IHorseCache
     public async Task<HorseCacheData<string>> GetString(string key, CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.GetCache);
-        HorseResult result = await _client.SendAndGetAck(message, cancellationToken: cancellationToken);
+        HorseResult result = await _client.SendAsync(message, true, cancellationToken);
 
         if (result == null || result.Code != HorseResultCode.Ok)
             return null;
@@ -57,7 +57,7 @@ internal class HorseCache : IHorseCache
         if (duration > TimeSpan.Zero)
             message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
 
-        HorseResult result = await _client.SendAndGetAck(message, cancellationToken: cancellationToken);
+        HorseResult result = await _client.SendAsync(message, true, cancellationToken);
 
         if (result == null || result.Code != HorseResultCode.Ok)
             return null;
@@ -81,7 +81,7 @@ internal class HorseCache : IHorseCache
     public async Task<HorseCacheData<byte[]>> GetData(string key, CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.GetCache);
-        HorseResult result = await _client.SendAndGetAck(message, cancellationToken: cancellationToken);
+        HorseResult result = await _client.SendAsync(message, true, cancellationToken);
 
         if (result == null || result.Code != HorseResultCode.Ok)
             return null;
@@ -95,7 +95,7 @@ internal class HorseCache : IHorseCache
     public async Task<HorseCacheData<TData>> Get<TData>(string key, CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.GetCache);
-        HorseModelResult<TData> result = await _client.SendAndGet<TData>(message);
+        HorseModelResult<TData> result = await _client.SendAsync<TData>(message, cancellationToken);
 
         if (result == null)
             return default;
@@ -138,7 +138,7 @@ internal class HorseCache : IHorseCache
         if (!string.IsNullOrEmpty(filter))
             message.AddHeader(HorseHeaders.FILTER, filter);
         
-        return await _client.SendAndGet<List<CacheInformation>>(message);
+        return await _client.SendAsync<List<CacheInformation>>(message, cancellationToken);
     }
 
     #endregion
@@ -157,7 +157,7 @@ internal class HorseCache : IHorseCache
         if (tags != null && tags.Length > 0)
             message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
 
-        return _client.SendAndGetAck(message, cancellationToken: cancellationToken);
+        return _client.SendAsync(message, true, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -173,7 +173,7 @@ internal class HorseCache : IHorseCache
         if (tags != null && tags.Length > 0)
             message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
 
-        return _client.SendAndGetAck(message, cancellationToken: cancellationToken);
+        return _client.SendAsync(message, true, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -190,7 +190,7 @@ internal class HorseCache : IHorseCache
         if (tags != null && tags.Length > 0)
             message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
 
-        return _client.SendAndGetAck(message, cancellationToken: cancellationToken);
+        return _client.SendAsync(message, true, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -205,7 +205,7 @@ internal class HorseCache : IHorseCache
         if (tags != null && tags.Length > 0)
             message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
 
-        return _client.SendAndGetAck(message, cancellationToken: cancellationToken);
+        return _client.SendAsync(message, true, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -221,7 +221,7 @@ internal class HorseCache : IHorseCache
         if (tags != null && tags.Length > 0)
             message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
 
-        return _client.SendAndGetAck(message, cancellationToken: cancellationToken);
+        return _client.SendAsync(message, true, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -238,7 +238,7 @@ internal class HorseCache : IHorseCache
         if (tags != null && tags.Length > 0)
             message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
 
-        return _client.SendAndGetAck(message, cancellationToken: cancellationToken);
+        return _client.SendAsync(message, true, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -254,7 +254,7 @@ internal class HorseCache : IHorseCache
 
         message.Content = new MemoryStream(data);
         message.CalculateLengths();
-        return _client.SendAndGetAck(message, cancellationToken: cancellationToken);
+        return _client.SendAsync(message, true, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -271,7 +271,7 @@ internal class HorseCache : IHorseCache
 
         message.Content = new MemoryStream(data);
         message.CalculateLengths();
-        return _client.SendAndGetAck(message, cancellationToken: cancellationToken);
+        return _client.SendAsync(message, true, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -289,7 +289,7 @@ internal class HorseCache : IHorseCache
 
         message.Content = new MemoryStream(data);
         message.CalculateLengths();
-        return _client.SendAndGetAck(message, cancellationToken: cancellationToken);
+        return _client.SendAsync(message, true, cancellationToken);
     }
 
     #endregion
@@ -300,14 +300,14 @@ internal class HorseCache : IHorseCache
     public Task<HorseResult> Remove(string key, CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.RemoveCache);
-        return _client.SendAndGetAck(message, cancellationToken: cancellationToken);
+        return _client.SendAsync(message, true, cancellationToken);
     }
 
     /// <inheritdoc />
     public Task<HorseResult> Purge(CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, null, KnownContentTypes.PurgeCache);
-        return _client.SendAndGetAck(message, cancellationToken: cancellationToken);
+        return _client.SendAsync(message, true, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -315,7 +315,7 @@ internal class HorseCache : IHorseCache
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, null, KnownContentTypes.PurgeCache);
         message.SetOrAddHeader(HorseHeaders.TAG, tag);
-        return _client.SendAndGetAck(message, cancellationToken: cancellationToken);
+        return _client.SendAsync(message, true, cancellationToken);
     }
 
     #endregion

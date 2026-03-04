@@ -64,9 +64,9 @@ public class DirectOperator
                 message.AddHeader(pair.Key, pair.Value);
 
         if (waitAcknowledge)
-            return await _client.SendAndGetAck(message, cancellationToken: cancellationToken);
+            return await _client.SendAsync(message, true, cancellationToken);
 
-        return await _client.SendAsync(message);
+        return await _client.SendAsync(message, cancellationToken);
     }
 
     /// <summary>
@@ -107,9 +107,9 @@ public class DirectOperator
                 message.AddHeader(pair.Key, pair.Value);
 
         if (waitAcknowledge)
-            return await _client.SendAndGetAck(message, cancellationToken: cancellationToken);
+            return await _client.SendAsync(message, true, cancellationToken);
 
-        return await _client.SendAsync(message);
+        return await _client.SendAsync(message, cancellationToken);
     }
 
     /// <summary>
@@ -133,9 +133,9 @@ public class DirectOperator
                 message.AddHeader(pair.Key, pair.Value);
 
         if (waitAcknowledge)
-            return await _client.SendAndGetAck(message, cancellationToken: cancellationToken);
+            return await _client.SendAsync(message, true, cancellationToken);
 
-        return await _client.SendAsync(message);
+        return await _client.SendAsync(message, cancellationToken);
     }
 
     /// <summary>
@@ -173,9 +173,9 @@ public class DirectOperator
                 message.AddHeader(pair.Key, pair.Value);
 
         if (waitAcknowledge)
-            return await _client.SendAndGetAck(message, cancellationToken: cancellationToken);
+            return await _client.SendAsync(message, true, cancellationToken);
 
-        return await _client.SendAsync(message);
+        return await _client.SendAsync(message, cancellationToken);
     }
 
     #endregion

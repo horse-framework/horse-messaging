@@ -31,7 +31,7 @@ public class RouterOperator
     /// Creates new router.
     /// Returns success result if router already exists.
     /// </summary>
-    public async Task<HorseResult> Create(string name, RouteMethod method)
+    public async Task<HorseResult> Create(string name, RouteMethod method, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Server;
@@ -40,25 +40,25 @@ public class RouterOperator
         message.WaitResponse = true;
         message.AddHeader(HorseHeaders.ROUTE_METHOD, Convert.ToInt32(method).ToString());
         message.SetMessageId(_client.UniqueIdGenerator.Create());
-        return await _client.WaitResponse(message, true);
+        return await _client.WaitResponse(message, true, cancellationToken);
     }
 
     /// <summary>
     /// Gets information of all routers in server
     /// </summary>
-    public async Task<HorseModelResult<List<RouterInformation>>> List()
+    public async Task<HorseModelResult<List<RouterInformation>>> List(CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Server;
         message.ContentType = KnownContentTypes.ListRouters;
-        return await _client.SendAndGet<List<RouterInformation>>(message);
+        return await _client.SendAsync<List<RouterInformation>>(message, cancellationToken);
     }
 
     /// <summary>
     /// Removes a router.
     /// Returns success result if router doesn't exists.
     /// </summary>
-    public async Task<HorseResult> Remove(string name)
+    public async Task<HorseResult> Remove(string name, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Server;
@@ -66,7 +66,7 @@ public class RouterOperator
         message.SetTarget(name);
         message.WaitResponse = true;
         message.SetMessageId(_client.UniqueIdGenerator.Create());
-        return await _client.WaitResponse(message, true);
+        return await _client.WaitResponse(message, true, cancellationToken);
     }
 
     /// <summary>
@@ -86,9 +86,10 @@ public class RouterOperator
         string name,
         string target,
         BindingInteraction interaction,
-        RouteMethod bindingMethod = RouteMethod.Distribute,
-        ushort? contentType = null,
-        int priority = 1)
+        RouteMethod bindingMethod,
+        ushort? contentType,
+        int priority,
+        CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Server;
@@ -107,25 +108,25 @@ public class RouterOperator
             Method = bindingMethod
         };
         message.Serialize(info, _client.MessageSerializer);
-        return await _client.WaitResponse(message, true);
+        return await _client.WaitResponse(message, true, cancellationToken);
     }
 
     /// <summary>
     /// Gets all bindings of a router
     /// </summary>
-    public async Task<HorseModelResult<List<BindingInformation>>> GetBindings(string routerName)
+    public async Task<HorseModelResult<List<BindingInformation>>> GetBindings(string routerName, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Server;
         message.ContentType = KnownContentTypes.ListBindings;
         message.SetTarget(routerName);
-        return await _client.SendAndGet<List<BindingInformation>>(message);
+        return await _client.SendAsync<List<BindingInformation>>(message, cancellationToken);
     }
 
     /// <summary>
     /// Remove a binding from a router
     /// </summary>
-    public async Task<HorseResult> RemoveBinding(string routerName, string bindingName)
+    public async Task<HorseResult> RemoveBinding(string routerName, string bindingName, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Server;
@@ -134,7 +135,7 @@ public class RouterOperator
         message.WaitResponse = true;
         message.SetMessageId(_client.UniqueIdGenerator.Create());
         message.AddHeader(HorseHeaders.BINDING_NAME, bindingName);
-        return await _client.WaitResponse(message, true);
+        return await _client.WaitResponse(message, true, cancellationToken);
     }
 
     #endregion

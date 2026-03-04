@@ -117,7 +117,7 @@ public class CombinedTest
         consumer.MessageReceived += async (client, msg) =>
         {
             Interlocked.Increment(ref received);
-            await client.SendAck(msg);
+            await client.SendAck(msg, CancellationToken.None);
         };
         await consumer.Queue.Subscribe("q", true);
 
@@ -153,7 +153,7 @@ public class CombinedTest
             if (body == "msg-0")
                 pendingAckMsg = msg; // hold ack for first message
             else
-                client.SendAck(msg);
+                client.SendAck(msg, CancellationToken.None);
         };
         await consumer.Queue.Subscribe("q", true);
 
@@ -171,7 +171,7 @@ public class CombinedTest
         Assert.Equal(1, receivedMessages.Count);
 
         // Now ack first message
-        await consumer.SendAck(pendingAckMsg);
+        await consumer.SendAck(pendingAckMsg, CancellationToken.None);
         await WaitUntil(() => receivedMessages.Count >= 2);
 
         Assert.Equal(2, receivedMessages.Count);
@@ -320,7 +320,7 @@ public class CombinedTest
         consumer.MessageReceived += async (client, msg) =>
         {
             await Task.Delay(200); // simulate work
-            await client.SendAck(msg);
+            await client.SendAck(msg, CancellationToken.None);
         };
         await consumer.Queue.Subscribe("q", true);
 
@@ -351,7 +351,7 @@ public class CombinedTest
         consumer.MessageReceived += async (client, msg) =>
         {
             await Task.Delay(300);
-            await client.SendAck(msg);
+            await client.SendAck(msg, CancellationToken.None);
             ackSent = true;
         };
         await consumer.Queue.Subscribe("q", true);
@@ -597,7 +597,7 @@ public class CombinedTest
         consumer.MessageReceived += async (client, msg) =>
         {
             await Task.Delay(200);
-            await client.SendAck(msg);
+            await client.SendAck(msg, CancellationToken.None);
             ackSent = true;
         };
         await consumer.Queue.Subscribe("q", true);
@@ -628,7 +628,7 @@ public class CombinedTest
         var consumer = await ConnectClient(ctx.Port);
         consumer.MessageReceived += async (client, msg) =>
         {
-            await client.SendNegativeAck(msg, "test-error");
+            await client.SendNegativeAck(msg, "test-error", CancellationToken.None);
         };
         await consumer.Queue.Subscribe("q", true);
 
@@ -713,7 +713,7 @@ public class CombinedTest
             if (c1PendingAck == null)
                 c1PendingAck = msg; // hold first ack
             else
-                client.SendAck(msg);
+                client.SendAck(msg, CancellationToken.None);
         };
         await consumer1.Queue.Subscribe("q", true);
 
@@ -722,7 +722,7 @@ public class CombinedTest
         consumer2.MessageReceived += async (client, msg) =>
         {
             c2Messages.Add(msg.GetStringContent());
-            await client.SendAck(msg);
+            await client.SendAck(msg, CancellationToken.None);
         };
         await consumer2.Queue.Subscribe("q", true);
 
@@ -742,7 +742,7 @@ public class CombinedTest
 
         // Now ack the pending message
         if (c1PendingAck != null)
-            await consumer1.SendAck(c1PendingAck);
+            await consumer1.SendAck(c1PendingAck, CancellationToken.None);
     }
 
     [Theory]
@@ -767,7 +767,7 @@ public class CombinedTest
             int num = int.Parse(msg.GetStringContent());
             receivedOrder.Enqueue(num);
             await Task.Delay(50); // simulate processing
-            await client.SendAck(msg);
+            await client.SendAck(msg, CancellationToken.None);
         };
         await consumer.Queue.Subscribe("q", true);
 
@@ -849,9 +849,9 @@ public class CombinedTest
         // Ack from consumer1 using consumer1's own pending message
         // This is critical: ack must come from the same client the message was delivered to
         if (c1Pending != null)
-            await consumer1.SendAck(c1Pending);
+            await consumer1.SendAck(c1Pending, CancellationToken.None);
         else if (c2Pending != null)
-            await consumer2.SendAck(c2Pending);
+            await consumer2.SendAck(c2Pending, CancellationToken.None);
 
         // Wait for the 3rd message to be delivered to the freed consumer
         await WaitUntil(() => totalDelivered >= 3, 8000);

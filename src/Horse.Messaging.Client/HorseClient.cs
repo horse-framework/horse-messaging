@@ -357,8 +357,11 @@ public class HorseClient : IDisposable
         // Signal all active consumers to cancel their work
         _consumeCts.Cancel();
 
-        Channel.UnsubscribeFromAllChannels().GetAwaiter().GetResult();
-        Queue.UnsubscribeFromAllQueues().GetAwaiter().GetResult();
+        using var shutdownCts = new CancellationTokenSource(GracefulShutdownOptions.MaxWait);
+        var shutdownToken = shutdownCts.Token;
+
+        Channel.UnsubscribeFromAllChannels(shutdownToken).GetAwaiter().GetResult();
+        Queue.UnsubscribeFromAllQueues(shutdownToken).GetAwaiter().GetResult();
         int minWait = Convert.ToInt32(GracefulShutdownOptions.MinWait.TotalMilliseconds);
         int maxWait = Convert.ToInt32(GracefulShutdownOptions.MaxWait.TotalMilliseconds);
 
@@ -866,9 +869,115 @@ public class HorseClient : IDisposable
     }
 
     /// <summary>
-    /// Sends a Horse message
+    /// Sends a Horse message without waiting for a response.
     /// </summary>
-    public async Task<HorseResult> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
+    public Task<HorseResult> SendAsync(HorseMessage message, CancellationToken cancellationToken)
+    {
+        return SendAsyncCore(message, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sends a Horse message with additional headers without waiting for a response.
+    /// </summary>
+    public Task<HorseResult> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders, CancellationToken cancellationToken)
+    {
+        return SendAsyncCore(message, additionalHeaders, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sends a Horse message and optionally waits for an acknowledge/commit response from the server.
+    /// </summary>
+    public Task<HorseResult> SendAsync(HorseMessage message, bool waitForAcknowledge, CancellationToken cancellationToken)
+    {
+        if (!waitForAcknowledge)
+            return SendAsyncCore(message, null, cancellationToken);
+
+        message.SetSource(_clientId);
+        message.WaitResponse = true;
+
+        if (string.IsNullOrEmpty(message.MessageId))
+            message.SetMessageId(UniqueIdGenerator.Create());
+
+        if (message.Type == MessageType.DirectMessage)
+            message.HighPriority = true;
+
+        if (string.IsNullOrEmpty(message.MessageId))
+            throw new ArgumentNullException("Messages without unique id cannot be acknowledged");
+
+        return WaitResponse(message, true, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sends a Horse message with additional headers and optionally waits for an acknowledge/commit response from the server.
+    /// </summary>
+    public Task<HorseResult> SendAsync(HorseMessage message, bool waitForAcknowledge, IList<KeyValuePair<string, string>> additionalHeaders, CancellationToken cancellationToken)
+    {
+        if (additionalHeaders != null)
+            foreach (KeyValuePair<string, string> pair in additionalHeaders)
+                message.AddHeader(pair.Key, pair.Value);
+
+        if (!waitForAcknowledge)
+            return SendAsyncCore(message, null, cancellationToken);
+
+        message.SetSource(_clientId);
+        message.WaitResponse = true;
+
+        if (string.IsNullOrEmpty(message.MessageId))
+            message.SetMessageId(UniqueIdGenerator.Create());
+
+        if (message.Type == MessageType.DirectMessage)
+            message.HighPriority = true;
+
+        if (string.IsNullOrEmpty(message.MessageId))
+            throw new ArgumentNullException("Messages without unique id cannot be acknowledged");
+
+        return WaitResponse(message, true, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sends a Horse message, waits for a response and deserializes the response to <typeparamref name="T"/>.
+    /// </summary>
+    public async Task<HorseModelResult<T>> SendAsync<T>(HorseMessage message, CancellationToken cancellationToken)
+    {
+        message.WaitResponse = true;
+
+        if (string.IsNullOrEmpty(message.MessageId))
+            message.SetMessageId(UniqueIdGenerator.Create());
+
+        Task<HorseMessage> task = Tracker.Track(message);
+        HorseResult sent = await SendAsyncCore(message, null, cancellationToken);
+        if (sent.Code != HorseResultCode.Ok)
+            return new HorseModelResult<T>(new HorseResult(HorseResultCode.SendError));
+
+        HorseMessage response;
+        if (cancellationToken.CanBeCanceled)
+        {
+            var tcs = new TaskCompletionSource<HorseMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+            await using (cancellationToken.Register(() => tcs.TrySetCanceled(cancellationToken)))
+            {
+                Task completed = await Task.WhenAny(task, tcs.Task);
+                if (completed == tcs.Task)
+                {
+                    Tracker.Forget(message);
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+            }
+
+            response = task.IsCompletedSuccessfully ? task.Result : await task;
+        }
+        else
+        {
+            response = await task;
+        }
+
+        if (response?.Content == null || response.Length == 0 || response.Content.Length == 0)
+            return HorseModelResult<T>.FromContentType(message.ContentType);
+
+        T model = response.Deserialize<T>(MessageSerializer);
+        return new HorseModelResult<T>(HorseResult.Ok(), model);
+    }
+
+    private async Task<HorseResult> SendAsyncCore(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders, CancellationToken cancellationToken)
     {
         message.SetSource(_clientId);
 
@@ -877,6 +986,8 @@ public class HorseClient : IDisposable
 
         if (_socket == null)
             return new HorseResult(HorseResultCode.SendError);
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         bool sent;
         if (SwitchingProtocol != null)
@@ -938,7 +1049,7 @@ public class HorseClient : IDisposable
     }
 
     /// <summary>
-    /// Sends raw message
+    /// Sends raw byte array message
     /// </summary>
     public Task<bool> SendAsync(byte[] rawData)
     {
@@ -946,36 +1057,26 @@ public class HorseClient : IDisposable
     }
 
     /// <summary>
-    /// Sends a Horse message and waits for acknowledge
+    /// Sends multiple Horse messages in a single envelope and waits for acknowledge.
     /// </summary>
-    public Task<HorseResult> SendAndGetAck(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null,
-        CancellationToken cancellationToken = default)
+    public Task<HorseResult> SendEnvelopedAsync(IEnumerable<HorseMessage> messages, CancellationToken cancellationToken)
     {
-        message.SetSource(_clientId);
-        message.WaitResponse = true;
-
-        if (string.IsNullOrEmpty(message.MessageId))
-            message.SetMessageId(UniqueIdGenerator.Create());
-
-        if (message.Type == MessageType.DirectMessage)
-            message.HighPriority = true;
-
-        if (additionalHeaders != null)
-            foreach (KeyValuePair<string, string> pair in additionalHeaders)
-                message.AddHeader(pair.Key, pair.Value);
-
-        if (string.IsNullOrEmpty(message.MessageId))
-            throw new ArgumentNullException("Messages without unique id cannot be acknowledged");
-
-        return WaitResponse(message, true, cancellationToken);
+        return SendEnvelopedAsync(messages, null, null, cancellationToken);
     }
 
     /// <summary>
-    /// Sends multiple horses messages in a single horse message and waits for acknowledge
+    /// Sends multiple Horse messages in a single envelope to a specific target and waits for acknowledge.
     /// </summary>
-    public Task<HorseResult> SendEnvelopedAndGetAck(IEnumerable<HorseMessage> messages, string envelopeTarget = null,
-        IList<KeyValuePair<string, string>> additionalHeaders = null,
-        CancellationToken cancellationToken = default)
+    public Task<HorseResult> SendEnvelopedAsync(IEnumerable<HorseMessage> messages, string envelopeTarget, CancellationToken cancellationToken)
+    {
+        return SendEnvelopedAsync(messages, envelopeTarget, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sends multiple Horse messages in a single envelope to a specific target with additional headers and waits for acknowledge.
+    /// </summary>
+    public Task<HorseResult> SendEnvelopedAsync(IEnumerable<HorseMessage> messages, string envelopeTarget,
+        IList<KeyValuePair<string, string>> additionalHeaders, CancellationToken cancellationToken)
     {
         HorseMessage envelope = new HorseMessage(MessageType.Envelope, string.IsNullOrEmpty(envelopeTarget) ? "*" : envelopeTarget, 0);
         envelope.SetSource(_clientId);
@@ -1006,89 +1107,59 @@ public class HorseClient : IDisposable
     }
 
     /// <summary>
-    /// Sends a message, waits response and deserializes the response to T template type
+    /// Sends a request to a plugin and receives the typed response.
     /// </summary>
-    public async Task<HorseModelResult<T>> SendAndGet<T>(HorseMessage message)
+    public Task<HorseModelResult<T>> SendPluginAsync<T>(string pluginName, object requestModel, CancellationToken cancellationToken)
     {
-        message.WaitResponse = true;
-
-        if (string.IsNullOrEmpty(message.MessageId))
-            message.SetMessageId(UniqueIdGenerator.Create());
-
-        Task<HorseMessage> task = Tracker.Track(message);
-        HorseResult sent = await SendAsync(message);
-        if (sent.Code != HorseResultCode.Ok)
-            return new HorseModelResult<T>(new HorseResult(HorseResultCode.SendError));
-
-        HorseMessage response = await task;
-        if (response?.Content == null || response.Length == 0 || response.Content.Length == 0)
-            return HorseModelResult<T>.FromContentType(message.ContentType);
-
-        T model = response.Deserialize<T>(MessageSerializer);
-        return new HorseModelResult<T>(HorseResult.Ok(), model);
+        return SendPluginAsync<T>(pluginName, requestModel, 0, cancellationToken);
     }
 
     /// <summary>
-    /// Sends a request to a plugin and received the response
+    /// Sends a request to a plugin with a specific content type and receives the typed response.
     /// </summary>
-    public async Task<HorseModelResult<T>> SendPluginMessage<T>(string pluginName, object requestModel, ushort contentType = 0)
+    public async Task<HorseModelResult<T>> SendPluginAsync<T>(string pluginName, object requestModel, ushort contentType, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage(MessageType.Plugin, pluginName, contentType);
         MessageSerializer.Serialize(message, requestModel);
 
-        message.WaitResponse = true;
-
-        if (string.IsNullOrEmpty(message.MessageId))
-            message.SetMessageId(UniqueIdGenerator.Create());
-
-        Task<HorseMessage> task = Tracker.Track(message);
-        HorseResult sent = await SendAsync(message);
-        if (sent.Code != HorseResultCode.Ok)
-            return new HorseModelResult<T>(new HorseResult(HorseResultCode.SendError));
-
-        HorseMessage response = await task;
-        if (response?.Content == null || response.Length == 0 || response.Content.Length == 0)
-            return HorseModelResult<T>.FromContentType(message.ContentType);
-
-        T model = response.Deserialize<T>(MessageSerializer);
-        return new HorseModelResult<T>(HorseResult.Ok(), model);
+        return await SendAsync<T>(message, cancellationToken);
     }
 
     /// <summary>
     /// Sends a response message to the request
     /// </summary>
-    public async Task<HorseResult> SendResponseAsync<TModel>(HorseMessage requestMessage, TModel responseModel)
+    public async Task<HorseResult> SendResponseAsync<TModel>(HorseMessage requestMessage, TModel responseModel, CancellationToken cancellationToken)
     {
         HorseMessage response = requestMessage.CreateResponse(HorseResultCode.Ok);
         response.Serialize(responseModel, MessageSerializer);
-        return await SendAsync(response);
+        return await SendAsync(response, cancellationToken);
     }
 
     /// <summary>
     /// Sends a response message to the request
     /// </summary>
-    public async Task<HorseResult> SendResponseAsync(HorseMessage requestMessage, string responseContent)
+    public async Task<HorseResult> SendResponseAsync(HorseMessage requestMessage, string responseContent, CancellationToken cancellationToken)
     {
         HorseMessage response = requestMessage.CreateResponse(HorseResultCode.Ok);
         response.SetStringContent(responseContent);
-        return await SendAsync(response);
+        return await SendAsync(response, cancellationToken);
     }
 
     /// <summary>
     /// Sends a response message to the request
     /// </summary>
-    public async Task<HorseResult> SendResponseAsync(HorseMessage requestMessage, Stream content)
+    public async Task<HorseResult> SendResponseAsync(HorseMessage requestMessage, Stream content, CancellationToken cancellationToken)
     {
         HorseMessage response = requestMessage.CreateResponse(HorseResultCode.Ok);
         response.Content = new MemoryStream();
-        await content.CopyToAsync(response.Content);
-        return await SendAsync(response);
+        await content.CopyToAsync(response.Content, cancellationToken);
+        return await SendAsync(response, cancellationToken);
     }
 
     /// <summary>
     /// Sends the message and waits for response
     /// </summary>
-    public Task<HorseMessage> Request(HorseMessage message, CancellationToken cancellationToken = default)
+    public Task<HorseMessage> Request(HorseMessage message, CancellationToken cancellationToken)
     {
         message.WaitResponse = true;
 
@@ -1102,7 +1173,7 @@ public class HorseClient : IDisposable
     {
         Task<HorseMessage> task = Tracker.Track(message);
 
-        HorseResult sent = await SendAsync(message);
+        HorseResult sent = await SendAsync(message, cancellationToken);
         if (sent.Code != HorseResultCode.Ok)
         {
             Tracker.Forget(message);
@@ -1136,43 +1207,54 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends negative acknowledge message for the message.
     /// </summary>
-    public async Task<HorseResult> SendNegativeAck(HorseMessage message, string reason = null)
+    public Task<HorseResult> SendNegativeAck(HorseMessage message, CancellationToken cancellationToken)
+    {
+        return SendNegativeAck(message, HorseHeaders.NACK_REASON_NONE, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sends negative acknowledge message for the message with a reason.
+    /// </summary>
+    public async Task<HorseResult> SendNegativeAck(HorseMessage message, string reason, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(reason))
             reason = HorseHeaders.NACK_REASON_NONE;
 
         HorseMessage ack = message.CreateAcknowledge(reason);
-        return await SendAsync(ack);
+        return await SendAsync(ack, cancellationToken);
     }
 
     /// <summary>
     /// Sends acknowledge message for the message.
     /// </summary>
-    public Task<HorseResult> SendAck(HorseMessage message)
+    public Task<HorseResult> SendAck(HorseMessage message, CancellationToken cancellationToken)
     {
         HorseMessage ack = message.CreateAcknowledge();
-        return SendAsync(ack);
+        return SendAsync(ack, cancellationToken);
     }
 
     /// <summary>
     /// Sends success response for the message
     /// </summary>
-    /// <param name="message"></param>
-    /// <returns></returns>
-    public Task<HorseResult> SendResponse(HorseMessage message)
+    public Task<HorseResult> SendResponse(HorseMessage message, CancellationToken cancellationToken)
     {
-        return SendAck(message);
+        return SendAck(message, cancellationToken);
     }
 
     /// <summary>
-    /// /// Sends negative response for the message
+    /// Sends negative response for the message
     /// </summary>
-    /// <param name="message">Received horse message</param>
-    /// <param name="reason">Description for the error</param>
-    /// <returns></returns>
-    public Task<HorseResult> SendNegativeResponse(HorseMessage message, string reason = null)
+    public Task<HorseResult> SendNegativeResponse(HorseMessage message, CancellationToken cancellationToken)
     {
-        return SendNegativeAck(message, reason);
+        return SendNegativeAck(message, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sends negative response for the message with a reason
+    /// </summary>
+    public Task<HorseResult> SendNegativeResponse(HorseMessage message, string reason, CancellationToken cancellationToken)
+    {
+        return SendNegativeAck(message, reason, cancellationToken);
     }
 
     /// <summary>
@@ -1181,7 +1263,7 @@ public class HorseClient : IDisposable
     /// returns true if Ok.
     /// </summary>
     protected internal Task<HorseResult> WaitResponse(HorseMessage message, bool waitForResponse,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
         => WaitResponseCore(message, waitForResponse, cancellationToken);
 
     private async Task<HorseResult> WaitResponseCore(HorseMessage message, bool waitForResponse,
@@ -1197,7 +1279,7 @@ public class HorseClient : IDisposable
             task = Tracker.Track(message);
         }
 
-        HorseResult sent = await SendAsync(message);
+        HorseResult sent = await SendAsync(message, cancellationToken);
         if (sent.Code != HorseResultCode.Ok)
         {
             if (waitForResponse)
@@ -1258,7 +1340,7 @@ public class HorseClient : IDisposable
 
         Task<HorseMessage> task = Tracker.Track(message);
 
-        HorseResult sent = await SendAsync(message);
+        HorseResult sent = await SendAsync(message, ConsumeToken);
         if (sent.Code != HorseResultCode.Ok)
         {
             Tracker.Forget(message);
@@ -1293,13 +1375,13 @@ public class HorseClient : IDisposable
 
             case MessageType.QueueMessage:
                 if (message.WaitResponse && AutoAcknowledge)
-                    await SendAsync(message.CreateAcknowledge());
+                    await SendAsync(message.CreateAcknowledge(), ConsumeToken);
                 _ = DispatchQueueMessageAsync(message);
                 break;
 
             case MessageType.DirectMessage:
                 if (message.WaitResponse && AutoAcknowledge)
-                    await SendAsync(message.CreateAcknowledge());
+                    await SendAsync(message.CreateAcknowledge(), ConsumeToken);
                 _ = DispatchDirectMessageAsync(message);
                 break;
 
@@ -1478,11 +1560,12 @@ public class HorseClient : IDisposable
                     verifyResponse: true,
                     maxPartitions: registration.MaxPartitions,
                     subscribersPerPartition: registration.SubscribersPerPartition,
-                    additionalHeaders: descriptorHeaders.Count > 0 ? descriptorHeaders : null);
+                    additionalHeaders: descriptorHeaders.Count > 0 ? descriptorHeaders : null,
+                    cancellationToken: ConsumeToken);
             }
             else
             {
-                joinResult = await Queue.Subscribe(registration.QueueName, true, descriptorHeaders);
+                joinResult = await Queue.Subscribe(registration.QueueName, true, descriptorHeaders, ConsumeToken);
             }
 
             if (joinResult.Code == HorseResultCode.Ok)
@@ -1505,7 +1588,7 @@ public class HorseClient : IDisposable
 
         foreach (ChannelSubscriberRegistration registration in Channel.Registrations)
         {
-            HorseResult joinResult = await Channel.Subscribe(registration.Name, true);
+            HorseResult joinResult = await Channel.Subscribe(registration.Name, true, null, ConsumeToken);
             if (joinResult.Code == HorseResultCode.Ok)
                 continue;
 
@@ -1526,7 +1609,7 @@ public class HorseClient : IDisposable
 
         foreach (EventSubscriberRegistration registration in Event.Registrations)
         {
-            HorseResult joinResult = await Event.Subscribe(registration.Type, registration.Target);
+            HorseResult joinResult = await Event.Subscribe(registration.Type, registration.Target, ConsumeToken);
             if (joinResult.Code == HorseResultCode.Ok)
                 continue;
 

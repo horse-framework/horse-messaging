@@ -170,7 +170,7 @@ public class PartitionEventTest
         };
 
         // Subscribe to the server-side event
-        await subscriber.Event.Subscribe(HorseEventType.QueuePartitionCreated, null, false);
+        await subscriber.Event.Subscribe(HorseEventType.QueuePartitionCreated, null, false, CancellationToken.None);
 
         // Now create a partition by subscribing a worker
         HorseClient worker = new HorseClient();

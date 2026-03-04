@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
@@ -42,7 +43,15 @@ public class EventOperator
     /// <summary>
     /// Subscribes to an event
     /// </summary>
-    public Task<HorseResult> Subscribe(HorseEventType eventType, string target, bool verifyResponse = false)
+    public Task<HorseResult> Subscribe(HorseEventType eventType, string target, CancellationToken cancellationToken)
+    {
+        return Subscribe(eventType, target, false, cancellationToken);
+    }
+
+    /// <summary>
+    /// Subscribes to an event with response verification
+    /// </summary>
+    public Task<HorseResult> Subscribe(HorseEventType eventType, string target, bool verifyResponse, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Event;
@@ -53,13 +62,21 @@ public class EventOperator
         if (verifyResponse)
             message.SetMessageId(Client.UniqueIdGenerator.Create());
 
-        return Client.WaitResponse(message, verifyResponse);
+        return Client.WaitResponse(message, verifyResponse, cancellationToken);
     }
 
     /// <summary>
     /// Unsubscribes from an event
     /// </summary>
-    public Task<HorseResult> Unsubscribe(HorseEventType eventType, string target, bool verifyResponse = false)
+    public Task<HorseResult> Unsubscribe(HorseEventType eventType, string target, CancellationToken cancellationToken)
+    {
+        return Unsubscribe(eventType, target, false, cancellationToken);
+    }
+
+    /// <summary>
+    /// Unsubscribes from an event with response verification
+    /// </summary>
+    public Task<HorseResult> Unsubscribe(HorseEventType eventType, string target, bool verifyResponse, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Event;
@@ -71,6 +88,6 @@ public class EventOperator
         if (verifyResponse)
             message.SetMessageId(Client.UniqueIdGenerator.Create());
 
-        return Client.WaitResponse(message, verifyResponse);
+        return Client.WaitResponse(message, verifyResponse, cancellationToken);
     }
 }

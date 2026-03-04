@@ -173,18 +173,19 @@ public class QueueOperator : IDisposable
     /// <summary>
     /// Creates new queue in server
     /// </summary>
-    public Task<HorseResult> Create(string queue)
+    public Task<HorseResult> Create(string queue, CancellationToken cancellationToken)
     {
-        return Create(queue, null, null, null);
+        return Create(queue, null, null, null, cancellationToken);
     }
 
     /// <summary>
     /// Creates new queue in server
     /// </summary>
     public Task<HorseResult> Create(string queue,
-        IEnumerable<KeyValuePair<string, string>> additionalHeaders)
+        IEnumerable<KeyValuePair<string, string>> additionalHeaders,
+        CancellationToken cancellationToken)
     {
-        return Create(queue, null, null, additionalHeaders);
+        return Create(queue, null, null, additionalHeaders, cancellationToken);
     }
 
     /// <summary>
@@ -192,9 +193,10 @@ public class QueueOperator : IDisposable
     /// </summary>
     public Task<HorseResult> Create(string queue,
         string deliveryHandlerHeader,
-        IEnumerable<KeyValuePair<string, string>> additionalHeaders)
+        IEnumerable<KeyValuePair<string, string>> additionalHeaders,
+        CancellationToken cancellationToken)
     {
-        return Create(queue, null, deliveryHandlerHeader, additionalHeaders);
+        return Create(queue, null, deliveryHandlerHeader, additionalHeaders, cancellationToken);
     }
 
     /// <summary>
@@ -202,8 +204,9 @@ public class QueueOperator : IDisposable
     /// </summary>
     public async Task<HorseResult> Create(string queue,
         Action<QueueOptions> optionsAction,
-        string queueManagerName = null,
-        IEnumerable<KeyValuePair<string, string>> additionalHeaders = null)
+        string queueManagerName,
+        IEnumerable<KeyValuePair<string, string>> additionalHeaders,
+        CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Server;
@@ -230,13 +233,21 @@ public class QueueOperator : IDisposable
 
         message.SetMessageId(Client.UniqueIdGenerator.Create());
 
-        return await Client.WaitResponse(message, true);
+        return await Client.WaitResponse(message, true, cancellationToken);
     }
 
     /// <summary>
     /// Finds all queues in server
     /// </summary>
-    public async Task<HorseModelResult<List<QueueInformation>>> List(string filter = null)
+    public Task<HorseModelResult<List<QueueInformation>>> List(CancellationToken cancellationToken)
+    {
+        return List(null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Finds all queues in server
+    /// </summary>
+    public async Task<HorseModelResult<List<QueueInformation>>> List(string filter, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Server;
@@ -246,15 +257,13 @@ public class QueueOperator : IDisposable
         if (!string.IsNullOrEmpty(filter))
             message.AddHeader(HorseHeaders.FILTER, filter);
 
-        return await Client.SendAndGet<List<QueueInformation>>(message);
+        return await Client.SendAsync<List<QueueInformation>>(message, cancellationToken);
     }
 
     /// <summary>
     /// Removes a queue in server.
-    /// Required administration permission.
-    /// If server has no implementation for administration authorization, request is not allowed.
     /// </summary>
-    public async Task<HorseResult> Remove(string queue)
+    public async Task<HorseResult> Remove(string queue, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Server;
@@ -263,13 +272,13 @@ public class QueueOperator : IDisposable
         message.WaitResponse = true;
         message.SetMessageId(Client.UniqueIdGenerator.Create());
 
-        return await Client.WaitResponse(message, true);
+        return await Client.WaitResponse(message, true, cancellationToken);
     }
 
     /// <summary>
     /// Updates queue options
     /// </summary>
-    public async Task<HorseResult> SetOptions(string queue, Action<QueueOptions> optionsAction)
+    public async Task<HorseResult> SetOptions(string queue, Action<QueueOptions> optionsAction, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Server;
@@ -285,15 +294,13 @@ public class QueueOperator : IDisposable
         message.Content = new MemoryStream();
         await JsonSerializer.SerializeAsync(message.Content, options, SerializerFactory.Default());
 
-        return await Client.WaitResponse(message, true);
+        return await Client.WaitResponse(message, true, cancellationToken);
     }
 
     /// <summary>
     /// Clears messages in a queue.
-    /// Required administration permission.
-    /// If server has no implementation for administration authorization, request is not allowed.
     /// </summary>
-    public Task<HorseResult> ClearMessages(string queue, bool clearPriorityMessages, bool clearMessages)
+    public Task<HorseResult> ClearMessages(string queue, bool clearPriorityMessages, bool clearMessages, CancellationToken cancellationToken)
     {
         if (!clearPriorityMessages && !clearMessages)
             return Task.FromResult(HorseResult.Failed());
@@ -312,13 +319,13 @@ public class QueueOperator : IDisposable
         if (clearMessages)
             message.AddHeader(HorseHeaders.MESSAGES, "yes");
 
-        return Client.WaitResponse(message, true);
+        return Client.WaitResponse(message, true, cancellationToken);
     }
 
     /// <summary>
     /// Gets all consumers of queue
     /// </summary>
-    public async Task<HorseModelResult<List<ClientInformation>>> GetConsumers(string queue)
+    public async Task<HorseModelResult<List<ClientInformation>>> GetConsumers(string queue, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Server;
@@ -328,7 +335,7 @@ public class QueueOperator : IDisposable
 
         message.AddHeader(HorseHeaders.QUEUE_NAME, queue);
 
-        return await Client.SendAndGet<List<ClientInformation>>(message);
+        return await Client.SendAsync<List<ClientInformation>>(message, cancellationToken);
     }
 
     #endregion
@@ -625,7 +632,7 @@ public class QueueOperator : IDisposable
         lock (PullContainers)
             PullContainers.Add(message.MessageId, container);
 
-        HorseResult sent = await Client.SendAsync(message);
+        HorseResult sent = await Client.SendAsync(message, cancellationToken);
         if (sent.Code != HorseResultCode.Ok)
         {
             lock (PullContainers)

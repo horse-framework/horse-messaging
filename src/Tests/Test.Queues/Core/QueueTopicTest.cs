@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Threading;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Models;
@@ -129,7 +130,7 @@ public class QueueTopicTest
         var client = new HorseClient();
         await client.ConnectAsync($"horse://localhost:{ctx.Port}");
 
-        var result = await client.Queue.List();
+        var result = await client.Queue.List(CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, result.Result.Code);
 
         QueueInformation info = result.Model.FirstOrDefault(q => q.Name == "listed-q");
@@ -151,7 +152,7 @@ public class QueueTopicTest
         var client = new HorseClient();
         await client.ConnectAsync($"horse://localhost:{ctx.Port}");
 
-        var result = await client.Queue.List();
+        var result = await client.Queue.List(CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, result.Result.Code);
 
         QueueInformation info = result.Model.FirstOrDefault(q => q.Name == "no-topic-listed-q");

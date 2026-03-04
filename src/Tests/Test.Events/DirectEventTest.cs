@@ -1,3 +1,4 @@
+using System.Threading;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -48,7 +49,7 @@ public class DirectEventTest
         client.CatchEventMessages = false;
         client.MessageReceived += (c, m) =>
         {
-            c.SendAsync(m.CreateResponse(HorseResultCode.Ok));
+            c.SendAsync(m.CreateResponse(HorseResultCode.Ok), CancellationToken.None);
         };
 
         EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);

@@ -244,7 +244,7 @@ public class ServerConnectionTest
         client.SetClientName("client-test");
         await client.ConnectAsync("horse://localhost:" + port);
 
-        var result = await client.Connection.GetConnectedClients(filter);
+        var result = await client.Connection.GetConnectedClients(filter, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, result.Result.Code);
         Assert.NotNull(result.Model);
         var c = result.Model.FirstOrDefault();

@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Text;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
@@ -395,7 +396,7 @@ public class RouterTest
         {
             HorseMessage response = m.CreateResponse(HorseResultCode.Ok);
             response.SetStringContent("Response");
-            client1.SendAsync(response);
+            client1.SendAsync(response, CancellationToken.None);
         };
         Assert.True(client1.IsConnected);
 

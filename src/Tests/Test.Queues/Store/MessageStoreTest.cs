@@ -1,5 +1,6 @@
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -122,7 +123,7 @@ public class MessageStoreTest
         // Clear via client API
         HorseClient admin = new HorseClient();
         await admin.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await admin.Queue.ClearMessages("store-clear", true, true);
+        await admin.Queue.ClearMessages("store-clear", true, true, CancellationToken.None);
         await Task.Delay(500);
 
         Assert.Equal(0, queue.Manager.MessageStore.Count());
@@ -354,7 +355,7 @@ public class MessageStoreTest
         HorseMessage hiMsg = new HorseMessage(MessageType.QueueMessage, "store-pri");
         hiMsg.HighPriority = true;
         hiMsg.SetStringContent("priority");
-        await producer.SendAsync(hiMsg);
+        await producer.SendAsync(hiMsg, CancellationToken.None);
 
         await Task.Delay(500);
 

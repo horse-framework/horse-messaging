@@ -62,7 +62,7 @@ internal class RequestHandlerExecutor<TRequest, TResponse>: ExecutorBase
                     responseMessage.Serialize(responseModel, client.MessageSerializer);
 
                 respond = true;
-                await client.SendAsync(responseMessage);
+                await client.SendAsync(responseMessage, cancellationToken);
             }
             catch (Exception e)
             {
@@ -87,7 +87,7 @@ internal class RequestHandlerExecutor<TRequest, TResponse>: ExecutorBase
                     responseMessage.SetStringContent(errorModel.Reason);
 
                 respond = true;
-                await client.SendAsync(responseMessage);
+                await client.SendAsync(responseMessage, cancellationToken);
                 throw throwBack;
             }
         }
@@ -99,7 +99,7 @@ internal class RequestHandlerExecutor<TRequest, TResponse>: ExecutorBase
                 {
                     HorseMessage response = message.CreateResponse(HorseResultCode.InternalServerError);
                     response.SetStringContent(e.Message);
-                    await client.SendAsync(response);
+                    await client.SendAsync(response, cancellationToken);
                 }
                 catch
                 {

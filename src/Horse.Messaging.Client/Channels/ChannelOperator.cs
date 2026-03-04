@@ -173,7 +173,15 @@ public class ChannelOperator
     /// <summary>
     /// Finds in all channels in server
     /// </summary>
-    public async Task<HorseModelResult<List<ChannelInformation>>> List(string filter = null)
+    public Task<HorseModelResult<List<ChannelInformation>>> List(CancellationToken cancellationToken)
+    {
+        return List(null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Finds in all channels in server
+    /// </summary>
+    public async Task<HorseModelResult<List<ChannelInformation>>> List(string filter, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Channel;
@@ -183,13 +191,13 @@ public class ChannelOperator
         if (!string.IsNullOrEmpty(filter))
             message.AddHeader(HorseHeaders.FILTER, filter);
 
-        return await Client.SendAndGet<List<ChannelInformation>>(message);
+        return await Client.SendAsync<List<ChannelInformation>>(message, cancellationToken);
     }
 
     /// <summary>
     /// Gets all subscribers of channel
     /// </summary>
-    public async Task<HorseModelResult<List<ClientInformation>>> GetSubscribers(string channelName)
+    public async Task<HorseModelResult<List<ClientInformation>>> GetSubscribers(string channelName, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Channel;
@@ -199,7 +207,7 @@ public class ChannelOperator
 
         message.AddHeader(HorseHeaders.CHANNEL_NAME, channelName);
 
-        return await Client.SendAndGet<List<ClientInformation>>(message);
+        return await Client.SendAsync<List<ClientInformation>>(message, cancellationToken);
     }
 
     #region Publish

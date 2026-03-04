@@ -1,5 +1,6 @@
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Queues;
@@ -281,7 +282,7 @@ public class PullDeliveryTest
         // Clear all messages
         HorseClient admin = new HorseClient();
         await admin.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await admin.Queue.ClearMessages("pull-clear", true, true);
+        await admin.Queue.ClearMessages("pull-clear", true, true, CancellationToken.None);
         await Task.Delay(300);
 
         // Pull → should be empty
@@ -364,7 +365,7 @@ public class PullDeliveryTest
         HorseMessage hiMsg = new HorseMessage(MessageType.QueueMessage, "pull-pri");
         hiMsg.HighPriority = true;
         hiMsg.SetStringContent("priority");
-        await producer.SendAsync(hiMsg);
+        await producer.SendAsync(hiMsg, CancellationToken.None);
         await Task.Delay(500);
 
         // Pull → should get priority first
