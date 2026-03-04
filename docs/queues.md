@@ -70,24 +70,47 @@ Horse Messaging provides a powerful, flexible message queue system with support 
    - Commit When (Producer-Side Confirmation)
    - Redelivery Headers
 
-9. [Partitioned Queues](queues/partitioned-queues.md)  
-   Scaling queues with label-based partitioning for multi-tenant and high-throughput scenarios.
-   - Enabling Partitions (`PartitionOptions`)
-   - Partition Labels
-   - Subscribing with Labels
-   - Auto Assign Workers (Worker Pool)
-   - Max Partitions Per Worker
-   - Partition Auto Destroy
-   - Partition Metrics
+9. [Retry & Redelivery](queues/retry-redelivery.md)  
+   Handling transient failures with client-side retry and server-side delivery tracking.
+   - Client-Side Retry (`[Retry]` Attribute)
+   - Retry Count, Delay, and Ignored Exceptions
+   - Retry Interaction with Other Attributes
+   - Server-Side Redelivery Tracking (`useRedelivery`)
+   - Delivery Count Header
+   - Redelivery Persistence and Lifecycle
+   - Using Retry and Redelivery Together
 
-10. [Queue Topics](queues/queue-topics.md)  
+10. [Dead-Letter Queues & Exception Handling](queues/dead-letter-exceptions.md)  
+    Routing failed messages and exception data when consumers throw.
+    - Exception Handling Pipeline Overview
+    - `[MoveOnError]` — Moving Messages to Dead-Letter Queues
+    - `[PushExceptions]` — Pushing Exception Models to Queues
+    - `[PublishExceptions]` — Publishing Exception Models to Routers
+    - Type-Specific Exception Routing
+    - `ITransportableException` Interface and `ExceptionContext`
+    - `ExceptionDescription` Metadata
+    - `[AutoNack]` and `NegativeReason` Options
+    - Combining Retry, MoveOnError, PushExceptions, and AutoNack
+    - Recommended Patterns (DLQ, Centralized Logging, Poison Message Detection)
+
+11. [Partitioned Queues](queues/partitioned-queues.md)  
+    Scaling queues with label-based partitioning for multi-tenant and high-throughput scenarios.
+    - Enabling Partitions (`PartitionOptions`)
+    - Partition Labels
+    - Subscribing with Labels
+    - Auto Assign Workers (Worker Pool)
+    - Max Partitions Per Worker
+    - Partition Auto Destroy
+    - Partition Metrics
+
+12. [Queue Topics](queues/queue-topics.md)  
     Topic-based routing via the Router system.
     - Setting Topics (server-side, `Queue-Topic` header, `[QueueTopic]` attribute)
     - Topic Binding in Routers
     - Wildcard Pattern Matching
     - Topic Persistence
 
-11. [Queue Lifecycle](queues/queue-lifecycle.md)  
+13. [Queue Lifecycle](queues/queue-lifecycle.md)  
     How queues are created, managed, and destroyed at runtime.
     - Auto Creation
     - Status (Running, Paused, Stopped)

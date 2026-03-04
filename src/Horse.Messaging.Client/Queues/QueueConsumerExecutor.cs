@@ -87,7 +87,7 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
                 clone.Type = MessageType.QueueMessage;
                 clone.SetTarget(_moveOnError.QueueName);
 
-                var ack = await client.SendAndGetAck(message);
+                var ack = await client.SendAndGetAck(clone);
 
                 if (ack.Code == HorseResultCode.Ok)
                     await client.SendAck(message);
