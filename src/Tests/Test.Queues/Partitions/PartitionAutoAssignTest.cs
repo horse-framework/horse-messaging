@@ -592,7 +592,7 @@ public class PartitionAutoAssignTest
         // Push messages first — partitions created but no consumers
         await PushLabeled(producer, "t1");
         await PushLabeled(producer, "t2");
-        await Task.Delay(300);
+        await WaitUntil(() => queue.PartitionManager.Partitions.Count() >= 2);
 
         Assert.Equal(2, queue.PartitionManager.Partitions.Count());
         // No consumers yet
@@ -604,7 +604,10 @@ public class PartitionAutoAssignTest
         worker.MessageReceived += (_, _) => Interlocked.Increment(ref received);
 
         await SubscribeNoLabel(worker);
-        await Task.Delay(800);
+
+        // Wait until worker is assigned to both partitions and messages are delivered
+        await WaitUntil(() => queue.PartitionManager.Partitions.Count(p => p.Queue.Clients.Any()) >= 2);
+        await WaitUntil(() => received >= 2);
 
         // Worker should be assigned to both existing partitions
         int withConsumer = queue.PartitionManager.Partitions.Count(p => p.Queue.Clients.Any());
