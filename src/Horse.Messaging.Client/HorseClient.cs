@@ -898,9 +898,9 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends a Horse message and optionally waits for an acknowledge/commit response from the server.
     /// </summary>
-    public Task<HorseResult> SendAsync(HorseMessage message, bool waitForAcknowledge, CancellationToken cancellationToken)
+    public Task<HorseResult> SendAsync(HorseMessage message, bool waitAcknowledge, CancellationToken cancellationToken)
     {
-        if (!waitForAcknowledge)
+        if (!waitAcknowledge)
             return SendAsyncCore(message, null, cancellationToken);
 
         message.SetSource(_clientId);
@@ -921,13 +921,13 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends a Horse message with additional headers and optionally waits for an acknowledge/commit response from the server.
     /// </summary>
-    public Task<HorseResult> SendAsync(HorseMessage message, bool waitForAcknowledge, IList<KeyValuePair<string, string>> additionalHeaders, CancellationToken cancellationToken)
+    public Task<HorseResult> SendAsync(HorseMessage message, bool waitAcknowledge, IList<KeyValuePair<string, string>> additionalHeaders, CancellationToken cancellationToken)
     {
         if (additionalHeaders != null)
             foreach (KeyValuePair<string, string> pair in additionalHeaders)
                 message.AddHeader(pair.Key, pair.Value);
 
-        if (!waitForAcknowledge)
+        if (!waitAcknowledge)
             return SendAsyncCore(message, null, cancellationToken);
 
         message.SetSource(_clientId);

@@ -50,17 +50,17 @@ public interface IHorseChannelBus
     /// <summary>
     /// Publishes a message to a channel
     /// </summary>
-    Task<HorseResult> Publish(object model, bool waitForAcknowledge, CancellationToken cancellationToken);
+    Task<HorseResult> Publish(object model, bool waitAcknowledge, CancellationToken cancellationToken);
 
     /// <summary>
     /// Publishes a message to a channel
     /// </summary>
-    Task<HorseResult> Publish(string channel, object model, bool waitForAcknowledge, CancellationToken cancellationToken);
+    Task<HorseResult> Publish(string channel, object model, bool waitAcknowledge, CancellationToken cancellationToken);
 
     /// <summary>
     /// Publishes a message to a channel
     /// </summary>
-    Task<HorseResult> Publish(string channel, object model, bool waitForAcknowledge,
+    Task<HorseResult> Publish(string channel, object model, bool waitAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken);
 
     /// <summary>
@@ -71,12 +71,12 @@ public interface IHorseChannelBus
     /// <summary>
     /// Publishes a string message to a channel
     /// </summary>
-    Task<HorseResult> PublishString(string channel, string message, bool waitForAcknowledge, CancellationToken cancellationToken);
+    Task<HorseResult> PublishString(string channel, string message, bool waitAcknowledge, CancellationToken cancellationToken);
 
     /// <summary>
     /// Publishes a string message to a channel
     /// </summary>
-    Task<HorseResult> PublishString(string channel, string message, bool waitForAcknowledge,
+    Task<HorseResult> PublishString(string channel, string message, bool waitAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken);
 
     /// <summary>
@@ -87,11 +87,11 @@ public interface IHorseChannelBus
     /// <summary>
     /// Publishes binary data to a channel
     /// </summary>
-    Task<HorseResult> PublishData(string channel, MemoryStream content, bool waitForAcknowledge, CancellationToken cancellationToken);
+    Task<HorseResult> PublishData(string channel, MemoryStream content, bool waitAcknowledge, CancellationToken cancellationToken);
 
     /// <summary>
     /// Publishes binary data to a channel
     /// </summary>
-    Task<HorseResult> PublishData(string channel, MemoryStream content, bool waitForAcknowledge,
+    Task<HorseResult> PublishData(string channel, MemoryStream content, bool waitAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken);
 }

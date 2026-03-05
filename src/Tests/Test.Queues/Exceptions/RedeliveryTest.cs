@@ -42,7 +42,7 @@ public class RedeliveryTrackerAccessor(RedeliveryTracker tracker)
 
 [QueueName("redeliver-q")]
 [QueueType(MessagingQueueType.RoundRobin)]
-[Acknowledge(QueueAckDecision.WaitForAcknowledge)]
+[Acknowledge(QueueAckDecision.waitAcknowledge)]
 public class RedeliverModel
 {
     public string Data { get; set; }
@@ -99,7 +99,7 @@ public class RedeliveryTest
             .ConfigureQueues(q =>
             {
                 q.Options.Type = QueueType.RoundRobin;
-                q.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                q.Options.Acknowledge = QueueAckDecision.waitAcknowledge;
                 q.Options.CommitWhen = CommitWhen.AfterReceived;
                 q.Options.AutoQueueCreation = true;
                 q.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(10);
@@ -352,7 +352,7 @@ public class RedeliveryTest
             await ctx.Rider.Queue.Create("redeliver-q", o =>
             {
                 o.Type = QueueType.RoundRobin;
-                o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                o.Acknowledge = QueueAckDecision.waitAcknowledge;
                 o.CommitWhen = CommitWhen.AfterReceived;
                 o.PutBack = PutBackDecision.Regular;
                 o.AcknowledgeTimeout = TimeSpan.FromSeconds(5);
@@ -415,7 +415,7 @@ public class RedeliveryTest
             await ctx.Rider.Queue.Create("redeliver-q", o =>
             {
                 o.Type = QueueType.RoundRobin;
-                o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                o.Acknowledge = QueueAckDecision.waitAcknowledge;
                 o.CommitWhen = CommitWhen.AfterReceived;
                 o.PutBack = PutBackDecision.No;
                 o.AcknowledgeTimeout = TimeSpan.FromSeconds(5);
@@ -471,7 +471,7 @@ public class RedeliveryTest
             await ctx.Rider.Queue.Create("redeliver-q", o =>
             {
                 o.Type = QueueType.RoundRobin;
-                o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                o.Acknowledge = QueueAckDecision.waitAcknowledge;
                 o.CommitWhen = CommitWhen.AfterReceived;
                 o.PutBack = PutBackDecision.Regular;
                 o.AcknowledgeTimeout = TimeSpan.FromSeconds(5);
@@ -526,7 +526,7 @@ public class RedeliveryTest
             await ctx.Rider.Queue.Create("redeliver-q", o =>
             {
                 o.Type = QueueType.RoundRobin;
-                o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                o.Acknowledge = QueueAckDecision.waitAcknowledge;
                 o.CommitWhen = CommitWhen.AfterReceived;
                 o.PutBack = PutBackDecision.Regular;
                 o.AcknowledgeTimeout = TimeSpan.FromSeconds(5);
@@ -618,7 +618,7 @@ public class RedeliveryTest
             await ctx.Rider.Queue.Create("redeliver-q", o =>
             {
                 o.Type = QueueType.RoundRobin;
-                o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                o.Acknowledge = QueueAckDecision.waitAcknowledge;
                 o.CommitWhen = CommitWhen.AfterReceived;
                 o.PutBack = PutBackDecision.Regular;
                 o.AcknowledgeTimeout = TimeSpan.FromSeconds(5);
@@ -679,7 +679,7 @@ public class RedeliveryTest
             await ctx.Rider.Queue.Create("redeliver-q", o =>
             {
                 o.Type = QueueType.RoundRobin;
-                o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                o.Acknowledge = QueueAckDecision.waitAcknowledge;
                 o.CommitWhen = CommitWhen.AfterReceived;
                 o.PutBack = PutBackDecision.Regular;
             });
@@ -732,7 +732,7 @@ public class RedeliveryTest
             .ConfigureQueues(q =>
             {
                 q.Options.Type = QueueType.RoundRobin;
-                q.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                q.Options.Acknowledge = QueueAckDecision.waitAcknowledge;
                 q.Options.CommitWhen = CommitWhen.AfterReceived;
                 q.Options.AutoQueueCreation = true;
                 q.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(5);
@@ -755,7 +755,7 @@ public class RedeliveryTest
             await rider.Queue.Create("no-redel-q", o =>
             {
                 o.Type = QueueType.RoundRobin;
-                o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                o.Acknowledge = QueueAckDecision.waitAcknowledge;
                 o.CommitWhen = CommitWhen.AfterReceived;
                 o.PutBack = PutBackDecision.Regular;
                 o.AcknowledgeTimeout = TimeSpan.FromSeconds(5);

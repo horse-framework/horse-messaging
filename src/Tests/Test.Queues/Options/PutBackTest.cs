@@ -21,7 +21,7 @@ public class PutBackTest
         await using var ctx = await QueueTestServer.Create(mode, o =>
         {
             o.CommitWhen = CommitWhen.AfterReceived;
-            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+            o.Acknowledge = QueueAckDecision.waitAcknowledge;
         });
 
         await ctx.Rider.Queue.Create("pb-no", o =>
@@ -59,7 +59,7 @@ public class PutBackTest
         await using var ctx = await QueueTestServer.Create(mode, o =>
         {
             o.CommitWhen = CommitWhen.AfterReceived;
-            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+            o.Acknowledge = QueueAckDecision.waitAcknowledge;
         });
 
         await ctx.Rider.Queue.Create("pb-pri", o =>
@@ -99,7 +99,7 @@ public class PutBackTest
         await using var ctx = await QueueTestServer.Create(mode, o =>
         {
             o.CommitWhen = CommitWhen.AfterReceived;
-            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+            o.Acknowledge = QueueAckDecision.waitAcknowledge;
         });
 
         await ctx.Rider.Queue.Create("pb-reg", o =>
@@ -138,7 +138,7 @@ public class PutBackTest
         await using var ctx = await QueueTestServer.Create(mode, o =>
         {
             o.CommitWhen = CommitWhen.AfterReceived;
-            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+            o.Acknowledge = QueueAckDecision.waitAcknowledge;
         });
 
         await ctx.Rider.Queue.Create("pb-delay", o =>

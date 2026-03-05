@@ -27,7 +27,7 @@ cfg.UseMemoryQueues("Fast", queue =>
 
 cfg.UseMemoryQueues("Reliable", queue =>
 {
-    queue.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+    queue.Options.Acknowledge = QueueAckDecision.waitAcknowledge;
 });
 ```
 
@@ -57,7 +57,7 @@ Pass the `queueManagerName` parameter when creating a queue programmatically via
 await client.Queue.Create("orders", options =>
 {
     options.Type = QueueType.RoundRobin;
-    options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+    options.Acknowledge = QueueAckDecision.waitAcknowledge;
 }, queueManagerName: "Persistent");
 ```
 
@@ -71,7 +71,7 @@ var headers = new List<KeyValuePair<string, string>>
     new(HorseHeaders.QUEUE_MANAGER, "Persistent")
 };
 
-await client.Queue.Push("orders", content, true, headers, null, CancellationToken.None);
+await client.Queue.Push("orders", content, true, headers, null, cancellationToken);
 ```
 
 > **Note:** The queue manager is determined only at queue creation time. Once a queue is created with a specific manager, subsequent messages do not change it — the header is stripped from the message before delivery.
@@ -138,7 +138,7 @@ cfg.UsePersistentQueues(
     },
     queue =>
     {
-        queue.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+        queue.Options.Acknowledge = QueueAckDecision.waitAcknowledge;
         queue.Options.CommitWhen = CommitWhen.AfterReceived;
     }
 );

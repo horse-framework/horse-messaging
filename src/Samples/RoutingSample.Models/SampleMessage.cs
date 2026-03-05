@@ -11,7 +11,7 @@ namespace RoutingSample.Models
 	[QueueName("SAMPLE-MESSAGE-QUEUE")] // FOR QUEUE PUSH
 	[DirectContentType(1001)]                 // FOR DIRECT PUSH
 	[QueueType(MessagingQueueType.Push)]
-	[Acknowledge(QueueAckDecision.WaitForAcknowledge)]
+	[Acknowledge(QueueAckDecision.waitAcknowledge)]
 	public class SampleMessage
 	{
 		public string Content { get; set; }

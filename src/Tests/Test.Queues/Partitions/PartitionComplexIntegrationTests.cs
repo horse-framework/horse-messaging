@@ -46,7 +46,7 @@ public class QueueCModel
 
 [QueueName("QueueD")]
 [QueueType(MessagingQueueType.RoundRobin)]
-[Acknowledge(QueueAckDecision.WaitForAcknowledge)]
+[Acknowledge(QueueAckDecision.waitAcknowledge)]
 public class QueueDModel
 {
     public string TenantId { get; set; }
@@ -474,7 +474,7 @@ public class PartitionComplexIntegrationTests
         {
             Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 1,
             AutoAssignWorkers = true, MaxPartitionsPerWorker = 5, AutoDestroy = PartitionAutoDestroy.Disabled
-        }, ack: QueueAckDecision.WaitForAcknowledge);
+        }, ack: QueueAckDecision.waitAcknowledge);
         await using PartitionTestContext _ = ctx;
 
         ConsumeTracker tracker = new();
@@ -515,7 +515,7 @@ public class PartitionComplexIntegrationTests
         {
             Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 2,
             AutoAssignWorkers = true, MaxPartitionsPerWorker = 10, AutoDestroy = PartitionAutoDestroy.Disabled
-        }, ack: QueueAckDecision.WaitForAcknowledge);
+        }, ack: QueueAckDecision.waitAcknowledge);
         await using PartitionTestContext _ = ctx;
 
         ConsumeTracker tracker = new();
@@ -1018,7 +1018,7 @@ public class PartitionComplexIntegrationTests
             await ctx.Rider.Queue.Create($"QueueD-{tier}", o =>
             {
                 o.Type = QueueType.RoundRobin;
-                o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                o.Acknowledge = QueueAckDecision.waitAcknowledge;
                 o.Partition = new PartitionOptions
                 {
                     Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 10, AutoAssignWorkers = true, MaxPartitionsPerWorker = 200,
@@ -1084,7 +1084,7 @@ public class PartitionComplexIntegrationTests
             await ctx.Rider.Queue.Create($"QueueD-{tier}", o =>
             {
                 o.Type = QueueType.RoundRobin;
-                o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                o.Acknowledge = QueueAckDecision.waitAcknowledge;
                 o.Partition = new PartitionOptions
                 {
                     Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 10, AutoAssignWorkers = true, MaxPartitionsPerWorker = 50,
@@ -1208,7 +1208,7 @@ public class PartitionComplexIntegrationTests
             await ctx.Rider.Queue.Create($"QueueD-{tier}", o =>
             {
                 o.Type = QueueType.RoundRobin;
-                o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                o.Acknowledge = QueueAckDecision.waitAcknowledge;
                 o.Partition = new PartitionOptions
                 {
                     Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 10, AutoAssignWorkers = true, MaxPartitionsPerWorker = 50,
@@ -1288,7 +1288,7 @@ public class PartitionComplexIntegrationTests
             Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 1,
             AutoAssignWorkers = true, MaxPartitionsPerWorker = 5,
             AutoDestroy = PartitionAutoDestroy.NoMessages, AutoDestroyIdleSeconds = 3
-        }, ack: QueueAckDecision.WaitForAcknowledge);
+        }, ack: QueueAckDecision.waitAcknowledge);
         await using PartitionTestContext _ = ctx;
 
         ConsumeTracker tracker = new();

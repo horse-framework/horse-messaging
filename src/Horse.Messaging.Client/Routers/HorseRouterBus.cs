@@ -33,13 +33,13 @@ public class HorseRouterBus : IHorseRouterBus
         => _client.Router.Publish(routerName, data, cancellationToken);
 
     /// <inheritdoc />
-    public Task<HorseResult> Publish(string routerName, byte[] data, bool waitForAcknowledge, CancellationToken cancellationToken)
-        => _client.Router.Publish(routerName, data, waitForAcknowledge, cancellationToken);
+    public Task<HorseResult> Publish(string routerName, byte[] data, bool waitAcknowledge, CancellationToken cancellationToken)
+        => _client.Router.Publish(routerName, data, waitAcknowledge, cancellationToken);
 
     /// <inheritdoc />
-    public Task<HorseResult> Publish(string routerName, byte[] data, string messageId, bool waitForAcknowledge,
+    public Task<HorseResult> Publish(string routerName, byte[] data, string messageId, bool waitAcknowledge,
         ushort contentType, IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
-        => _client.Router.Publish(routerName, data, messageId, waitForAcknowledge, contentType, messageHeaders, cancellationToken);
+        => _client.Router.Publish(routerName, data, messageId, waitAcknowledge, contentType, messageHeaders, cancellationToken);
 
     // ── Publish — model ──
 
@@ -48,27 +48,27 @@ public class HorseRouterBus : IHorseRouterBus
         => _client.Router.Publish(model, cancellationToken);
 
     /// <inheritdoc />
-    public Task<HorseResult> Publish<T>(T model, bool waitForAcknowledge, CancellationToken cancellationToken) where T : class
-        => _client.Router.Publish(model, waitForAcknowledge, cancellationToken);
+    public Task<HorseResult> Publish<T>(T model, bool waitAcknowledge, CancellationToken cancellationToken) where T : class
+        => _client.Router.Publish(model, waitAcknowledge, cancellationToken);
 
     /// <inheritdoc />
-    public Task<HorseResult> Publish<T>(string routerName, T model, bool waitForAcknowledge, CancellationToken cancellationToken) where T : class
-        => _client.Router.Publish(routerName, model, waitForAcknowledge, cancellationToken);
+    public Task<HorseResult> Publish<T>(string routerName, T model, bool waitAcknowledge, CancellationToken cancellationToken) where T : class
+        => _client.Router.Publish(routerName, model, waitAcknowledge, cancellationToken);
 
     /// <inheritdoc />
-    public Task<HorseResult> Publish<T>(string routerName, T model, bool waitForAcknowledge,
+    public Task<HorseResult> Publish<T>(string routerName, T model, bool waitAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken) where T : class
-        => _client.Router.Publish(routerName, model, waitForAcknowledge, messageHeaders, cancellationToken);
+        => _client.Router.Publish(routerName, model, waitAcknowledge, messageHeaders, cancellationToken);
 
     /// <inheritdoc />
-    public Task<HorseResult> Publish<T>(string routerName, T model, ushort? contentType, bool waitForAcknowledge,
+    public Task<HorseResult> Publish<T>(string routerName, T model, ushort? contentType, bool waitAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken) where T : class
-        => _client.Router.Publish(routerName, model, contentType, waitForAcknowledge, messageHeaders, cancellationToken);
+        => _client.Router.Publish(routerName, model, contentType, waitAcknowledge, messageHeaders, cancellationToken);
 
     /// <inheritdoc />
-    public Task<HorseResult> Publish<T>(string routerName, T model, string messageId, ushort? contentType, bool waitForAcknowledge,
+    public Task<HorseResult> Publish<T>(string routerName, T model, string messageId, ushort? contentType, bool waitAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken) where T : class
-        => _client.Router.Publish(routerName, model, messageId, contentType, waitForAcknowledge, messageHeaders, cancellationToken);
+        => _client.Router.Publish(routerName, model, messageId, contentType, waitAcknowledge, messageHeaders, cancellationToken);
 
     // ── PublishRequest ──
 

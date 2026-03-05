@@ -30,9 +30,9 @@ public interface IHorseRouterBus : IHorseConnection
     /// </summary>
     /// <param name="routerName">Target router name.</param>
     /// <param name="data">Raw binary data to publish.</param>
-    /// <param name="waitForAcknowledge">If true, waits for the router to acknowledge.</param>
+    /// <param name="waitAcknowledge">If true, waits for the router to acknowledge.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task<HorseResult> Publish(string routerName, byte[] data, bool waitForAcknowledge, CancellationToken cancellationToken);
+    Task<HorseResult> Publish(string routerName, byte[] data, bool waitAcknowledge, CancellationToken cancellationToken);
 
     /// <summary>
     /// Publishes raw byte data to a router with full control over message id, content type, and headers.
@@ -40,11 +40,11 @@ public interface IHorseRouterBus : IHorseConnection
     /// <param name="routerName">Target router name.</param>
     /// <param name="data">Raw binary data to publish.</param>
     /// <param name="messageId">Explicit unique message id.</param>
-    /// <param name="waitForAcknowledge">If true, waits for the router to acknowledge.</param>
+    /// <param name="waitAcknowledge">If true, waits for the router to acknowledge.</param>
     /// <param name="contentType">Application-defined content type code.</param>
     /// <param name="messageHeaders">Additional message headers.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task<HorseResult> Publish(string routerName, byte[] data, string messageId, bool waitForAcknowledge,
+    Task<HorseResult> Publish(string routerName, byte[] data, string messageId, bool waitAcknowledge,
         ushort contentType, IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken);
 
     #endregion
@@ -62,28 +62,28 @@ public interface IHorseRouterBus : IHorseConnection
     /// Publishes a model to the router resolved from the model's RouterName attribute, optionally waiting for acknowledgement.
     /// </summary>
     /// <param name="model">The message model.</param>
-    /// <param name="waitForAcknowledge">If true, waits for the router to acknowledge.</param>
+    /// <param name="waitAcknowledge">If true, waits for the router to acknowledge.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task<HorseResult> Publish<T>(T model, bool waitForAcknowledge, CancellationToken cancellationToken) where T : class;
+    Task<HorseResult> Publish<T>(T model, bool waitAcknowledge, CancellationToken cancellationToken) where T : class;
 
     /// <summary>
     /// Publishes a model to a specific router, optionally waiting for acknowledgement.
     /// </summary>
     /// <param name="routerName">Target router name.</param>
     /// <param name="model">The message model.</param>
-    /// <param name="waitForAcknowledge">If true, waits for the router to acknowledge.</param>
+    /// <param name="waitAcknowledge">If true, waits for the router to acknowledge.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task<HorseResult> Publish<T>(string routerName, T model, bool waitForAcknowledge, CancellationToken cancellationToken) where T : class;
+    Task<HorseResult> Publish<T>(string routerName, T model, bool waitAcknowledge, CancellationToken cancellationToken) where T : class;
 
     /// <summary>
     /// Publishes a model to a specific router with custom headers.
     /// </summary>
     /// <param name="routerName">Target router name.</param>
     /// <param name="model">The message model.</param>
-    /// <param name="waitForAcknowledge">If true, waits for the router to acknowledge.</param>
+    /// <param name="waitAcknowledge">If true, waits for the router to acknowledge.</param>
     /// <param name="messageHeaders">Additional message headers.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task<HorseResult> Publish<T>(string routerName, T model, bool waitForAcknowledge,
+    Task<HorseResult> Publish<T>(string routerName, T model, bool waitAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken) where T : class;
 
     /// <summary>
@@ -92,10 +92,10 @@ public interface IHorseRouterBus : IHorseConnection
     /// <param name="routerName">Target router name.</param>
     /// <param name="model">The message model.</param>
     /// <param name="contentType">Optional content type override.</param>
-    /// <param name="waitForAcknowledge">If true, waits for the router to acknowledge.</param>
+    /// <param name="waitAcknowledge">If true, waits for the router to acknowledge.</param>
     /// <param name="messageHeaders">Additional message headers.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task<HorseResult> Publish<T>(string routerName, T model, ushort? contentType, bool waitForAcknowledge,
+    Task<HorseResult> Publish<T>(string routerName, T model, ushort? contentType, bool waitAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken) where T : class;
 
     /// <summary>
@@ -105,10 +105,10 @@ public interface IHorseRouterBus : IHorseConnection
     /// <param name="model">The message model.</param>
     /// <param name="messageId">Explicit unique message id.</param>
     /// <param name="contentType">Optional content type override.</param>
-    /// <param name="waitForAcknowledge">If true, waits for the router to acknowledge.</param>
+    /// <param name="waitAcknowledge">If true, waits for the router to acknowledge.</param>
     /// <param name="messageHeaders">Additional message headers.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task<HorseResult> Publish<T>(string routerName, T model, string messageId, ushort? contentType, bool waitForAcknowledge,
+    Task<HorseResult> Publish<T>(string routerName, T model, string messageId, ushort? contentType, bool waitAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken) where T : class;
 
     #endregion

@@ -18,7 +18,7 @@ namespace Test.Queues.Partitions;
 /// Three tiers (free / standard / premium), each backed by a separate partitioned queue
 /// with AutoAssignWorkers enabled. Workers subscribe without labels (enter pool).
 /// Producers send messages with partitionLabel = tenantId.
-/// Each tenant gets its own partition → WaitForAcknowledge guarantees per-tenant FIFO.
+/// Each tenant gets its own partition → waitAcknowledge guarantees per-tenant FIFO.
 ///
 /// Also covers:
 ///  - Queue name override via AddScopedConsumer(string queueName, string partitionLabel)

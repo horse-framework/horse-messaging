@@ -36,7 +36,7 @@ namespace Sample.Server
                 .ConfigureQueues(cfg =>
                 {
                     cfg.Options.Type = QueueType.RoundRobin;
-                    cfg.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                    cfg.Options.Acknowledge = QueueAckDecision.waitAcknowledge;
                     cfg.Options.CommitWhen = CommitWhen.AfterReceived;
                     cfg.Options.AutoQueueCreation = true;
                     cfg.UsePersistentQueues();

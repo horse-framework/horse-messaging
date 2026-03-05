@@ -179,9 +179,8 @@ The .NET client library for connecting to a Horse Messaging server.
 - Interceptors (`IHorseInterceptor`)
 - Auto Subscribe
 - DI Integration (`Horse.Messaging.Extensions.Client`)
-  - `IServiceCollection.AddHorseClient`
-  - `IHostBuilder.AddHorseClient`
-  - `IHostApplicationBuilder.AddHorseClient`
+  - `IHostBuilder.AddHorse`
+  - `IHostApplicationBuilder.AddHorse`
   - `IHost.UseHorse`
   - Graceful Shutdown (`GracefulShutdownOptions`)
 

@@ -19,7 +19,7 @@ public class InMemoryQueueConfig
 
 public class QueueConfigOptions
 {
-    public QueueAckDecision Acknowledge { get; set; } = QueueAckDecision.WaitForAcknowledge;
+    public QueueAckDecision Acknowledge { get; set; } = QueueAckDecision.waitAcknowledge;
     public CommitWhen CommitWhen { get; set; } = CommitWhen.AfterReceived;
     public string AcknowledgeTimeout { get; set; } = "1s";
     public string MessageTimeout { get; set; } = "1s";

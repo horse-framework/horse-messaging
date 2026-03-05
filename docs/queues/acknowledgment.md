@@ -26,9 +26,9 @@ The queue's `Acknowledge` option controls the server's expectations. See also [Q
 |----------|-----------------|
 | `None` | Message is removed immediately after delivery. No ack expected. |
 | `JustRequest` | Server asks for an ack but continues sending the next message without waiting. Unacked messages are handled by the put-back policy after timeout. |
-| `WaitForAcknowledge` | Server waits for acknowledgment before delivering the next message. Behavior varies by queue type — see below. |
+| `waitAcknowledge` | Server waits for acknowledgment before delivering the next message. Behavior varies by queue type — see below. |
 
-#### WaitForAcknowledge — Behavior by Queue Type
+#### waitAcknowledge — Behavior by Queue Type
 
 **Push (fan-out):**
 The message is sent to **all** consumers simultaneously. The queue waits until **any one** consumer acknowledges (or the timeout expires) before dispatching the next message. It does **not** wait for all consumers to ack. The remaining consumers still have their own ack deadlines — if they don't ack in time, the put-back decision applies for their delivery.
@@ -230,10 +230,10 @@ For full details on retry mechanics, ignored exceptions, and interaction with re
 | Pattern | Configuration |
 |---------|---------------|
 | **At-most-once** | `Acknowledge = None` |
-| **At-least-once** | `Acknowledge = WaitForAcknowledge` + `PutBack = Regular` |
-| **Strict FIFO** | `Acknowledge = WaitForAcknowledge` + `Type = RoundRobin` + **single consumer** |
+| **At-least-once** | `Acknowledge = waitAcknowledge` + `PutBack = Regular` |
+| **Strict FIFO** | `Acknowledge = waitAcknowledge` + `Type = RoundRobin` + **single consumer** |
 | **Dead-letter queue** | `[MoveOnError("dlq")]` + `[Retry(3)]` |
 | **Producer confirmation** | `CommitWhen = AfterReceived` + `Push(model, waitForCommit: true)` |
 
-> **Note:** With `RoundRobin` + `WaitForAcknowledge` + multiple consumers, messages are distributed across consumers but strict FIFO ordering is **not** guaranteed. Use a single consumer if ordering matters.
+> **Note:** With `RoundRobin` + `waitAcknowledge` + multiple consumers, messages are distributed across consumers but strict FIFO ordering is **not** guaranteed. Use a single consumer if ordering matters.
 

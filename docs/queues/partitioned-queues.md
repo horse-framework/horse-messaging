@@ -16,7 +16,7 @@ Producer ──▶ Parent Queue ─┤
 - Each partition is a real `HorseQueue` with its own message store, consumers, and processing loop.
 - Partition sub-queues have `IsPartitionQueue = true` and do not have their own `PartitionManager`.
 - Partition naming is deterministic: `{parentQueueName}-Partition-{label}` for labeled partitions, `{parentQueueName}-Partition-{counter}` for label-less ones. This ensures the same queue name across server restarts so that persistent `.hdb` files are naturally picked up.
-- Per-partition FIFO ordering is guaranteed when using `WaitForAcknowledge` with a single consumer per partition. See [Acknowledgment & Reliability](acknowledgment.md#waitforacknowledge--behavior-by-queue-type).
+- Per-partition FIFO ordering is guaranteed when using `waitAcknowledge` with a single consumer per partition. See [Acknowledgment & Reliability](acknowledgment.md#waitAcknowledge--behavior-by-queue-type).
 
 ## Enabling Partitions
 
@@ -27,7 +27,7 @@ HorseRider rider = HorseRiderBuilder.Create()
     .ConfigureQueues(cfg =>
     {
         cfg.Options.Type = QueueType.RoundRobin;
-        cfg.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+        cfg.Options.Acknowledge = QueueAckDecision.waitAcknowledge;
         cfg.Options.AutoQueueCreation = true;
 
         cfg.Options.Partition = new PartitionOptions
@@ -151,7 +151,7 @@ Use when tenant/label values are not known at startup. Workers subscribe without
 await rider.Queue.Create("OrderQueue", opts =>
 {
     opts.Type = QueueType.Push;
-    opts.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+    opts.Acknowledge = QueueAckDecision.waitAcknowledge;
     opts.Partition = new PartitionOptions
     {
         Enabled                 = true,
@@ -165,12 +165,12 @@ await rider.Queue.Create("OrderQueue", opts =>
 });
 
 // ── Worker side (10 instances, no label) ─────────────────
-await client.Queue.Subscribe("OrderQueue", true, CancellationToken.None);
+await client.Queue.Subscribe("OrderQueue", true, cancellationToken);
 // Worker enters the available pool; server will assign it later
 
 // ── Producer side ────────────────────────────────────────
 await producer.Queue.Push("OrderQueue", order, false,
-    new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, tenantId) }, null, CancellationToken.None);
+    new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, tenantId) }, null, cancellationToken);
 ```
 
 **What happens:**
@@ -181,7 +181,7 @@ await producer.Queue.Push("OrderQueue", order, false,
 5. Next 9 tenants each get a partition and the **same worker** is assigned to all of them.
 6. Worker-1 now serves 10 tenants concurrently — each partition has its own message processing loop.
 7. 11th tenant triggers assignment of Worker-2 from the pool.
-8. With `WaitForAcknowledge`, **per-tenant FIFO is still guaranteed** — each partition has its own ACK lock.
+8. With `waitAcknowledge`, **per-tenant FIFO is still guaranteed** — each partition has its own ACK lock.
 9. When all messages in a partition are consumed → `NoMessages` triggers destroy → worker's assignment count decreases → capacity freed.
 
 ```
@@ -217,7 +217,7 @@ HorseResult result = await client.Queue.SubscribePartitioned(
     true,
     10,                // → Partition-Limit: 10 header
     1,                 // → Partition-Subscribers: 1 header
-    CancellationToken.None);
+    cancellationToken);
 // Server creates queue with PartitionOptions.Enabled=true, MaxPartitionCount=10
 
 // To auto-create with unlimited partitions (override server default):
@@ -227,7 +227,7 @@ HorseResult r2 = await client.Queue.SubscribePartitioned(
     true,
     0,                 // → Partition-Limit: 0 header → unlimited
     null,
-    CancellationToken.None);
+    cancellationToken);
 ```
 
 ---
@@ -313,7 +313,7 @@ When `AutoSubscribe = true`, the client automatically calls `SubscribePartitione
 await client.Queue.SubscribePartitioned("orders", "tenant-42", true,
     50,
     1,
-    CancellationToken.None);
+    cancellationToken);
 ```
 
 > **API note:** `maxPartitions` and `subscribersPerPartition` are `int?` (nullable). `null` = not sent (server default used), `0` = unlimited, `> 0` = explicit limit.
@@ -328,20 +328,23 @@ Queue-Name:      orders-Partition-tenant-42
 ### Consumer Registration with Partition (DI)
 
 ```csharp
-services.AddHorseClient(b => b
-    .AddHost("horse://localhost:2626")
+var builder = Host.CreateDefaultBuilder(args);
+builder.AddHorse(b =>
+{
+    b.AddHost("horse://localhost:2626");
     // No partition
-    .AddSingletonConsumer<OrderConsumer>()
+    b.AddSingletonConsumer<OrderConsumer>();
     // Explicit partition label (overrides any attribute)
-    .AddSingletonConsumer<OrderConsumer>("tenant-42", maxPartitions: 10, subscribersPerPartition: 1)
+    b.AddSingletonConsumer<OrderConsumer>("tenant-42", maxPartitions: 10, subscribersPerPartition: 1);
     // Unlimited partitions (overrides server default)
-    .AddSingletonConsumer<OrderConsumer>("tenant-42", maxPartitions: 0)
+    b.AddSingletonConsumer<OrderConsumer>("tenant-42", maxPartitions: 0);
     // Enter the auto-assign worker pool (label-less, server assigns partitions on demand)
-    .AddSingletonConsumer<JobConsumer>(queueNameTransform: n => n, enterWorkerPool: true));
+    b.AddSingletonConsumer<JobConsumer>(queueNameTransform: n => n, enterWorkerPool: true);
 
-// Transient and Scoped also supported:
-.AddTransientConsumer<OrderConsumer>("tenant-42", maxPartitions: 10, subscribersPerPartition: 1)
-.AddScopedConsumer<OrderConsumer>("tenant-42", maxPartitions: 10, subscribersPerPartition: 1)
+    // Transient and Scoped also supported:
+    b.AddTransientConsumer<OrderConsumer>("tenant-42", maxPartitions: 10, subscribersPerPartition: 1);
+    b.AddScopedConsumer<OrderConsumer>("tenant-42", maxPartitions: 10, subscribersPerPartition: 1);
+});
 ```
 
 > **Parameter types:** `maxPartitions` and `subscribersPerPartition` are `int?` (nullable). `null` (default) = not sent (server default used), `0` = unlimited, `> 0` = explicit limit.
@@ -400,10 +403,10 @@ await bus.Push("JobQueue", stream, false, null, null, cancellationToken);
 ```csharp
 // Labeled
 await producer.Queue.Push("FetchOrders", content, false,
-    new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "tenant-42") }, null, CancellationToken.None);
+    new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "tenant-42") }, null, cancellationToken);
 
 // Label-less → round-robin across partitions
-await producer.Queue.Push("FetchOrders", content, false, CancellationToken.None);
+await producer.Queue.Push("FetchOrders", content, false, cancellationToken);
 ```
 
 ---
@@ -457,18 +460,18 @@ Producer → Push("FetchOrders", msg)
 | `1` (default) | One partition at a time. When the partition is destroyed or the worker is unassigned, it becomes available for another partition. |
 | `N` | Up to N partitions concurrently. Each partition has its own processing loop, so the worker processes them independently. |
 
-With `WaitForAcknowledge`, per-partition FIFO ordering is still guaranteed even when a worker serves multiple partitions — because each partition has exactly one consumer. See [Acknowledgment & Reliability](acknowledgment.md#waitforacknowledge--behavior-by-queue-type).
+With `waitAcknowledge`, per-partition FIFO ordering is still guaranteed even when a worker serves multiple partitions — because each partition has exactly one consumer. See [Acknowledgment & Reliability](acknowledgment.md#waitAcknowledge--behavior-by-queue-type).
 
 ---
 
-## WaitForAcknowledge and Ordering Guarantees
+## waitAcknowledge and Ordering Guarantees
 
-`WaitForAcknowledge` guarantees that a single partition queue will not deliver message N+1 until message N is acknowledged. **However, partitioning by definition splits messages across multiple independent queues.** Each partition has its own acknowledge lock — they don't coordinate with each other.
+`waitAcknowledge` guarantees that a single partition queue will not deliver message N+1 until message N is acknowledged. **However, partitioning by definition splits messages across multiple independent queues.** Each partition has its own acknowledge lock — they don't coordinate with each other.
 
-### Label-less (Round-Robin) + WaitForAcknowledge
+### Label-less (Round-Robin) + waitAcknowledge
 
 ```
-Parent: OrderQueue (Partitioned, WaitForAcknowledge)
+Parent: OrderQueue (Partitioned, waitAcknowledge)
   ├── Partition-1 → Worker-1
   └── Partition-2 → Worker-2
 
@@ -476,14 +479,14 @@ msg-1 → round-robin → Partition-1 → Worker-1 (processing...)
 msg-2 → round-robin → Partition-2 → Worker-2 (processing in parallel!)
 ```
 
-**Global ordering is NOT guaranteed in label-less mode.** msg-1 and msg-2 run in parallel on different partitions. However, if messages are sent **with a label**, all messages sharing the same label are routed to the same partition — and within that partition, FIFO ordering is guaranteed. See [Labeled + WaitForAcknowledge + SubscribersPerPartition = 1](#labeled--waitforacknowledge--subscribersperpartition--1) below.
+**Global ordering is NOT guaranteed in label-less mode.** msg-1 and msg-2 run in parallel on different partitions. However, if messages are sent **with a label**, all messages sharing the same label are routed to the same partition — and within that partition, FIFO ordering is guaranteed. See [Labeled + waitAcknowledge + SubscribersPerPartition = 1](#labeled--waitAcknowledge--subscribersperpartition--1) below.
 
 If you need strict **global** ordering across all messages regardless of label, use a single (non-partitioned) queue with a single subscriber.
 
-### Labeled + WaitForAcknowledge + SubscribersPerPartition = 1
+### Labeled + waitAcknowledge + SubscribersPerPartition = 1
 
 ```
-Parent: OrderQueue (Partitioned, WaitForAcknowledge)
+Parent: OrderQueue (Partitioned, waitAcknowledge)
   ├── Partition-tenantA → Worker-A
   └── Partition-tenantB → Worker-B
 
@@ -494,7 +497,7 @@ msg-3 (label=B) → Partition-B → Worker-B (independent, runs in parallel)
 
 **Per-label ordering IS guaranteed.** Within a single partition:
 - Only one subscriber (`SubscribersPerPartition = 1`)
-- `WaitForAcknowledge` lock blocks the next message until ACK
+- `waitAcknowledge` lock blocks the next message until ACK
 - Messages for `tenant-A` are always processed in FIFO order
 
 This is the correct pattern for most real-world scenarios: you don't need global ordering — you need **per-tenant** or **per-entity** ordering.
@@ -503,8 +506,8 @@ This is the correct pattern for most real-world scenarios: you don't need global
 
 | Scenario | Partitioned? | Config | Ordering Guarantee |
 |----------|-------------|--------|-------------------|
-| Global strict ordering | ❌ No | Single queue, single subscriber, `WaitForAcknowledge` | ✅ Global FIFO |
-| Per-tenant ordering | ✅ Yes | Labeled, `SubscribersPerPartition = 1`, `WaitForAcknowledge` | ✅ Per-label FIFO |
+| Global strict ordering | ❌ No | Single queue, single subscriber, `waitAcknowledge` | ✅ Global FIFO |
+| Per-tenant ordering | ✅ Yes | Labeled, `SubscribersPerPartition = 1`, `waitAcknowledge` | ✅ Per-label FIFO |
 | Per-tenant ordering + load sharing | ✅ Yes | Labeled, `SubscribersPerPartition > 1`, `QueueType.RoundRobin` | ⚠️ Per-partition round-robin (no strict order) |
 | Maximum throughput, no ordering needed | ✅ Yes | Label-less, round-robin | ❌ No ordering |
 
@@ -513,7 +516,7 @@ This is the correct pattern for most real-world scenarios: you don't need global
 ```csharp
 // Per-tenant strict ordering
 opts.Type = QueueType.Push; // or RoundRobin — same with SubscribersPerPartition=1
-opts.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+opts.Acknowledge = QueueAckDecision.waitAcknowledge;
 opts.Partition = new PartitionOptions
 {
     Enabled                 = true,
@@ -527,7 +530,7 @@ opts.Partition = new PartitionOptions
 await bus.Push("OrderQueue", order, true, null, order.TenantId, cancellationToken);
 
 // Consumer: subscribe with the tenant label
-await client.Queue.SubscribePartitioned("OrderQueue", "tenant-42", true, CancellationToken.None);
+await client.Queue.SubscribePartitioned("OrderQueue", "tenant-42", true, cancellationToken);
 ```
 
 For dynamic tenant scenarios where partition queues are created on demand (e.g., tenant IDs are not known at server startup), `SubscribersPerPartition = 1` can also be enforced from the **subscriber side** — you don't need to configure it only on the server. The subscriber can set it via the `subscribersPerPartition` parameter or the `[PartitionedQueue]` attribute:
@@ -538,7 +541,7 @@ await client.Queue.SubscribePartitioned("OrderQueue", "tenant-42",
     true,
     100,
     1,             // ← enforces single consumer per partition
-    CancellationToken.None);
+    cancellationToken);
 
 // Option 2: Attribute on consumer class
 [QueueName("OrderQueue")]
@@ -548,7 +551,7 @@ public class OrderConsumer : IQueueConsumer<OrderEvent> { ... }
 
 When the queue is auto-created via `AutoQueueCreation`, these values are sent as `Partition-Limit` and `Partition-Subscribers` headers and the server uses them to configure the partition options. This means FIFO guarantee per tenant can be established entirely from the client side without any server-side pre-configuration.
 
-> **Key insight:** Partition = parallelism boundary. WaitForAcknowledge = ordering boundary within a partition. Use labels to define your ordering domain (tenant, customer, entity ID, etc.).
+> **Key insight:** Partition = parallelism boundary. waitAcknowledge = ordering boundary within a partition. Use labels to define your ordering domain (tenant, customer, entity ID, etc.).
 
 ---
 
@@ -588,9 +591,9 @@ The auto-destroy timer checks at the specified interval. When the condition is m
 | Memory | Least | Medium (N queues) | Medium (N queues) |
 | When to use | Light, fast jobs | Safer distribution | Tenant/worker isolation |
 
-### The Truth About WaitForAcknowledge
+### The Truth About waitAcknowledge
 
-> **Misconception:** `WaitForAcknowledge` guarantees ordered processing.
+> **Misconception:** `waitAcknowledge` guarantees ordered processing.
 > **Reality:** It guarantees safe delivery of a single message. It is NOT a global ordering guarantee.
 
 **RoundRobin + WaitForAck:** busy worker is skipped, message goes to the next — system does not block.
@@ -749,7 +752,7 @@ Queue → [msg1, msg2, msg3, msg4, msg5]
        Worker1  Worker1  Worker2   ← unbalanced, race condition, lock
 ```
 
-All consumers compete on the same queue. In `WaitForAcknowledge` mode, while one consumer is busy the others also wait.
+All consumers compete on the same queue. In `waitAcknowledge` mode, while one consumer is busy the others also wait.
 
 ### With the Partition System
 

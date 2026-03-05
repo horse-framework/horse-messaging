@@ -106,7 +106,7 @@ public class OptionsBuilder
     {
         _options.QueueType = Enums.Parse<QueueType>(Environment.GetEnvironmentVariable("HORSE_QUEUE_TYPE") ?? "RoundRobin", true, EnumFormat.Name);
         _options.QueueAutoCreate = bool.Parse(Environment.GetEnvironmentVariable("HORSE_QUEUE_AUTO_CREATE") ?? "true");
-        _options.QueueAck = Enums.Parse<QueueAckDecision>(Environment.GetEnvironmentVariable("HORSE_QUEUE_ACK") ?? "WaitForAcknowledge");
+        _options.QueueAck = Enums.Parse<QueueAckDecision>(Environment.GetEnvironmentVariable("HORSE_QUEUE_ACK") ?? "waitAcknowledge");
         _options.QueueDestroy = Enums.Parse<QueueDestroy>(Environment.GetEnvironmentVariable("HORSE_QUEUE_AUTO_DESTROY") ?? "Disabled");
         _options.QueueCommitWhen = Enums.Parse<CommitWhen>(Environment.GetEnvironmentVariable("HORSE_QUEUE_COMMIT_WHEN") ?? "AfterReceived");
         _options.QueuePutback = Enums.Parse<PutBackDecision>(Environment.GetEnvironmentVariable("HORSE_QUEUE_PUTBACK") ?? "Regular");

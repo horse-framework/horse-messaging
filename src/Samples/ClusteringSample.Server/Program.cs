@@ -30,7 +30,7 @@ class Program
             .ConfigureQueues(q =>
             {
                 q.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(10);
-                q.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                q.Options.Acknowledge = QueueAckDecision.waitAcknowledge;
                 q.Options.CommitWhen = CommitWhen.AfterReceived;
                 q.UsePersistentQueues(c =>
                 {

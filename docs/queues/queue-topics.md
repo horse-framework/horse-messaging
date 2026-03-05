@@ -41,7 +41,7 @@ var headers = new List<KeyValuePair<string, string>>
     new(HorseHeaders.QUEUE_TOPIC, "commerce")
 };
 
-await client.Queue.Push("orders", content, true, headers, null, CancellationToken.None);
+await client.Queue.Push("orders", content, true, headers, null, cancellationToken);
 // Server auto-creates "orders" queue with Topic = "commerce"
 ```
 
@@ -178,7 +178,7 @@ router.AddBinding(new TopicBinding
 });
 
 // Producer publishes to the router — message goes to all three queues
-await client.Router.Publish("order-router", message, waitForAcknowledge: true);
+await client.Router.Publish("order-router", message, true, cancellationToken);
 ```
 
 ## Summary

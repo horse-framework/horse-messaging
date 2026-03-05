@@ -93,7 +93,7 @@ public class CommitTest
         await using var ctx = await QueueTestServer.Create(mode, o =>
         {
             o.CommitWhen = CommitWhen.AfterAcknowledge;
-            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+            o.Acknowledge = QueueAckDecision.waitAcknowledge;
         });
 
         await ctx.Rider.Queue.Create("commit-ack", o => o.Type = QueueType.RoundRobin);
@@ -122,7 +122,7 @@ public class CommitTest
         await using var ctx = await QueueTestServer.Create(mode, o =>
         {
             o.CommitWhen = CommitWhen.AfterAcknowledge;
-            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+            o.Acknowledge = QueueAckDecision.waitAcknowledge;
         });
 
         await ctx.Rider.Queue.Create("commit-noblock", o => o.Type = QueueType.RoundRobin);

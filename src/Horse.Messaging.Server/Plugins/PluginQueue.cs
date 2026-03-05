@@ -32,7 +32,7 @@ internal class PluginQueue : IPluginQueue
         string ack = "none";
         if (_queue.Options.Acknowledge == QueueAckDecision.JustRequest)
             ack = "just";
-        else if (_queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
+        else if (_queue.Options.Acknowledge == QueueAckDecision.waitAcknowledge)
             ack = "wait";
 
         return new QueueInformation

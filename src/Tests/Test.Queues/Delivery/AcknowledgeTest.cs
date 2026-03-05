@@ -91,7 +91,7 @@ public class AcknowledgeTest
         await using var ctx = await QueueTestServer.Create(mode, o =>
         {
             o.CommitWhen = CommitWhen.AfterReceived;
-            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+            o.Acknowledge = QueueAckDecision.waitAcknowledge;
         });
 
         await ctx.Rider.Queue.Create("ack-wait", o => o.Type = QueueType.RoundRobin);
@@ -150,7 +150,7 @@ public class AcknowledgeTest
         await using var ctx = await QueueTestServer.Create(mode, o =>
         {
             o.CommitWhen = CommitWhen.AfterReceived;
-            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+            o.Acknowledge = QueueAckDecision.waitAcknowledge;
         });
 
         await ctx.Rider.Queue.Create("ack-remove", o =>
@@ -185,7 +185,7 @@ public class AcknowledgeTest
         await using var ctx = await QueueTestServer.Create(mode, o =>
         {
             o.CommitWhen = CommitWhen.AfterReceived;
-            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+            o.Acknowledge = QueueAckDecision.waitAcknowledge;
         });
 
         await ctx.Rider.Queue.Create("ack-neg", o =>
@@ -230,7 +230,7 @@ public class AcknowledgeTest
         await using var ctx = await QueueTestServer.Create(mode, o =>
         {
             o.CommitWhen = CommitWhen.AfterReceived;
-            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+            o.Acknowledge = QueueAckDecision.waitAcknowledge;
         });
 
         await ctx.Rider.Queue.Create("ack-block-push", o => o.Type = QueueType.Push);
@@ -281,7 +281,7 @@ public class AcknowledgeTest
     [InlineData("persistent")]
     public async Task Ack_WaitForAck_Push_MultipleConsumers_NextMessageReleasedAfterFirstAck(string mode)
     {
-        // Push + WaitForAcknowledge + multiple consumers:
+        // Push + waitAcknowledge + multiple consumers:
         // The message is sent to ALL consumers (fan-out).
         // The queue uses a single TaskCompletionSource for the ack lock.
         // The FIRST consumer ack releases the lock and the next message is dispatched.
@@ -289,7 +289,7 @@ public class AcknowledgeTest
         await using var ctx = await QueueTestServer.Create(mode, o =>
         {
             o.CommitWhen = CommitWhen.AfterReceived;
-            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+            o.Acknowledge = QueueAckDecision.waitAcknowledge;
             o.AcknowledgeTimeout = TimeSpan.FromSeconds(15);
         });
 

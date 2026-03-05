@@ -36,7 +36,7 @@ internal class RoundRobinQueueState : IQueueState
             if (!message.Deadline.HasValue && _queue.Options.MessageTimeout.Policy != MessageTimeoutPolicy.NoTimeout && _queue.Options.MessageTimeout.MessageDuration > 0)
                 message.Deadline = DateTime.UtcNow.AddSeconds(_queue.Options.MessageTimeout.MessageDuration);
 
-            bool waitForAck = _queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge;
+            bool waitForAck = _queue.Options.Acknowledge == QueueAckDecision.waitAcknowledge;
             var tuple = await GetNextAvailableRRClient(_roundRobinIndex, message, waitForAck);
 
             QueueClient cc = tuple.Item1;
@@ -167,7 +167,7 @@ internal class RoundRobinQueueState : IQueueState
     /// Gets next available client which is not currently consuming any message.
     /// Used for wait for acknowledge situations
     /// </summary>
-    private async Task<Tuple<QueueClient, int>> GetNextAvailableRRClient(int currentIndex, QueueMessage message, bool waitForAcknowledge)
+    private async Task<Tuple<QueueClient, int>> GetNextAvailableRRClient(int currentIndex, QueueMessage message, bool waitAcknowledge)
     {
         if (!_queue.HasAnyClient())
             return new Tuple<QueueClient, int>(null, -1);
@@ -204,7 +204,7 @@ internal class RoundRobinQueueState : IQueueState
                 if (!client.Client.IsConnected)
                     continue;
 
-                if (waitForAcknowledge && client.CurrentlyProcessing != null)
+                if (waitAcknowledge && client.CurrentlyProcessing != null)
                 {
                     if (client.ProcessDeadline < DateTime.UtcNow)
                         client.CurrentlyProcessing = null;

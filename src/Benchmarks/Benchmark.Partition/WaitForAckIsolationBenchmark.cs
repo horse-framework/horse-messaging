@@ -10,9 +10,9 @@ using Horse.Messaging.Server.Queues;
 namespace Benchmark.Partition;
 
 /// <summary>
-/// Benchmark 3 — WaitForAcknowledge Isolation
+/// Benchmark 3 — waitAcknowledge Isolation
 ///
-/// With WaitForAcknowledge mode:
+/// With waitAcknowledge mode:
 ///   • On a single flat queue all workers are blocked while any one is processing.
 ///   • On partitioned queues each partition is blocked independently; other partitions continue.
 ///
@@ -45,18 +45,18 @@ public class WaitForAckIsolationBenchmark : BenchmarkBase
     [GlobalSetup]
     public void Setup()
     {
-        StartServer(QueueType.Push, QueueAckDecision.WaitForAcknowledge);
+        StartServer(QueueType.Push, QueueAckDecision.waitAcknowledge);
 
         Rider.Queue.Create(FlatQueue, o =>
         {
             o.Type      = QueueType.Push;
-            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+            o.Acknowledge = QueueAckDecision.waitAcknowledge;
             o.AcknowledgeTimeout = System.TimeSpan.FromSeconds(30);
         }).GetAwaiter().GetResult();
 
         CreatePartitionedQueue(PartQueue, QueueType.Push,
             maxPartitions: WorkerCount, subscribersPerPart: 1,
-            ackDecision: QueueAckDecision.WaitForAcknowledge)
+            ackDecision: QueueAckDecision.waitAcknowledge)
             .GetAwaiter().GetResult();
 
         _flatConsumers = new HorseClient[WorkerCount];

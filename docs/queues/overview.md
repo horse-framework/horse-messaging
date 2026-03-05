@@ -50,7 +50,7 @@ HorseRider rider = HorseRiderBuilder.Create()
     .ConfigureQueues(cfg =>
     {
         cfg.Options.Type = QueueType.RoundRobin;
-        cfg.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+        cfg.Options.Acknowledge = QueueAckDecision.waitAcknowledge;
         cfg.UseMemoryQueues();
     })
     .Build();
@@ -67,7 +67,7 @@ await server.StartAsync();
 HorseClient client = new HorseClient();
 client.Connect("horse://localhost:26222");
 
-await client.Queue.Push(new OrderCreatedEvent { OrderId = 42 }, waitForCommit: true);
+await client.Queue.Push(new OrderCreatedEvent { OrderId = 42 }, true, cancellationToken);
 ```
 
 ### Consumer
@@ -90,7 +90,8 @@ public class OrderCreatedConsumer : IQueueConsumer<OrderCreatedEvent>
 Register the consumer on the client:
 
 ```csharp
-services.AddHorse(cfg =>
+var builder = Host.CreateDefaultBuilder(args);
+builder.AddHorse(cfg =>
 {
     cfg.AddHost("horse://localhost:26222");
     cfg.AddScopedConsumer<OrderCreatedConsumer>();

@@ -44,10 +44,10 @@ HorseClient client = new HorseClient();
 client.Connect("horse://localhost:26222");
 
 // Push a serialized model (queue name resolved from type or [QueueName] attribute)
-await client.Queue.Push(new OrderCreatedEvent { OrderId = 42 }, true, CancellationToken.None);
+await client.Queue.Push(new OrderCreatedEvent { OrderId = 42 }, true, cancellationToken);
 
 // Push with a specific queue name
-await client.Queue.Push("my-custom-queue", new OrderCreatedEvent { OrderId = 42 }, true, CancellationToken.None);
+await client.Queue.Push("my-custom-queue", new OrderCreatedEvent { OrderId = 42 }, true, cancellationToken);
 ```
 
 ## Push to Named Queues
@@ -61,9 +61,12 @@ await bus.Push("high-priority-orders", new OrderEvent { ... }, true, cancellatio
 
 ## Push Overloads
 
-The `QueueOperator.Push` method has several overloads:
+The `IHorseQueueBus` and `QueueOperator` provide several `Push` overloads. When using DI, you interact with `IHorseQueueBus`. When using `HorseClient` directly, you use `client.Queue` (the `QueueOperator`):
 
 ```csharp
+// Fire-and-forget (queue name from type/attribute)
+Task<HorseResult> Push<T>(T model, CancellationToken cancellationToken)
+
 // Model-based (queue name from type/attribute)
 Task<HorseResult> Push<T>(T model, bool waitForCommit, CancellationToken cancellationToken)
 

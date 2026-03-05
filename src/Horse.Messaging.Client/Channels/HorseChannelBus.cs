@@ -49,33 +49,33 @@ internal class HorseChannelBus : IHorseChannelBus
     public Task<HorseResult> Publish(object model, CancellationToken cancellationToken)
         => _client.Channel.Publish(model, cancellationToken);
 
-    public Task<HorseResult> Publish(object model, bool waitForAcknowledge, CancellationToken cancellationToken)
-        => _client.Channel.Publish(model, waitForAcknowledge, cancellationToken);
+    public Task<HorseResult> Publish(object model, bool waitAcknowledge, CancellationToken cancellationToken)
+        => _client.Channel.Publish(model, waitAcknowledge, cancellationToken);
 
-    public Task<HorseResult> Publish(string channel, object model, bool waitForAcknowledge, CancellationToken cancellationToken)
-        => _client.Channel.Publish(channel, model, waitForAcknowledge, cancellationToken);
+    public Task<HorseResult> Publish(string channel, object model, bool waitAcknowledge, CancellationToken cancellationToken)
+        => _client.Channel.Publish(channel, model, waitAcknowledge, cancellationToken);
 
-    public Task<HorseResult> Publish(string channel, object model, bool waitForAcknowledge,
+    public Task<HorseResult> Publish(string channel, object model, bool waitAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
-        => _client.Channel.Publish(channel, model, waitForAcknowledge, messageHeaders, cancellationToken);
+        => _client.Channel.Publish(channel, model, waitAcknowledge, messageHeaders, cancellationToken);
 
     public Task<HorseResult> PublishString(string channel, string message, CancellationToken cancellationToken)
         => _client.Channel.PublishString(channel, message, cancellationToken);
 
-    public Task<HorseResult> PublishString(string channel, string message, bool waitForAcknowledge, CancellationToken cancellationToken)
-        => _client.Channel.PublishString(channel, message, waitForAcknowledge, cancellationToken);
+    public Task<HorseResult> PublishString(string channel, string message, bool waitAcknowledge, CancellationToken cancellationToken)
+        => _client.Channel.PublishString(channel, message, waitAcknowledge, cancellationToken);
 
-    public Task<HorseResult> PublishString(string channel, string message, bool waitForAcknowledge,
+    public Task<HorseResult> PublishString(string channel, string message, bool waitAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
-        => _client.Channel.PublishString(channel, message, waitForAcknowledge, messageHeaders, cancellationToken);
+        => _client.Channel.PublishString(channel, message, waitAcknowledge, messageHeaders, cancellationToken);
 
     public Task<HorseResult> PublishData(string channel, MemoryStream content, CancellationToken cancellationToken)
         => _client.Channel.PublishData(channel, content, cancellationToken);
 
-    public Task<HorseResult> PublishData(string channel, MemoryStream content, bool waitForAcknowledge, CancellationToken cancellationToken)
-        => _client.Channel.PublishData(channel, content, waitForAcknowledge, cancellationToken);
+    public Task<HorseResult> PublishData(string channel, MemoryStream content, bool waitAcknowledge, CancellationToken cancellationToken)
+        => _client.Channel.PublishData(channel, content, waitAcknowledge, cancellationToken);
 
-    public Task<HorseResult> PublishData(string channel, MemoryStream content, bool waitForAcknowledge,
+    public Task<HorseResult> PublishData(string channel, MemoryStream content, bool waitAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
-        => _client.Channel.PublishData(channel, content, waitForAcknowledge, messageHeaders, cancellationToken);
+        => _client.Channel.PublishData(channel, content, waitAcknowledge, messageHeaders, cancellationToken);
 }

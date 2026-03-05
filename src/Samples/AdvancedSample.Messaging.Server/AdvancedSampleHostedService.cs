@@ -75,7 +75,7 @@ public class AdvancedSampleHostedService : IHostedService
                     },
                     q =>
                     {
-                        q.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                        q.Options.Acknowledge = QueueAckDecision.waitAcknowledge;
                         q.Options.CommitWhen = CommitWhen.AfterReceived;
                     }, true);
 

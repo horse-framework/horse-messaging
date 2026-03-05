@@ -24,7 +24,7 @@ namespace Test.Queues.Exceptions;
 
 [QueueName("source-q")]
 [QueueType(MessagingQueueType.RoundRobin)]
-[Acknowledge(QueueAckDecision.WaitForAcknowledge)]
+[Acknowledge(QueueAckDecision.waitAcknowledge)]
 public class SourceModel
 {
     public string Data { get; set; }
@@ -67,7 +67,7 @@ public class SpecificExceptionLogModel : ITransportableException
 
 [QueueName("retry-source-q")]
 [QueueType(MessagingQueueType.RoundRobin)]
-[Acknowledge(QueueAckDecision.WaitForAcknowledge)]
+[Acknowledge(QueueAckDecision.waitAcknowledge)]
 public class RetrySourceModel
 {
     public string Data { get; set; }
@@ -338,7 +338,7 @@ public class ExceptionHandlingTest
         return await QueueTestServer.Create(mode, o =>
         {
             o.Type = QueueType.RoundRobin;
-            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+            o.Acknowledge = QueueAckDecision.waitAcknowledge;
             o.CommitWhen = CommitWhen.AfterReceived;
             o.AutoQueueCreation = true;
             o.AcknowledgeTimeout = TimeSpan.FromSeconds(10);
@@ -704,7 +704,7 @@ public class ExceptionHandlingTest
         await ctx.Rider.Queue.Create("source-q", o =>
         {
             o.Type = QueueType.RoundRobin;
-            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+            o.Acknowledge = QueueAckDecision.waitAcknowledge;
             o.CommitWhen = CommitWhen.AfterReceived;
             o.AcknowledgeTimeout = TimeSpan.FromSeconds(5);
             o.PutBack = PutBackDecision.No;
@@ -989,7 +989,7 @@ public class ExceptionHandlingTest
         await ctx.Rider.Queue.Create("source-q", o =>
         {
             o.Type = QueueType.RoundRobin;
-            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+            o.Acknowledge = QueueAckDecision.waitAcknowledge;
             o.CommitWhen = CommitWhen.AfterReceived;
             o.AcknowledgeTimeout = TimeSpan.FromSeconds(5);
             o.PutBack = PutBackDecision.No;
