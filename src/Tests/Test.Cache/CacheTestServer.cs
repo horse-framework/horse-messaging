@@ -19,6 +19,11 @@ internal static class CacheTestServer
 {
     public static async Task<CacheTestContext> Create(Action<HorseCacheOptions> configureOptions = null)
     {
+        return await Create(configureOptions, null);
+    }
+
+    public static async Task<CacheTestContext> Create(Action<HorseCacheOptions> configureOptions, Action<HorseCacheConfigurator> configureCache)
+    {
         string dataPath = $"ct-{Environment.TickCount}-{Random.Shared.Next(0, 100000)}";
 
         HorseRider rider = HorseRiderBuilder.Create()
@@ -26,6 +31,7 @@ internal static class CacheTestServer
             .ConfigureCache(c =>
             {
                 configureOptions?.Invoke(c.Options);
+                configureCache?.Invoke(c);
             })
             .ConfigureQueues(q =>
             {

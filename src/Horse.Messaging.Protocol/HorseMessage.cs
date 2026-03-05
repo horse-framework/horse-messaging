@@ -219,14 +219,17 @@ public class HorseMessage : IDisposable
     /// </summary>
     public void SetStringContent(string content)
     {
-        if (string.IsNullOrEmpty(content))
+        if (content == null)
             return;
 
         int byteCount = Encoding.UTF8.GetByteCount(content);
         Content = new MemoryStream(byteCount);
         Content.SetLength(byteCount);
-        Span<byte> span = Content.GetBuffer().AsSpan(0, byteCount);
-        Encoding.UTF8.GetBytes(content.AsSpan(), span);
+        if (byteCount > 0)
+        {
+            Span<byte> span = Content.GetBuffer().AsSpan(0, byteCount);
+            Encoding.UTF8.GetBytes(content.AsSpan(), span);
+        }
         Length = (ulong)byteCount;
     }
 
@@ -273,8 +276,11 @@ public class HorseMessage : IDisposable
     /// <returns></returns>
     public string GetStringContent()
     {
-        if (Content == null || Length == 0)
+        if (Content == null)
             return null;
+
+        if (Length == 0 || Content.Length == 0)
+            return string.Empty;
 
         if (Content.TryGetBuffer(out ArraySegment<byte> buffer))
             return Encoding.UTF8.GetString(buffer.AsSpan());

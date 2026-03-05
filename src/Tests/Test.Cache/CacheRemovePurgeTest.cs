@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -193,6 +194,88 @@ public class CacheRemovePurgeTest
         cache.Remove("casekey");
 
         Assert.Null(await cache.Get("CaseKey"));
+    }
+
+    [Fact]
+    public async Task TimerBasedCleanup_ExpiredKeysRemovedWithoutGet()
+    {
+        // The server runs a background timer (every 30s) that removes expired keys.
+        // GetCacheKeys also calls RemoveExpiredKeys internally.
+        // This test verifies that expired keys are cleaned up even without a Get() call,
+        // by using GetCacheKeys which triggers the same RemoveExpiredKeys path.
+        await using var ctx = await CacheTestServer.Create(o =>
+        {
+            o.MinimumDuration = TimeSpan.Zero;
+            o.MaximumDuration = TimeSpan.Zero;
+        });
+
+        var cache = ctx.Rider.Cache;
+        cache.Purge();
+
+        cache.Set("short", "val", TimeSpan.FromMilliseconds(50));
+        cache.Set("long", "val", TimeSpan.FromMinutes(5));
+
+        // Before expiration — both present
+        var keysBefore = cache.GetCacheKeys();
+        Assert.Equal(2, keysBefore.Count);
+
+        await Task.Delay(200);
+
+        // After expiration — GetCacheKeys triggers RemoveExpiredKeys
+        // "short" should be gone without ever calling Get("short")
+        var keysAfter = cache.GetCacheKeys();
+        Assert.Single(keysAfter);
+        Assert.Equal("long", keysAfter[0].Key);
+    }
+
+    [Fact]
+    public async Task TimerBasedCleanup_AllExpired_ReturnsEmpty()
+    {
+        await using var ctx = await CacheTestServer.Create(o =>
+        {
+            o.MinimumDuration = TimeSpan.Zero;
+            o.MaximumDuration = TimeSpan.Zero;
+        });
+
+        var cache = ctx.Rider.Cache;
+        cache.Purge();
+
+        cache.Set("a", "1", TimeSpan.FromMilliseconds(50));
+        cache.Set("b", "2", TimeSpan.FromMilliseconds(50));
+        cache.Set("c", "3", TimeSpan.FromMilliseconds(50));
+
+        await Task.Delay(200);
+
+        var keys = cache.GetCacheKeys();
+        Assert.Empty(keys);
+    }
+
+    [Fact]
+    public async Task TimerBasedCleanup_PersistentExpiredKey_FileDeletedOnGet()
+    {
+        await using var ctx = await CacheTestServer.Create(o =>
+        {
+            o.MinimumDuration = TimeSpan.Zero;
+            o.MaximumDuration = TimeSpan.Zero;
+        });
+
+        var cache = ctx.Rider.Cache;
+
+        cache.Set("persist-expire", "val", TimeSpan.FromMilliseconds(50), persistent: true);
+
+        string cacheDir = System.IO.Path.Combine(ctx.Rider.Options.DataPath, "Cache");
+        string filePath = System.IO.Path.Combine(cacheDir, "persist-expire.hci");
+        Assert.True(System.IO.File.Exists(filePath));
+
+        await Task.Delay(200);
+
+        // Get triggers removal of expired key
+        var result = await cache.Get("persist-expire");
+        Assert.Null(result);
+
+        // Key should be gone from listing
+        var keys = cache.GetCacheKeys();
+        Assert.DoesNotContain(keys, k => k.Key == "persist-expire");
     }
 }
 

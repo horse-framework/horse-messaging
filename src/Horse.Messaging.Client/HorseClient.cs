@@ -1043,10 +1043,17 @@ public class HorseClient : IDisposable
         }
 
         if (response?.Content == null || response.Length == 0 || response.Content.Length == 0)
-            return HorseModelResult<T>.FromContentType(message.ContentType);
+        {
+            HorseResultCode code = response != null ? (HorseResultCode) response.ContentType : HorseResultCode.Failed;
+            HorseResult emptyResult = new HorseResult(code);
+            emptyResult.Message = response;
+            return new HorseModelResult<T>(emptyResult);
+        }
 
         T model = response.Deserialize<T>(MessageSerializer);
-        return new HorseModelResult<T>(HorseResult.Ok(), model);
+        HorseResult okResult = HorseResult.Ok();
+        okResult.Message = response;
+        return new HorseModelResult<T>(okResult, model);
     }
 
     private async Task<HorseResult> SendAsyncCore(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders, CancellationToken cancellationToken)

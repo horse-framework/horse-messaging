@@ -31,7 +31,7 @@ internal class HorseCache : IHorseCache
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.GetCache);
         HorseModelResult<TData> result = await _client.SendAsync<TData>(message, cancellationToken);
 
-        if (result == null)
+        if (result == null || result.Result?.Code != HorseResultCode.Ok || result.Result.Message == null)
             return default;
 
         HorseCacheData<TData> data = CreateCacheData<TData>(key, result.Result.Message);
@@ -48,7 +48,9 @@ internal class HorseCache : IHorseCache
             return null;
 
         HorseCacheData<string> data = CreateCacheData<string>(key, result.Message);
-        data.Value = result.Message.GetStringContent();
+        data.Value = result.Message.Content != null && result.Message.Length > 0
+            ? result.Message.GetStringContent()
+            : string.Empty;
         return data;
     }
 
@@ -61,7 +63,9 @@ internal class HorseCache : IHorseCache
             return null;
 
         HorseCacheData<byte[]> data = CreateCacheData<byte[]>(key, result.Message);
-        data.Value = result.Message.Content.ToArray();
+        data.Value = result.Message.Content != null && result.Message.Content.Length > 0
+            ? result.Message.Content.ToArray()
+            : Array.Empty<byte>();
         return data;
     }
 
@@ -78,7 +82,7 @@ internal class HorseCache : IHorseCache
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.GetIncrementalCache);
 
-        if (increment > 1)
+        if (increment != 1)
             message.AddHeader(HorseHeaders.VALUE, increment.ToString());
 
         if (duration > TimeSpan.Zero)

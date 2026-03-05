@@ -176,6 +176,8 @@ public class HorseCache
     /// </summary>
     internal CacheOperation Set(MessagingClient client, bool notifyCluster, string key, MemoryStream value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null, bool persistent = false)
     {
+        value ??= new MemoryStream(0);
+
         if (Options.MaximumKeys > 0 && _items.Count >= Options.MaximumKeys && !_items.ContainsKey(key))
             return new CacheOperation(CacheResult.KeyLimit, null);
 
