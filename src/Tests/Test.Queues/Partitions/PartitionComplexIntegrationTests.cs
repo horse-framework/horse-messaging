@@ -410,7 +410,7 @@ public class PartitionComplexIntegrationTests
         // Push 9 messages WITHOUT label → round-robin
         IHorseQueueBus rrBus = new HorseQueueBus(producer);
         for (int i = 0; i < 9; i++)
-            await rrBus.Push("QueueA", new QueueAModel { TenantId = "rr", Sequence = i }, false, CancellationToken.None);
+            await rrBus.Push("rr-q", new QueueAModel { TenantId = "rr", Sequence = i }, false, CancellationToken.None);
 
         await WaitUntil(() => tracker.TotalCount() >= 12);
         Assert.True(tracker.TotalCount() >= 12);
@@ -485,7 +485,7 @@ public class PartitionComplexIntegrationTests
         HorseClient producer = await CreateProducer(ctx.Port);
         int msgCount = 30;
         for (int i = 0; i < msgCount; i++)
-            await PushModel(producer, "t1", "t1", i);
+            await PushModel(producer, "fifo-q", "t1", "t1", i);
 
         await WaitUntil(() => tracker.TotalCount() >= msgCount, 15_000);
 
@@ -527,7 +527,7 @@ public class PartitionComplexIntegrationTests
         HorseClient producer = await CreateProducer(ctx.Port);
         for (int label = 1; label <= 5; label++)
         for (int i = 0; i < 10; i++)
-            await PushModel(producer, $"L{label}", $"L{label}", i);
+            await PushModel(producer, "metrics-q", $"L{label}", $"L{label}", i);
 
         await Task.Delay(2000);
         List<PartitionMetricSnapshot> metrics = queue.PartitionManager.GetMetrics().ToList();
@@ -816,32 +816,26 @@ public class PartitionComplexIntegrationTests
     }
 
     private static async Task<(PartitionTestContext ctx, HorseQueue queue)> CreateSingleQueueServer(
-        string mode, PartitionOptions partitionOptions,
+        string mode, string queueName, PartitionOptions partitionOptions,
+        QueueType queueType = QueueType.RoundRobin,
         QueueAckDecision ack = QueueAckDecision.JustRequest)
     {
         PartitionTestContext ctx = await PartitionTestServer.Create(mode, opts =>
         {
-            opts.Type = QueueType.RoundRobin;
+            opts.Type = queueType;
             opts.Acknowledge = ack;
             opts.AutoQueueCreation = true;
         });
 
-        await ctx.Rider.Queue.Create("QueueA", o =>
+        await ctx.Rider.Queue.Create(queueName, o =>
         {
-            o.Type = QueueType.RoundRobin;
+            o.Type = queueType;
             o.Acknowledge = ack;
             o.Partition = partitionOptions;
         });
 
-        return (ctx, ctx.Rider.Queue.Find("QueueA"));
+        return (ctx, ctx.Rider.Queue.Find(queueName));
     }
-
-    /// <summary>Backward-compatible overload — ignores queueName, always creates "QueueA".</summary>
-    private static Task<(PartitionTestContext ctx, HorseQueue queue)> CreateSingleQueueServer(
-        string mode, string queueName, PartitionOptions partitionOptions,
-        QueueType queueType = QueueType.RoundRobin,
-        QueueAckDecision ack = QueueAckDecision.JustRequest)
-        => CreateSingleQueueServer(mode, partitionOptions, ack);
 
     #endregion
 
@@ -866,10 +860,11 @@ public class PartitionComplexIntegrationTests
     }
 
     /// <summary>
-    ///     Single-queue pool worker: subscribes to "QueueA" via enterWorkerPool.
+    ///     Single-queue pool worker: subscribes to the specified queue via enterWorkerPool.
     ///     Uses DI-based QueueAConsumer — messages are QueueAModel.
+    ///     Queue name is overridden from the attribute's "QueueA" to the given queueName.
     /// </summary>
-    private static HorseClient BuildPoolWorker(int port, string clientType, TrackerAccessor accessor)
+    private static async Task<HorseClient> BuildPoolWorker(int port, string clientType, TrackerAccessor accessor, string queueName)
     {
         ServiceCollection services = new();
         services.AddSingleton(accessor);
@@ -877,14 +872,8 @@ public class PartitionComplexIntegrationTests
         builder.AddHost($"horse://localhost:{port}");
         builder.SetClientType(clientType);
         builder.AutoSubscribe(true);
-        builder.AddScopedConsumer<QueueAConsumer>(name => name, enterWorkerPool: true);
-        return builder.Build();
-    }
-
-    /// <summary>Backward-compatible overload — ignores queueName, builds, connects and returns.</summary>
-    private static async Task<HorseClient> BuildPoolWorker(int port, string clientType, TrackerAccessor accessor, string queueName)
-    {
-        HorseClient client = BuildPoolWorker(port, clientType, accessor);
+        builder.AddScopedConsumer<QueueAConsumer>(name => queueName, enterWorkerPool: true);
+        HorseClient client = builder.Build();
         await client.ConnectAsync();
         return client;
     }
@@ -898,18 +887,17 @@ public class PartitionComplexIntegrationTests
         return client;
     }
 
-    /// <summary>Push a QueueAModel with partition label to "QueueA" via IHorseQueueBus.</summary>
-    private static async Task PushModel(HorseClient producer, string label, string tenantId = null, int sequence = 0)
+    /// <summary>Push a QueueAModel with partition label to the specified queue via IHorseQueueBus.</summary>
+    private static async Task PushModel(HorseClient producer, string queue, string label, string tenantId = null, int sequence = 0)
     {
         tenantId ??= label;
         IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("QueueA", new QueueAModel { TenantId = tenantId, Sequence = sequence }, false, null, label, CancellationToken.None);
+        await bus.Push(queue, new QueueAModel { TenantId = tenantId, Sequence = sequence }, false, null, label, CancellationToken.None);
     }
 
-    /// <summary>Push a QueueAModel with partition label. Queue parameter is the server-side queue name
-    /// but messages always target "QueueA" (matching the QueueAModel attribute and worker subscription).</summary>
+    /// <summary>Push a QueueAModel with partition label to the specified queue.</summary>
     private static Task PushLabeled(HorseClient producer, string queue, string label, string body = null)
-        => PushModel(producer, label);
+        => PushModel(producer, queue, label);
 
     #endregion
 
@@ -1797,3 +1785,4 @@ public class PartitionComplexIntegrationTests
 
     #endregion
 }
+
