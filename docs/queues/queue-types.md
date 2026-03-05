@@ -84,7 +84,7 @@ PullContainer container = await client.Queue.Pull(new PullRequest
     Queue = "jobs",
     Count = 10,
     Order = MessageOrder.FIFO
-});
+}, cancellationToken);
 
 foreach (var message in container.ReceivedMessages)
 {

@@ -70,17 +70,17 @@ public class RouterOperator
     }
 
     /// <summary>
-    /// Adds new binding to a router
+    /// Adds new binding to a router.
     /// </summary>
-    /// <param name="routerName">Router name of the binding</param>
-    /// <param name="type">Binding type</param>
-    /// <param name="name">Binding name</param>
+    /// <param name="routerName">Router name of the binding.</param>
+    /// <param name="type">Binding type.</param>
+    /// <param name="name">Binding name.</param>
     /// <param name="target">Binding target. Queue name, tag name, direct receiver id, name, type, etc.</param>
-    /// <param name="interaction">Binding interaction</param>
-    /// <param name="bindingMethod">Binding method is used when multiple receivers available in same binding. It's used for Direct and Tag bindings.</param>
-    /// <param name="contentType">Overwritten content type if specified</param>
-    /// <param name="priority">Binding priority</param>
-    /// <returns></returns>
+    /// <param name="interaction">Binding interaction.</param>
+    /// <param name="bindingMethod">Binding method is used when multiple receivers available in same binding.</param>
+    /// <param name="contentType">Overwritten content type if specified.</param>
+    /// <param name="priority">Binding priority.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public async Task<HorseResult> AddBinding(string routerName,
         string type,
         string name,

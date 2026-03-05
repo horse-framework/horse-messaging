@@ -145,8 +145,21 @@ public class DirectOperator
     }
 
     /// <summary>
+    /// Sends a serialized model to a direct receiver resolved from the model's attribute without waiting for acknowledgement.
+    /// </summary>
+    /// <param name="model">The message model.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public Task<HorseResult> Send<T>(T model, CancellationToken cancellationToken)
+    {
+        return Send(model, false, null, cancellationToken);
+    }
+
+    /// <summary>
     /// Sends a serialized model to a direct receiver resolved from the model's attribute.
     /// </summary>
+    /// <param name="model">The message model.</param>
+    /// <param name="waitAcknowledge">If true, waits for the target to acknowledge receipt.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> Send<T>(T model, bool waitAcknowledge, CancellationToken cancellationToken)
     {
         return Send(model, waitAcknowledge, null, cancellationToken);

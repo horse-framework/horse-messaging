@@ -11,11 +11,11 @@ namespace Horse.Messaging.Client.Interceptors;
 internal sealed class InterceptorRunner(List<InterceptorTypeDescriptor> descriptors)
 {
     /// <summary>
-    /// Run before interceptors
+    /// Runs before interceptors.
     /// </summary>
-    /// <param name="message"></param>
-    /// <param name="client"></param>
-    /// <param name="handlerFactory"></param>
+    /// <param name="message">The Horse message.</param>
+    /// <param name="client">The Horse client.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     internal Task RunBeforeInterceptors(HorseMessage message, HorseClient client, CancellationToken cancellationToken)
     {
         return RunBeforeInterceptors(message, client, null, cancellationToken);

@@ -41,7 +41,7 @@ var headers = new List<KeyValuePair<string, string>>
     new(HorseHeaders.QUEUE_TOPIC, "commerce")
 };
 
-await client.Queue.Push("orders", content, waitForCommit: true, messageHeaders: headers);
+await client.Queue.Push("orders", content, true, headers, null, CancellationToken.None);
 // Server auto-creates "orders" queue with Topic = "commerce"
 ```
 

@@ -41,16 +41,23 @@ public class EventOperator
     }
 
     /// <summary>
-    /// Subscribes to an event
+    /// Subscribes to an event.
     /// </summary>
+    /// <param name="eventType">Type of event to subscribe to.</param>
+    /// <param name="target">Event target (e.g. queue name, channel name).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> Subscribe(HorseEventType eventType, string target, CancellationToken cancellationToken)
     {
         return Subscribe(eventType, target, false, cancellationToken);
     }
 
     /// <summary>
-    /// Subscribes to an event with response verification
+    /// Subscribes to an event with response verification.
     /// </summary>
+    /// <param name="eventType">Type of event to subscribe to.</param>
+    /// <param name="target">Event target (e.g. queue name, channel name).</param>
+    /// <param name="verifyResponse">If true, waits for the server to confirm the subscription.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> Subscribe(HorseEventType eventType, string target, bool verifyResponse, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage();
@@ -66,16 +73,23 @@ public class EventOperator
     }
 
     /// <summary>
-    /// Unsubscribes from an event
+    /// Unsubscribes from an event.
     /// </summary>
+    /// <param name="eventType">Type of event to unsubscribe from.</param>
+    /// <param name="target">Event target (e.g. queue name, channel name).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> Unsubscribe(HorseEventType eventType, string target, CancellationToken cancellationToken)
     {
         return Unsubscribe(eventType, target, false, cancellationToken);
     }
 
     /// <summary>
-    /// Unsubscribes from an event with response verification
+    /// Unsubscribes from an event with response verification.
     /// </summary>
+    /// <param name="eventType">Type of event to unsubscribe from.</param>
+    /// <param name="target">Event target (e.g. queue name, channel name).</param>
+    /// <param name="verifyResponse">If true, waits for the server to confirm the unsubscription.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> Unsubscribe(HorseEventType eventType, string target, bool verifyResponse, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage();

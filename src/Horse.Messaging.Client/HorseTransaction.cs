@@ -86,10 +86,11 @@ public class HorseTransaction : IDisposable
     }
 
     /// <summary>
-    /// Creates and begins new transaction
+    /// Creates and begins new transaction.
     /// </summary>
-    /// <param name="client">Transaction client</param>
-    /// <param name="name">Transaction name</param>
+    /// <param name="client">Transaction client.</param>
+    /// <param name="name">Transaction name.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public static async Task<HorseTransaction> Begin(HorseClient client, string name, CancellationToken cancellationToken)
     {
         HorseTransaction transaction = new HorseTransaction(client, name);
@@ -129,13 +130,14 @@ public class HorseTransaction : IDisposable
     }
 
     /// <summary>
-    /// Begins new transactions
+    /// Begins new transaction with a payload model.
     /// </summary>
-    /// <param name="model">Transaction payload model, if exists</param>
-    /// <typeparam name="TModel">Transaction payload model type</typeparam>
-    /// <exception cref="InvalidOperationException">Thrown if transaction already began, committed or rolled back</exception>
-    /// <exception cref="KeyNotFoundException">Thrown when the transaction name is not defined on server</exception>
-    /// <exception cref="Exception">Thrown when begin operation is failed</exception>
+    /// <param name="model">Transaction payload model, if exists.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <typeparam name="TModel">Transaction payload model type.</typeparam>
+    /// <exception cref="InvalidOperationException">Thrown if transaction already began, committed or rolled back.</exception>
+    /// <exception cref="KeyNotFoundException">Thrown when the transaction name is not defined on server.</exception>
+    /// <exception cref="Exception">Thrown when begin operation is failed.</exception>
     public async Task Begin<TModel>(TModel model, CancellationToken cancellationToken)
     {
         if (Status != TransactionStatus.None)

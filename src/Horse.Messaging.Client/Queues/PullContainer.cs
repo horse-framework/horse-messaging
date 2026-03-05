@@ -92,9 +92,9 @@ public class PullContainer
         _source.SetResult(this);
     }
 
-    internal Task<PullContainer> GetAwaitableTask(CancellationToken cancellationToken = default)
+    internal Task<PullContainer> GetAwaitableTask(CancellationToken cancellationToken)
     {
-        if (cancellationToken == default || !cancellationToken.CanBeCanceled)
+        if (!cancellationToken.CanBeCanceled)
             return _source.Task;
 
         cancellationToken.Register(() => _source.TrySetCanceled(cancellationToken), useSynchronizationContext: false);

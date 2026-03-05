@@ -46,7 +46,7 @@ A positive ack tells the server the message was processed successfully. The mess
 **Manual:**
 ```csharp
 public async Task Consume(HorseMessage message, OrderEvent model, HorseClient client,
-    CancellationToken cancellationToken = default)
+    CancellationToken cancellationToken)
 {
     // process...
     await client.SendAck(message);
@@ -59,7 +59,7 @@ public async Task Consume(HorseMessage message, OrderEvent model, HorseClient cl
 public class OrderConsumer : IQueueConsumer<OrderEvent>
 {
     public Task Consume(HorseMessage message, OrderEvent model, HorseClient client,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         // Ack is sent automatically after this method returns without exception
         return Task.CompletedTask;
@@ -74,7 +74,7 @@ A negative ack tells the server the message was not processed successfully. The 
 **Manual:**
 ```csharp
 public async Task Consume(HorseMessage message, OrderEvent model, HorseClient client,
-    CancellationToken cancellationToken = default)
+    CancellationToken cancellationToken)
 {
     try
     {
@@ -95,7 +95,7 @@ public async Task Consume(HorseMessage message, OrderEvent model, HorseClient cl
 public class OrderConsumer : IQueueConsumer<OrderEvent>
 {
     public Task Consume(HorseMessage message, OrderEvent model, HorseClient client,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         // If this throws, a negative ack is sent automatically
         return ProcessOrder(model);
@@ -155,12 +155,12 @@ On the client side, the `waitForCommit` parameter controls whether the `Push` ca
 
 ```csharp
 // Wait for commit — blocks until server confirms
-HorseResult result = await bus.Push(order, waitForCommit: true);
+HorseResult result = await bus.Push(order, true, cancellationToken);
 if (result.Code == HorseResultCode.Ok)
     Console.WriteLine("Message committed");
 
 // Fire-and-forget — returns immediately
-await bus.Push(metrics, waitForCommit: false);
+await bus.Push(metrics, false, cancellationToken);
 ```
 
 ## Redelivery Headers
@@ -175,7 +175,7 @@ In the consumer:
 
 ```csharp
 public Task Consume(HorseMessage message, OrderEvent model, HorseClient client,
-    CancellationToken cancellationToken = default)
+    CancellationToken cancellationToken)
 {
     string countHeader = message.FindHeader("Redelivery-Count");
     int redeliveryCount = string.IsNullOrEmpty(countHeader) ? 0 : int.Parse(countHeader);
@@ -199,7 +199,7 @@ Or use the `[MoveOnError]` attribute to automate dead-letter routing:
 public class OrderConsumer : IQueueConsumer<OrderEvent>
 {
     public Task Consume(HorseMessage message, OrderEvent model, HorseClient client,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         return ProcessOrder(model);
     }

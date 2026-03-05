@@ -165,12 +165,12 @@ await rider.Queue.Create("OrderQueue", opts =>
 });
 
 // ── Worker side (10 instances, no label) ─────────────────
-await client.Queue.Subscribe("OrderQueue", true);
+await client.Queue.Subscribe("OrderQueue", true, CancellationToken.None);
 // Worker enters the available pool; server will assign it later
 
 // ── Producer side ────────────────────────────────────────
 await producer.Queue.Push("OrderQueue", order, false,
-    new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, tenantId) });
+    new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, tenantId) }, null, CancellationToken.None);
 ```
 
 **What happens:**
@@ -212,19 +212,22 @@ When `AutoQueueCreation` is enabled on the server, a client can create a partiti
 
 ```csharp
 HorseResult result = await client.Queue.SubscribePartitioned(
-    queue:                  "auto-part-q",   // doesn't exist yet
-    partitionLabel:         "worker-1",
-    verifyResponse:         true,
-    maxPartitions:          10,              // → Partition-Limit: 10 header
-    subscribersPerPartition: 1);             // → Partition-Subscribers: 1 header
+    "auto-part-q",     // doesn't exist yet
+    "worker-1",
+    true,
+    10,                // → Partition-Limit: 10 header
+    1,                 // → Partition-Subscribers: 1 header
+    CancellationToken.None);
 // Server creates queue with PartitionOptions.Enabled=true, MaxPartitionCount=10
 
 // To auto-create with unlimited partitions (override server default):
 HorseResult r2 = await client.Queue.SubscribePartitioned(
-    queue:          "unlimited-q",
-    partitionLabel: "worker-1",
-    verifyResponse: true,
-    maxPartitions:  0);                      // → Partition-Limit: 0 header → unlimited
+    "unlimited-q",
+    "worker-1",
+    true,
+    0,                 // → Partition-Limit: 0 header → unlimited
+    null,
+    CancellationToken.None);
 ```
 
 ---
@@ -282,7 +285,7 @@ The `Partition-Label` header is stripped from the message before forwarding to c
 public class OrderConsumer : IQueueConsumer<OrderEvent>
 {
     public Task Consume(HorseMessage message, OrderEvent model, HorseClient client,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }
@@ -307,9 +310,10 @@ When `AutoSubscribe = true`, the client automatically calls `SubscribePartitione
 ### Programmatic Subscribe
 
 ```csharp
-await client.Queue.SubscribePartitioned("orders", "tenant-42", verifyResponse: true,
-    maxPartitions: 50, 
-    subscribersPerPartition: 1);
+await client.Queue.SubscribePartitioned("orders", "tenant-42", true,
+    50,
+    1,
+    CancellationToken.None);
 ```
 
 > **API note:** `maxPartitions` and `subscribersPerPartition` are `int?` (nullable). `null` = not sent (server default used), `0` = unlimited, `> 0` = explicit limit.
@@ -376,19 +380,19 @@ All `Push` methods on `IHorseQueueBus` accept an optional `partitionLabel` param
 
 ```csharp
 // Model → tenantId partition
-await bus.Push(new OrderEvent { OrderId = 1 }, partitionLabel: tenantId);
+await bus.Push(new OrderEvent { OrderId = 1 }, false, null, tenantId, cancellationToken);
 
 // Model → explicit queue + partition
-await bus.Push("FetchOrders", new OrderEvent { OrderId = 1 }, partitionLabel: tenantId);
+await bus.Push("FetchOrders", new OrderEvent { OrderId = 1 }, false, null, tenantId, cancellationToken);
 
 // WaitForCommit + partition
-HorseResult result = await bus.Push("FetchOrders", model, waitForCommit: true, partitionLabel: tenantId);
+HorseResult result = await bus.Push("FetchOrders", model, true, null, tenantId, cancellationToken);
 
 // No partition label — same as before
-await bus.Push("FetchOrders", model, waitForCommit: false);
+await bus.Push("FetchOrders", model, false, cancellationToken);
 
 // partitionLabel: null → round-robin across partitions
-await bus.Push("JobQueue", stream, waitForCommit: false, partitionLabel: null);
+await bus.Push("JobQueue", stream, false, null, null, cancellationToken);
 ```
 
 ### Using Headers Directly (Low-Level)
@@ -396,10 +400,10 @@ await bus.Push("JobQueue", stream, waitForCommit: false, partitionLabel: null);
 ```csharp
 // Labeled
 await producer.Queue.Push("FetchOrders", content, false,
-    new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "tenant-42") });
+    new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "tenant-42") }, null, CancellationToken.None);
 
 // Label-less → round-robin across partitions
-await producer.Queue.Push("FetchOrders", content, false);
+await producer.Queue.Push("FetchOrders", content, false, CancellationToken.None);
 ```
 
 ---
@@ -520,10 +524,10 @@ opts.Partition = new PartitionOptions
 };
 
 // Producer: always send with a label that represents the ordering domain
-await bus.Push("OrderQueue", order, partitionLabel: order.TenantId);
+await bus.Push("OrderQueue", order, true, null, order.TenantId, cancellationToken);
 
 // Consumer: subscribe with the tenant label
-await client.Queue.SubscribePartitioned("OrderQueue", "tenant-42", true);
+await client.Queue.SubscribePartitioned("OrderQueue", "tenant-42", true, CancellationToken.None);
 ```
 
 For dynamic tenant scenarios where partition queues are created on demand (e.g., tenant IDs are not known at server startup), `SubscribersPerPartition = 1` can also be enforced from the **subscriber side** — you don't need to configure it only on the server. The subscriber can set it via the `subscribersPerPartition` parameter or the `[PartitionedQueue]` attribute:
@@ -531,9 +535,10 @@ For dynamic tenant scenarios where partition queues are created on demand (e.g.,
 ```csharp
 // Option 1: Programmatic subscribe — subscriber declares subscribersPerPartition
 await client.Queue.SubscribePartitioned("OrderQueue", "tenant-42",
-    verifyResponse: true,
-    maxPartitions: 100,
-    subscribersPerPartition: 1);   // ← enforces single consumer per partition
+    true,
+    100,
+    1,             // ← enforces single consumer per partition
+    CancellationToken.None);
 
 // Option 2: Attribute on consumer class
 [QueueName("OrderQueue")]

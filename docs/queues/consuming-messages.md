@@ -10,7 +10,7 @@ Implement `IQueueConsumer<TModel>` to define a consumer:
 public class OrderConsumer : IQueueConsumer<OrderCreatedEvent>
 {
     public Task Consume(HorseMessage message, OrderCreatedEvent model, HorseClient client,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         Console.WriteLine($"Processing order: {model.OrderId}");
         return Task.CompletedTask;
@@ -82,17 +82,17 @@ cfg.AutoSubscribe(false);
 Then subscribe manually:
 
 ```csharp
-await client.Queue.Subscribe("orders", verifyResponse: true);
+await client.Queue.Subscribe("orders", true, cancellationToken);
 ```
 
 ## Manual Subscribe & Unsubscribe
 
 ```csharp
 // Subscribe
-HorseResult result = await client.Queue.Subscribe("orders", verifyResponse: true);
+HorseResult result = await client.Queue.Subscribe("orders", true, cancellationToken);
 
 // Unsubscribe
-HorseResult result = await client.Queue.Unsubscribe("orders", verifyResponse: true);
+HorseResult result = await client.Queue.Unsubscribe("orders", cancellationToken);
 ```
 
 The `verifyResponse` parameter controls whether the client waits for a response from the server:
@@ -110,7 +110,7 @@ PullContainer container = await client.Queue.Pull(new PullRequest
     Queue = "jobs",
     Count = 10,
     Order = MessageOrder.FIFO
-});
+}, cancellationToken);
 
 foreach (HorseMessage message in container.ReceivedMessages)
 {
@@ -123,7 +123,7 @@ Pull request shortcuts:
 
 ```csharp
 // Pull a single message
-PullContainer single = await client.Queue.Pull(PullRequest.Single("jobs"));
+PullContainer single = await client.Queue.Pull(PullRequest.Single("jobs"), cancellationToken);
 ```
 
 ## Consumer Attributes
@@ -142,7 +142,7 @@ Apply attributes to consumer or model classes to configure queue behavior at sub
 public class OrderConsumer : IQueueConsumer<OrderCreatedEvent>
 {
     public Task Consume(HorseMessage message, OrderCreatedEvent model, HorseClient client,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         // process
         return Task.CompletedTask;

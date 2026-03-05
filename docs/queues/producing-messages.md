@@ -16,7 +16,7 @@ public class OrderService
         _bus = bus;
     }
 
-    public async Task CreateOrder(Order order)
+    public async Task CreateOrder(Order order, CancellationToken cancellationToken)
     {
         // Process order...
 
@@ -25,7 +25,7 @@ public class OrderService
         {
             OrderId = order.Id,
             CreatedAt = DateTime.UtcNow
-        }, waitForCommit: true);
+        }, true, cancellationToken);
 
         if (result.Code != HorseResultCode.Ok)
             Console.WriteLine($"Push failed: {result.Code}");
@@ -33,7 +33,7 @@ public class OrderService
 }
 ```
 
-The `waitForCommit: true` parameter tells the client to wait for a commit response from the server before completing the `Push` call. When the commit arrives depends on the queue's [`CommitWhen`](queue-options.md#commitwhen) option. See [Commit Behavior](#commit-behavior) below for details.
+The `waitForCommit` parameter (second argument, `true`) tells the client to wait for a commit response from the server before completing the `Push` call. When the commit arrives depends on the queue's [`CommitWhen`](queue-options.md#commitwhen) option. See [Commit Behavior](#commit-behavior) below for details. The last parameter is always a `CancellationToken`.
 
 ## Using HorseClient Directly
 
@@ -44,10 +44,10 @@ HorseClient client = new HorseClient();
 client.Connect("horse://localhost:26222");
 
 // Push a serialized model (queue name resolved from type or [QueueName] attribute)
-await client.Queue.Push(new OrderCreatedEvent { OrderId = 42 }, waitForCommit: true);
+await client.Queue.Push(new OrderCreatedEvent { OrderId = 42 }, true, CancellationToken.None);
 
 // Push with a specific queue name
-await client.Queue.Push("my-custom-queue", new OrderCreatedEvent { OrderId = 42 }, waitForCommit: true);
+await client.Queue.Push("my-custom-queue", new OrderCreatedEvent { OrderId = 42 }, true, CancellationToken.None);
 ```
 
 ## Push to Named Queues
@@ -56,7 +56,7 @@ By default, the queue name is resolved from the model type name or the `[QueueNa
 
 ```csharp
 // Explicit queue name
-await bus.Push("high-priority-orders", new OrderEvent { ... }, waitForCommit: true);
+await bus.Push("high-priority-orders", new OrderEvent { ... }, true, cancellationToken);
 ```
 
 ## Push Overloads
@@ -65,25 +65,28 @@ The `QueueOperator.Push` method has several overloads:
 
 ```csharp
 // Model-based (queue name from type/attribute)
-Task<HorseResult> Push<T>(T model, bool waitForCommit, ...)
+Task<HorseResult> Push<T>(T model, bool waitForCommit, CancellationToken cancellationToken)
 
 // Model-based with explicit queue name
-Task<HorseResult> Push<T>(string queue, T model, bool waitForCommit, ...)
+Task<HorseResult> Push<T>(string queue, T model, bool waitForCommit, CancellationToken cancellationToken)
 
 // Model-based with explicit message ID
-Task<HorseResult> Push<T>(T model, string messageId, bool waitForCommit, ...)
+Task<HorseResult> Push<T>(T model, string messageId, bool waitForCommit, CancellationToken cancellationToken)
 
 // Raw binary content
-Task<HorseResult> Push(string queue, byte[] data, bool waitForCommit, ...)
-Task<HorseResult> Push(string queue, MemoryStream content, bool waitForCommit, ...)
+Task<HorseResult> Push(string queue, MemoryStream content, bool waitForCommit, CancellationToken cancellationToken)
+
+// Full overload with headers and partition label
+Task<HorseResult> Push<T>(string queue, T model, bool waitForCommit,
+    IEnumerable<KeyValuePair<string, string>> messageHeaders, string partitionLabel, CancellationToken cancellationToken)
 ```
 
-All overloads accept optional `messageHeaders` and `CancellationToken` parameters.
+All overloads require a `CancellationToken` parameter. This ensures cancellation propagation is never accidentally broken.
 
 The `IHorseQueueBus` interface additionally supports a `partitionLabel` parameter for [partition-aware routing](partitioned-queues.md):
 
 ```csharp
-await bus.Push(new OrderEvent { ... }, waitForCommit: true, partitionLabel: "tenant-42");
+await bus.Push(new OrderEvent { ... }, true, null, "tenant-42", cancellationToken);
 ```
 
 ## Bulk Push
@@ -141,23 +144,23 @@ var headers = new List<KeyValuePair<string, string>>
     new("X-Priority", "high")
 };
 
-await client.Queue.Push(new OrderEvent { ... }, waitForCommit: true, messageHeaders: headers);
+await client.Queue.Push(new OrderEvent { ... }, true, headers, null, cancellationToken);
 ```
 
 ## Commit Behavior
 
 The `waitForCommit` parameter controls whether the `Push` call blocks until the server confirms the message was processed.
 
-### `waitForCommit: false`
+### `waitForCommit = false`
 
 The client sends the message and returns immediately without waiting for any server response. The `Push` call completes as soon as the bytes are written to the socket. You get no feedback about whether the message was stored, delivered, or acknowledged. This is fire-and-forget:
 
 ```csharp
 // Fire-and-forget: returns immediately, no guarantee the server processed the message
-await bus.Push(new MetricEvent { Value = 42 }, waitForCommit: false);
+await bus.Push(new MetricEvent { Value = 42 }, false, cancellationToken);
 ```
 
-### `waitForCommit: true`
+### `waitForCommit = true`
 
 The client sends the message and waits for a commit response from the server. The `Push` call blocks (asynchronously) until the server sends back a response or the client's `ResponseTimeout` expires.
 
@@ -165,7 +168,7 @@ The client sends the message and waits for a commit response from the server. Th
 
 | CommitWhen | Producer receives commit when... |
 |------------|----------------------------------|
-| `None` | No commit is ever sent. The `Push` call **times out** and returns a timeout result. Do not use `waitForCommit: true` with `CommitWhen.None`. |
+| `None` | No commit is ever sent. The `Push` call **times out** and returns a timeout result. Do not use `waitForCommit = true` with `CommitWhen.None`. |
 | `AfterReceived` | The server has received and stored the message in the queue. This is the fastest commit — it confirms the message is safely queued but not yet delivered. |
 | `AfterSent` | The message has been sent to at least one consumer. If there are no consumers, the `Push` call **times out** because the commit is never triggered. |
 | `AfterAcknowledge` | A consumer has acknowledged the message. If the consumer never acks (or ack times out), the `Push` call returns a failure or timeout. |
@@ -179,7 +182,7 @@ The client sends the message and waits for a commit response from the server. Th
 
 ```csharp
 // Wait for commit: blocks until the server confirms based on CommitWhen
-HorseResult result = await bus.Push(new OrderEvent { OrderId = 1 }, waitForCommit: true);
+HorseResult result = await bus.Push(new OrderEvent { OrderId = 1 }, true, cancellationToken);
 
 if (result.Code == HorseResultCode.Ok)
     Console.WriteLine("Message committed successfully");

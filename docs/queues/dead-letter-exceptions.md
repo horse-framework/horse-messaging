@@ -56,7 +56,7 @@ Consumer.Consume() throws Exception
 public class OrderConsumer : IQueueConsumer<OrderModel>
 {
     public async Task Consume(HorseMessage message, OrderModel model, HorseClient client,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         // If this throws, the original message is cloned and moved to "order-errors" queue
         await ProcessOrder(model);
@@ -107,7 +107,7 @@ Subscribe a consumer to the error queue to process or log failed messages:
 public class OrderErrorConsumer : IQueueConsumer<OrderModel>
 {
     public async Task Consume(HorseMessage message, OrderModel model, HorseClient client,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         // Read the exception metadata from AdditionalContent
         string additionalContent = message.GetStringAdditionalContent();
@@ -150,7 +150,7 @@ public class ExceptionLogEntry : ITransportableException
 public class OrderConsumer : IQueueConsumer<OrderModel>
 {
     public async Task Consume(HorseMessage message, OrderModel model, HorseClient client,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         await ProcessOrder(model);
     }
@@ -195,7 +195,7 @@ public class GenericErrorLog : ITransportableException
 public class PaymentConsumer : IQueueConsumer<PaymentModel>
 {
     public async Task Consume(HorseMessage message, PaymentModel model, HorseClient client,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         await chargeService.Charge(model);
     }
@@ -301,7 +301,7 @@ Here is a fully configured consumer with all error handling mechanisms:
 public class OrderConsumer : IQueueConsumer<OrderModel>
 {
     public async Task Consume(HorseMessage message, OrderModel model, HorseClient client,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         await ProcessOrder(model);
     }
@@ -431,7 +431,7 @@ await rider.Queue.Create("orders", o =>
 public class OrderConsumer : IQueueConsumer<OrderModel>
 {
     public async Task Consume(HorseMessage message, OrderModel model, HorseClient client,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         string deliveryHeader = message.FindHeader(HorseHeaders.DELIVERY);
         int deliveryCount = string.IsNullOrEmpty(deliveryHeader) ? 1 : int.Parse(deliveryHeader);

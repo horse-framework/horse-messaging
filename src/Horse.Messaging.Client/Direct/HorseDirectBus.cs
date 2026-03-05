@@ -11,6 +11,7 @@ namespace Horse.Messaging.Client.Direct;
 /// </summary>
 public class HorseDirectBus<TIdentifier> : HorseDirectBus, IHorseDirectBus<TIdentifier>
 {
+    /// <inheritdoc />
     public HorseDirectBus(HorseClient client) : base(client) { }
 }
 
@@ -21,6 +22,10 @@ public class HorseDirectBus : IHorseDirectBus
 {
     private readonly HorseClient _client;
 
+    /// <summary>
+    /// Creates a new HorseDirectBus instance.
+    /// </summary>
+    /// <param name="client">The Horse client instance.</param>
     public HorseDirectBus(HorseClient client) => _client = client;
 
     /// <inheritdoc />
@@ -87,6 +92,10 @@ public class HorseDirectBus : IHorseDirectBus
     public Task<HorseResult> SendById<T>(string id, ushort contentType, T model, bool waitAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
         => _client.Direct.SendById(id, contentType, model, waitAcknowledge, messageHeaders, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<HorseResult> Send<T>(T model, CancellationToken cancellationToken)
+        => _client.Direct.Send(model, cancellationToken);
 
     /// <inheritdoc />
     public Task<HorseResult> Send<T>(T model, bool waitAcknowledge, CancellationToken cancellationToken)

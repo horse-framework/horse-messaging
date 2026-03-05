@@ -287,9 +287,20 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
     }
 
     /// <summary>
-    /// Sends a Horse message
+    /// Sends a Horse message.
     /// </summary>
-    public async Task<HorseResult> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
+    /// <param name="message">The message to send.</param>
+    public Task<HorseResult> SendAsync(HorseMessage message)
+    {
+        return SendAsync(message, null);
+    }
+
+    /// <summary>
+    /// Sends a Horse message with additional headers.
+    /// </summary>
+    /// <param name="message">The message to send.</param>
+    /// <param name="additionalHeaders">Additional headers to include.</param>
+    public async Task<HorseResult> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders)
     {
         message.SetSource(_client.ClientId);
 

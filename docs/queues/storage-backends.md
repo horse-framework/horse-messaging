@@ -71,7 +71,7 @@ var headers = new List<KeyValuePair<string, string>>
     new(HorseHeaders.QUEUE_MANAGER, "Persistent")
 };
 
-await client.Queue.Push("orders", content, waitForCommit: true, messageHeaders: headers);
+await client.Queue.Push("orders", content, true, headers, null, CancellationToken.None);
 ```
 
 > **Note:** The queue manager is determined only at queue creation time. Once a queue is created with a specific manager, subsequent messages do not change it — the header is stripped from the message before delivery.

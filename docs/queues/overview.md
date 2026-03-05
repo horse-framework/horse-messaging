@@ -79,7 +79,7 @@ await client.Queue.Push(new OrderCreatedEvent { OrderId = 42 }, waitForCommit: t
 public class OrderCreatedConsumer : IQueueConsumer<OrderCreatedEvent>
 {
     public Task Consume(HorseMessage message, OrderCreatedEvent model, HorseClient client,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         Console.WriteLine($"Order received: {model.OrderId}");
         return Task.CompletedTask;

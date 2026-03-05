@@ -39,7 +39,7 @@ internal class ChannelSubscriberExecutor<TModel> : ExecutorBase
     /// Executes the channel message
     /// </summary>
     public override async Task Execute(HorseClient client, HorseMessage message, object model,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         TModel t = (TModel) model;
         ProvidedHandler providedHandler = null;

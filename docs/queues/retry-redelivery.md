@@ -22,7 +22,7 @@ The `[Retry]` attribute on a consumer class tells the client to re-invoke the `C
 public class OrderConsumer : IQueueConsumer<OrderModel>
 {
     public async Task Consume(HorseMessage message, OrderModel model, HorseClient client,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         // If this throws, the client retries up to 3 times with 100ms delay between attempts.
         await ProcessOrder(model);
@@ -68,7 +68,7 @@ Some exceptions should not be retried because they represent permanent failures 
 public class PaymentConsumer : IQueueConsumer<PaymentModel>
 {
     public async Task Consume(HorseMessage message, PaymentModel model, HorseClient client,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         if (model.Amount <= 0)
             throw new ValidationException("Invalid amount"); // NOT retried — propagates immediately
@@ -149,7 +149,7 @@ In your consumer, read the `Delivery` header to detect redeliveries:
 public class OrderConsumer : IQueueConsumer<OrderModel>
 {
     public async Task Consume(HorseMessage message, OrderModel model, HorseClient client,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         string deliveryHeader = message.FindHeader(HorseHeaders.DELIVERY);
         int deliveryCount = string.IsNullOrEmpty(deliveryHeader) ? 1 : int.Parse(deliveryHeader);
@@ -239,7 +239,7 @@ await rider.Queue.Create("orders", o =>
 public class OrderConsumer : IQueueConsumer<OrderModel>
 {
     public async Task Consume(HorseMessage message, OrderModel model, HorseClient client,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         string deliveryHeader = message.FindHeader(HorseHeaders.DELIVERY);
         int serverDeliveryCount = string.IsNullOrEmpty(deliveryHeader) ? 1 : int.Parse(deliveryHeader);

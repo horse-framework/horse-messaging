@@ -848,9 +848,20 @@ public class HorseClient : IDisposable
     }
 
     /// <summary>
-    /// Sends a Horse message
+    /// Sends a Horse message synchronously (fire-and-forget).
     /// </summary>
-    public bool Send(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
+    /// <param name="message">The message to send.</param>
+    public bool Send(HorseMessage message)
+    {
+        return Send(message, (IList<KeyValuePair<string, string>>)null);
+    }
+
+    /// <summary>
+    /// Sends a Horse message synchronously with additional headers (fire-and-forget).
+    /// </summary>
+    /// <param name="message">The message to send.</param>
+    /// <param name="additionalHeaders">Additional headers to include.</param>
+    public bool Send(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders)
     {
         message.SetSource(_clientId);
 
