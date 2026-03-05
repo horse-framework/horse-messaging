@@ -1,4 +1,5 @@
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -28,19 +29,19 @@ public class RoundRobinDeliveryTest
 
         HorseClient c1 = new HorseClient();
         await c1.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await c1.Queue.Subscribe("rr-dist", true);
+        await c1.Queue.Subscribe("rr-dist", true, CancellationToken.None);
         c1.MessageReceived += (_, _) => count1++;
 
         HorseClient c2 = new HorseClient();
         await c2.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await c2.Queue.Subscribe("rr-dist", true);
+        await c2.Queue.Subscribe("rr-dist", true, CancellationToken.None);
         c2.MessageReceived += (_, _) => count2++;
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         for (int i = 0; i < 10; i++)
-            await producer.Queue.Push("rr-dist", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), true);
+            await producer.Queue.Push("rr-dist", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), true, CancellationToken.None);
 
         for (int i = 0; i < 50 && count1 + count2 < 10; i++)
             await Task.Delay(100);
@@ -71,14 +72,14 @@ public class RoundRobinDeliveryTest
 
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("rr-one", true);
+        await consumer.Queue.Subscribe("rr-one", true, CancellationToken.None);
         consumer.MessageReceived += (_, _) => count++;
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         for (int i = 0; i < 5; i++)
-            await producer.Queue.Push("rr-one", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), true);
+            await producer.Queue.Push("rr-one", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), true, CancellationToken.None);
 
         for (int i = 0; i < 30 && count < 5; i++)
             await Task.Delay(100);
@@ -106,24 +107,24 @@ public class RoundRobinDeliveryTest
 
         HorseClient c1 = new HorseClient();
         await c1.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await c1.Queue.Subscribe("rr-three", true);
+        await c1.Queue.Subscribe("rr-three", true, CancellationToken.None);
         c1.MessageReceived += (_, _) => count1++;
 
         HorseClient c2 = new HorseClient();
         await c2.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await c2.Queue.Subscribe("rr-three", true);
+        await c2.Queue.Subscribe("rr-three", true, CancellationToken.None);
         c2.MessageReceived += (_, _) => count2++;
 
         HorseClient c3 = new HorseClient();
         await c3.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await c3.Queue.Subscribe("rr-three", true);
+        await c3.Queue.Subscribe("rr-three", true, CancellationToken.None);
         c3.MessageReceived += (_, _) => count3++;
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         for (int i = 0; i < 9; i++)
-            await producer.Queue.Push("rr-three", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), true);
+            await producer.Queue.Push("rr-three", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), true, CancellationToken.None);
 
         for (int i = 0; i < 50 && count1 + count2 + count3 < 9; i++)
             await Task.Delay(100);
@@ -156,20 +157,20 @@ public class RoundRobinDeliveryTest
 
         HorseClient c1 = new HorseClient();
         await c1.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await c1.Queue.Subscribe("rr-leave", true);
+        await c1.Queue.Subscribe("rr-leave", true, CancellationToken.None);
         c1.MessageReceived += (_, _) => count1++;
 
         HorseClient c2 = new HorseClient();
         await c2.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await c2.Queue.Subscribe("rr-leave", true);
+        await c2.Queue.Subscribe("rr-leave", true, CancellationToken.None);
         c2.MessageReceived += (_, _) => count2++;
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         // Send 2 messages (one each)
-        await producer.Queue.Push("rr-leave", new MemoryStream("m1"u8.ToArray()), true);
-        await producer.Queue.Push("rr-leave", new MemoryStream("m2"u8.ToArray()), true);
+        await producer.Queue.Push("rr-leave", new MemoryStream("m1"u8.ToArray()), true, CancellationToken.None);
+        await producer.Queue.Push("rr-leave", new MemoryStream("m2"u8.ToArray()), true, CancellationToken.None);
 
         for (int i = 0; i < 30 && count1 + count2 < 2; i++)
             await Task.Delay(100);
@@ -184,7 +185,7 @@ public class RoundRobinDeliveryTest
 
         // Send 3 more → all go to c1
         for (int i = 0; i < 3; i++)
-            await producer.Queue.Push("rr-leave", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"after-{i}")), true);
+            await producer.Queue.Push("rr-leave", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"after-{i}")), true, CancellationToken.None);
 
         for (int i = 0; i < 30 && count1 < c1Before + 3; i++)
             await Task.Delay(100);
@@ -210,7 +211,7 @@ public class RoundRobinDeliveryTest
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("rr-store", new MemoryStream("stored"u8.ToArray()), false);
+        await producer.Queue.Push("rr-store", new MemoryStream("stored"u8.ToArray()), false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseQueue queue = ctx.Rider.Queue.Find("rr-store");
@@ -236,7 +237,7 @@ public class RoundRobinDeliveryTest
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
         for (int i = 0; i < 3; i++)
-            await producer.Queue.Push("rr-stored", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false);
+            await producer.Queue.Push("rr-stored", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false, CancellationToken.None);
         await Task.Delay(500);
 
         // Consumer subscribes → should get all stored messages (one at a time via RR)
@@ -244,7 +245,7 @@ public class RoundRobinDeliveryTest
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
         consumer.MessageReceived += (_, _) => received++;
-        await consumer.Queue.Subscribe("rr-stored", true);
+        await consumer.Queue.Subscribe("rr-stored", true, CancellationToken.None);
 
         for (int i = 0; i < 50 && received < 3; i++)
             await Task.Delay(100);
@@ -272,7 +273,7 @@ public class RoundRobinDeliveryTest
 
         HorseClient c1 = new HorseClient();
         await c1.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await c1.Queue.Subscribe("rr-midjoin", true);
+        await c1.Queue.Subscribe("rr-midjoin", true, CancellationToken.None);
         c1.MessageReceived += (_, _) => count1++;
 
         HorseClient producer = new HorseClient();
@@ -280,7 +281,7 @@ public class RoundRobinDeliveryTest
 
         // Send 2 messages → all go to c1
         for (int i = 0; i < 2; i++)
-            await producer.Queue.Push("rr-midjoin", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"batch1-{i}")), true);
+            await producer.Queue.Push("rr-midjoin", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"batch1-{i}")), true, CancellationToken.None);
 
         for (int i = 0; i < 30 && count1 < 2; i++)
             await Task.Delay(100);
@@ -289,13 +290,13 @@ public class RoundRobinDeliveryTest
         // c2 joins mid-stream
         HorseClient c2 = new HorseClient();
         await c2.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await c2.Queue.Subscribe("rr-midjoin", true);
+        await c2.Queue.Subscribe("rr-midjoin", true, CancellationToken.None);
         c2.MessageReceived += (_, _) => count2++;
         await Task.Delay(300);
 
         // Send 4 more → distributed between c1 and c2
         for (int i = 0; i < 4; i++)
-            await producer.Queue.Push("rr-midjoin", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"batch2-{i}")), true);
+            await producer.Queue.Push("rr-midjoin", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"batch2-{i}")), true, CancellationToken.None);
 
         for (int i = 0; i < 50 && count1 + count2 < 6; i++)
             await Task.Delay(100);
@@ -325,11 +326,11 @@ public class RoundRobinDeliveryTest
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
         consumer.MessageReceived += (_, _) => System.Threading.Interlocked.Increment(ref count);
-        await consumer.Queue.Subscribe("rr-reconn", true);
+        await consumer.Queue.Subscribe("rr-reconn", true, CancellationToken.None);
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("rr-reconn", new MemoryStream("msg1"u8.ToArray()), true);
+        await producer.Queue.Push("rr-reconn", new MemoryStream("msg1"u8.ToArray()), true, CancellationToken.None);
 
         for (int i = 0; i < 30 && count < 1; i++)
             await Task.Delay(100);
@@ -342,9 +343,9 @@ public class RoundRobinDeliveryTest
         consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
         consumer.MessageReceived += (_, _) => System.Threading.Interlocked.Increment(ref count);
-        await consumer.Queue.Subscribe("rr-reconn", true);
+        await consumer.Queue.Subscribe("rr-reconn", true, CancellationToken.None);
 
-        await producer.Queue.Push("rr-reconn", new MemoryStream("msg2"u8.ToArray()), true);
+        await producer.Queue.Push("rr-reconn", new MemoryStream("msg2"u8.ToArray()), true, CancellationToken.None);
 
         for (int i = 0; i < 30 && count < 2; i++)
             await Task.Delay(100);

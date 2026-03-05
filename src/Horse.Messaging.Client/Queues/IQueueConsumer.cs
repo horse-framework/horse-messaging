@@ -21,5 +21,5 @@ public interface IQueueConsumer<in TModel>
     /// Pass this token to any async I/O calls (HttpClient, EF Core, etc.) inside the handler.
     /// </param>
     Task Consume(HorseMessage message, TModel model, HorseClient client,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 }

@@ -28,7 +28,7 @@ public class MessageStoreTest
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("store-read", new MemoryStream("hello-store"u8.ToArray()), false);
+        await producer.Queue.Push("store-read", new MemoryStream("hello-store"u8.ToArray()), false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseQueue queue = ctx.Rider.Queue.Find("store-read");
@@ -54,7 +54,7 @@ public class MessageStoreTest
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("store-consume", new MemoryStream("consumed"u8.ToArray()), false);
+        await producer.Queue.Push("store-consume", new MemoryStream("consumed"u8.ToArray()), false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseQueue queue = ctx.Rider.Queue.Find("store-consume");
@@ -84,7 +84,7 @@ public class MessageStoreTest
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         for (int i = 0; i < 5; i++)
-            await producer.Queue.Push("store-count", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false);
+            await producer.Queue.Push("store-count", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseQueue queue = ctx.Rider.Queue.Find("store-count");
@@ -114,7 +114,7 @@ public class MessageStoreTest
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         for (int i = 0; i < 10; i++)
-            await producer.Queue.Push("store-clear", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false);
+            await producer.Queue.Push("store-clear", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseQueue queue = ctx.Rider.Queue.Find("store-clear");
@@ -149,7 +149,7 @@ public class MessageStoreTest
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         // Push with explicit message id
-        await producer.Queue.Push("store-find", new MemoryStream("findme"u8.ToArray()), "find-id-001", false);
+        await producer.Queue.Push("store-find", new MemoryStream("findme"u8.ToArray()), "find-id-001", false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseQueue queue = ctx.Rider.Queue.Find("store-find");
@@ -180,9 +180,9 @@ public class MessageStoreTest
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
-        await producer.Queue.Push("store-last", new MemoryStream("first"u8.ToArray()), false);
-        await producer.Queue.Push("store-last", new MemoryStream("second"u8.ToArray()), false);
-        await producer.Queue.Push("store-last", new MemoryStream("third"u8.ToArray()), false);
+        await producer.Queue.Push("store-last", new MemoryStream("first"u8.ToArray()), false, CancellationToken.None);
+        await producer.Queue.Push("store-last", new MemoryStream("second"u8.ToArray()), false, CancellationToken.None);
+        await producer.Queue.Push("store-last", new MemoryStream("third"u8.ToArray()), false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseQueue queue = ctx.Rider.Queue.Find("store-last");
@@ -211,7 +211,7 @@ public class MessageStoreTest
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         for (int i = 0; i < 5; i++)
-            await producer.Queue.Push("store-multi", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false);
+            await producer.Queue.Push("store-multi", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseQueue queue = ctx.Rider.Queue.Find("store-multi");
@@ -241,7 +241,7 @@ public class MessageStoreTest
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
-        await producer.Queue.Push("store-multi-over", new MemoryStream("only-one"u8.ToArray()), false);
+        await producer.Queue.Push("store-multi-over", new MemoryStream("only-one"u8.ToArray()), false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseQueue queue = ctx.Rider.Queue.Find("store-multi-over");
@@ -268,8 +268,8 @@ public class MessageStoreTest
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
-        await producer.Queue.Push("store-remove", new MemoryStream("removeme"u8.ToArray()), "rm-id-001", false);
-        await producer.Queue.Push("store-remove", new MemoryStream("keepme"u8.ToArray()), "rm-id-002", false);
+        await producer.Queue.Push("store-remove", new MemoryStream("removeme"u8.ToArray()), "rm-id-001", false, CancellationToken.None);
+        await producer.Queue.Push("store-remove", new MemoryStream("keepme"u8.ToArray()), "rm-id-002", false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseQueue queue = ctx.Rider.Queue.Find("store-remove");
@@ -321,7 +321,7 @@ public class MessageStoreTest
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("store-empty", new MemoryStream("data"u8.ToArray()), false);
+        await producer.Queue.Push("store-empty", new MemoryStream("data"u8.ToArray()), false, CancellationToken.None);
         await Task.Delay(500);
 
         Assert.False(queue.Manager.MessageStore.IsEmpty);
@@ -349,7 +349,7 @@ public class MessageStoreTest
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         // Normal message
-        await producer.Queue.Push("store-pri", new MemoryStream("normal"u8.ToArray()), false);
+        await producer.Queue.Push("store-pri", new MemoryStream("normal"u8.ToArray()), false, CancellationToken.None);
 
         // High priority message
         HorseMessage hiMsg = new HorseMessage(MessageType.QueueMessage, "store-pri");
@@ -384,7 +384,7 @@ public class MessageStoreTest
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("store-dup", new MemoryStream("first"u8.ToArray()), false);
+        await producer.Queue.Push("store-dup", new MemoryStream("first"u8.ToArray()), false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseQueue queue = ctx.Rider.Queue.Find("store-dup");
@@ -414,7 +414,7 @@ public class MessageStoreTest
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
         for (int i = 0; i < 3; i++)
-            await producer.Queue.Push("store-unsafe", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"u-{i}")), false);
+            await producer.Queue.Push("store-unsafe", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"u-{i}")), false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseQueue queue = ctx.Rider.Queue.Find("store-unsafe");
@@ -439,7 +439,7 @@ public class MessageStoreTest
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("store-destroy", new MemoryStream("data"u8.ToArray()), false);
+        await producer.Queue.Push("store-destroy", new MemoryStream("data"u8.ToArray()), false, CancellationToken.None);
         await Task.Delay(500);
 
         Assert.False(queue.Manager.MessageStore.IsEmpty);
@@ -474,7 +474,7 @@ public class MessageStoreTest
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("store-peek", new MemoryStream("peek"u8.ToArray()), false);
+        await producer.Queue.Push("store-peek", new MemoryStream("peek"u8.ToArray()), false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseQueue queue = ctx.Rider.Queue.Find("store-peek");

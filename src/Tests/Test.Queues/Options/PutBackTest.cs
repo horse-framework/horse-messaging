@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -33,11 +34,11 @@ public class PutBackTest
         HorseClient consumer = new HorseClient();
         consumer.AutoAcknowledge = false; // will not ack → timeout
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("pb-no", true);
+        await consumer.Queue.Subscribe("pb-no", true, CancellationToken.None);
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("pb-no", new MemoryStream("dropped"u8.ToArray()), false);
+        await producer.Queue.Push("pb-no", new MemoryStream("dropped"u8.ToArray()), false, CancellationToken.None);
 
         // Wait for ack timeout + processing
         await Task.Delay(4000);
@@ -72,12 +73,12 @@ public class PutBackTest
         HorseClient consumer = new HorseClient();
         consumer.AutoAcknowledge = false; // won't ack first time
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("pb-pri", true);
+        await consumer.Queue.Subscribe("pb-pri", true, CancellationToken.None);
         consumer.MessageReceived += (_, _) => receivedCount++;
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("pb-pri", new MemoryStream("putback"u8.ToArray()), false);
+        await producer.Queue.Push("pb-pri", new MemoryStream("putback"u8.ToArray()), false, CancellationToken.None);
 
         // Wait for delivery + timeout + put-back + re-delivery
         for (int i = 0; i < 50 && receivedCount < 2; i++)
@@ -112,12 +113,12 @@ public class PutBackTest
         HorseClient consumer = new HorseClient();
         consumer.AutoAcknowledge = false;
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("pb-reg", true);
+        await consumer.Queue.Subscribe("pb-reg", true, CancellationToken.None);
         consumer.MessageReceived += (_, _) => receivedCount++;
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("pb-reg", new MemoryStream("regular-back"u8.ToArray()), false);
+        await producer.Queue.Push("pb-reg", new MemoryStream("regular-back"u8.ToArray()), false, CancellationToken.None);
 
         // Wait for timeout + put-back + re-delivery
         for (int i = 0; i < 50 && receivedCount < 2; i++)
@@ -155,7 +156,7 @@ public class PutBackTest
         HorseClient consumer = new HorseClient();
         consumer.AutoAcknowledge = false;
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("pb-delay", true);
+        await consumer.Queue.Subscribe("pb-delay", true, CancellationToken.None);
         consumer.MessageReceived += (_, _) =>
         {
             receivedCount++;
@@ -167,7 +168,7 @@ public class PutBackTest
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("pb-delay", new MemoryStream("delayed"u8.ToArray()), false);
+        await producer.Queue.Push("pb-delay", new MemoryStream("delayed"u8.ToArray()), false, CancellationToken.None);
 
         // Wait for first delivery + timeout + delay + second delivery (generous timeout)
         for (int i = 0; i < 80 && receivedCount < 2; i++)

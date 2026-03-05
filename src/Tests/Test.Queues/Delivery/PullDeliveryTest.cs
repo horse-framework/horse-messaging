@@ -29,14 +29,14 @@ public class PullDeliveryTest
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("pull-one", new MemoryStream("pull-me"u8.ToArray()), false);
+        await producer.Queue.Push("pull-one", new MemoryStream("pull-me"u8.ToArray()), false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("pull-one", true);
+        await consumer.Queue.Subscribe("pull-one", true, CancellationToken.None);
 
-        PullContainer result = await consumer.Queue.Pull(new PullRequest { Queue = "pull-one", Count = 1 });
+        PullContainer result = await consumer.Queue.Pull(new PullRequest { Queue = "pull-one", Count = 1 }, CancellationToken.None);
 
         Assert.NotNull(result);
         Assert.Equal(1, result.ReceivedCount);
@@ -62,14 +62,14 @@ public class PullDeliveryTest
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         for (int i = 0; i < 5; i++)
-            await producer.Queue.Push("pull-multi", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false);
+            await producer.Queue.Push("pull-multi", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("pull-multi", true);
+        await consumer.Queue.Subscribe("pull-multi", true, CancellationToken.None);
 
-        PullContainer result = await consumer.Queue.Pull(new PullRequest { Queue = "pull-multi", Count = 3 });
+        PullContainer result = await consumer.Queue.Pull(new PullRequest { Queue = "pull-multi", Count = 3 }, CancellationToken.None);
 
         Assert.NotNull(result);
         Assert.Equal(3, result.ReceivedCount);
@@ -93,9 +93,9 @@ public class PullDeliveryTest
 
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("pull-empty", true);
+        await consumer.Queue.Subscribe("pull-empty", true, CancellationToken.None);
 
-        PullContainer result = await consumer.Queue.Pull(new PullRequest { Queue = "pull-empty", Count = 1 });
+        PullContainer result = await consumer.Queue.Pull(new PullRequest { Queue = "pull-empty", Count = 1 }, CancellationToken.None);
 
         Assert.NotNull(result);
         Assert.Equal(0, result.ReceivedCount);
@@ -120,19 +120,19 @@ public class PullDeliveryTest
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         for (int i = 0; i < 5; i++)
-            await producer.Queue.Push("pull-fifo", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false);
+            await producer.Queue.Push("pull-fifo", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("pull-fifo", true);
+        await consumer.Queue.Subscribe("pull-fifo", true, CancellationToken.None);
 
         PullContainer result = await consumer.Queue.Pull(new PullRequest
         {
             Queue = "pull-fifo",
             Count = 5,
             Order = MessageOrder.FIFO
-        });
+        }, CancellationToken.None);
 
         Assert.Equal(5, result.ReceivedCount);
 
@@ -161,19 +161,19 @@ public class PullDeliveryTest
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         for (int i = 0; i < 5; i++)
-            await producer.Queue.Push("pull-lifo", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false);
+            await producer.Queue.Push("pull-lifo", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("pull-lifo", true);
+        await consumer.Queue.Subscribe("pull-lifo", true, CancellationToken.None);
 
         PullContainer result = await consumer.Queue.Pull(new PullRequest
         {
             Queue = "pull-lifo",
             Count = 5,
             Order = MessageOrder.LIFO
-        });
+        }, CancellationToken.None);
 
         Assert.Equal(5, result.ReceivedCount);
 
@@ -201,21 +201,21 @@ public class PullDeliveryTest
 
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("pull-noauto", true);
+        await consumer.Queue.Subscribe("pull-noauto", true, CancellationToken.None);
 
         HorseMessage autoReceived = null;
         consumer.MessageReceived += (_, m) => autoReceived = m;
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("pull-noauto", new MemoryStream("no-auto"u8.ToArray()), false);
+        await producer.Queue.Push("pull-noauto", new MemoryStream("no-auto"u8.ToArray()), false, CancellationToken.None);
         await Task.Delay(1000);
 
         // Pull queue does NOT auto-deliver
         Assert.Null(autoReceived);
 
         // Only Pull delivers
-        PullContainer result = await consumer.Queue.Pull(new PullRequest { Queue = "pull-noauto", Count = 1 });
+        PullContainer result = await consumer.Queue.Pull(new PullRequest { Queue = "pull-noauto", Count = 1 }, CancellationToken.None);
         Assert.Equal(1, result.ReceivedCount);
 
         producer.Disconnect();
@@ -239,19 +239,19 @@ public class PullDeliveryTest
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         for (int i = 0; i < 5; i++)
-            await producer.Queue.Push("pull-counts", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false);
+            await producer.Queue.Push("pull-counts", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("pull-counts", true);
+        await consumer.Queue.Subscribe("pull-counts", true, CancellationToken.None);
 
         PullContainer result = await consumer.Queue.Pull(new PullRequest
         {
             Queue = "pull-counts",
             Count = 2,
             GetQueueMessageCounts = true
-        });
+        }, CancellationToken.None);
 
         Assert.Equal(2, result.ReceivedCount);
 
@@ -276,7 +276,7 @@ public class PullDeliveryTest
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         for (int i = 0; i < 5; i++)
-            await producer.Queue.Push("pull-clear", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false);
+            await producer.Queue.Push("pull-clear", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false, CancellationToken.None);
         await Task.Delay(500);
 
         // Clear all messages
@@ -288,13 +288,13 @@ public class PullDeliveryTest
         // Pull → should be empty
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("pull-clear", true);
+        await consumer.Queue.Subscribe("pull-clear", true, CancellationToken.None);
 
         PullContainer result = await consumer.Queue.Pull(new PullRequest
         {
             Queue = "pull-clear",
             Count = 10
-        });
+        }, CancellationToken.None);
 
         Assert.Equal(0, result.ReceivedCount);
 
@@ -320,21 +320,21 @@ public class PullDeliveryTest
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         for (int i = 0; i < 6; i++)
-            await producer.Queue.Push("pull-batch", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false);
+            await producer.Queue.Push("pull-batch", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("pull-batch", true);
+        await consumer.Queue.Subscribe("pull-batch", true, CancellationToken.None);
 
         // Pull first batch of 2
-        PullContainer batch1 = await consumer.Queue.Pull(new PullRequest { Queue = "pull-batch", Count = 2 });
+        PullContainer batch1 = await consumer.Queue.Pull(new PullRequest { Queue = "pull-batch", Count = 2 }, CancellationToken.None);
         Assert.Equal(2, batch1.ReceivedCount);
         Assert.Equal("msg-0", batch1.ReceivedMessages.First().ToString());
         Assert.Equal("msg-1", batch1.ReceivedMessages.Last().ToString());
 
         // Pull second batch of 2
-        PullContainer batch2 = await consumer.Queue.Pull(new PullRequest { Queue = "pull-batch", Count = 2 });
+        PullContainer batch2 = await consumer.Queue.Pull(new PullRequest { Queue = "pull-batch", Count = 2 }, CancellationToken.None);
         Assert.Equal(2, batch2.ReceivedCount);
         Assert.Equal("msg-2", batch2.ReceivedMessages.First().ToString());
         Assert.Equal("msg-3", batch2.ReceivedMessages.Last().ToString());
@@ -360,7 +360,7 @@ public class PullDeliveryTest
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         // Push normal then high-priority
-        await producer.Queue.Push("pull-pri", new MemoryStream("normal"u8.ToArray()), false);
+        await producer.Queue.Push("pull-pri", new MemoryStream("normal"u8.ToArray()), false, CancellationToken.None);
 
         HorseMessage hiMsg = new HorseMessage(MessageType.QueueMessage, "pull-pri");
         hiMsg.HighPriority = true;
@@ -371,14 +371,14 @@ public class PullDeliveryTest
         // Pull → should get priority first
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("pull-pri", true);
+        await consumer.Queue.Subscribe("pull-pri", true, CancellationToken.None);
 
-        var result1 = await consumer.Queue.Pull(new PullRequest { Queue = "pull-pri", Count = 1 });
+        var result1 = await consumer.Queue.Pull(new PullRequest { Queue = "pull-pri", Count = 1 }, CancellationToken.None);
         Assert.NotNull(result1);
         Assert.Equal(PullProcess.Completed, result1.Status);
         Assert.Equal("priority", result1.ReceivedMessages.First().ToString());
 
-        var result2 = await consumer.Queue.Pull(new PullRequest { Queue = "pull-pri", Count = 1 });
+        var result2 = await consumer.Queue.Pull(new PullRequest { Queue = "pull-pri", Count = 1 }, CancellationToken.None);
         Assert.NotNull(result2);
         Assert.Equal(PullProcess.Completed, result2.Status);
         Assert.Equal("normal", result2.ReceivedMessages.First().ToString());
@@ -404,7 +404,7 @@ public class PullDeliveryTest
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         for (int i = 0; i < 5; i++)
-            await producer.Queue.Push("pull-clear", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false);
+            await producer.Queue.Push("pull-clear", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseQueue queue = ctx.Rider.Queue.Find("pull-clear");

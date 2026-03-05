@@ -31,7 +31,7 @@ internal class RequestHandlerExecutor<TRequest, TResponse>: ExecutorBase
     }
 
     public override async Task Execute(HorseClient client, HorseMessage message, object model,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         bool respond = false;
         ProvidedHandler providedHandler = null;
@@ -117,7 +117,7 @@ internal class RequestHandlerExecutor<TRequest, TResponse>: ExecutorBase
 
     private async Task<TResponse> Handle(IHorseRequestHandler<TRequest, TResponse> handler, TRequest request,
         HorseMessage message, HorseClient client, IHandlerFactory handlerFactory,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         if (Retry == null)
         {

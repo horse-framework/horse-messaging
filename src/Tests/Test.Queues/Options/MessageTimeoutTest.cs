@@ -1,4 +1,5 @@
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -34,7 +35,7 @@ public class MessageTimeoutTest
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("mt-delete", new MemoryStream("expires"u8.ToArray()), false);
+        await producer.Queue.Push("mt-delete", new MemoryStream("expires"u8.ToArray()), false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseQueue queue = ctx.Rider.Queue.Find("mt-delete");
@@ -73,7 +74,7 @@ public class MessageTimeoutTest
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("mt-none", new MemoryStream("survives"u8.ToArray()), false);
+        await producer.Queue.Push("mt-none", new MemoryStream("survives"u8.ToArray()), false, CancellationToken.None);
 
         // Wait 3 seconds — message should still be there
         await Task.Delay(3000);
@@ -108,7 +109,7 @@ public class MessageTimeoutTest
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("mt-dur", new MemoryStream("still-alive"u8.ToArray()), false);
+        await producer.Queue.Push("mt-dur", new MemoryStream("still-alive"u8.ToArray()), false, CancellationToken.None);
 
         await Task.Delay(2000);
 

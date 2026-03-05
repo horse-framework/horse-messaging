@@ -346,20 +346,33 @@ public class QueueOperator : IDisposable
     /// Pushes a serialized model into a queue.
     /// The queue name is resolved from the <typeparamref name="T"/> attribute.
     /// </summary>
+    public Task<HorseResult> Push<T>(T model, bool waitForCommit, CancellationToken cancellationToken) where T : class
+    {
+        return Push<T>(null, model, null, waitForCommit, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Pushes a serialized model into a queue.
+    /// </summary>
     public Task<HorseResult> Push<T>(T model, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
-        CancellationToken cancellationToken = default) where T : class
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken) where T : class
     {
         return Push<T>(null, model, null, waitForCommit, messageHeaders, cancellationToken);
     }
 
     /// <summary>
     /// Pushes a serialized model into a queue with an explicit message id.
-    /// The queue name is resolved from the <typeparamref name="T"/> attribute.
+    /// </summary>
+    public Task<HorseResult> Push<T>(T model, string messageId, bool waitForCommit, CancellationToken cancellationToken) where T : class
+    {
+        return Push<T>(null, model, messageId, waitForCommit, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Pushes a serialized model into a queue with an explicit message id.
     /// </summary>
     public Task<HorseResult> Push<T>(T model, string messageId, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
-        CancellationToken cancellationToken = default) where T : class
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken) where T : class
     {
         return Push<T>(null, model, messageId, waitForCommit, messageHeaders, cancellationToken);
     }
@@ -367,9 +380,16 @@ public class QueueOperator : IDisposable
     /// <summary>
     /// Pushes a serialized model into the specified queue.
     /// </summary>
+    public Task<HorseResult> Push<T>(string queue, T model, bool waitForCommit, CancellationToken cancellationToken) where T : class
+    {
+        return Push<T>(queue, model, null, waitForCommit, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Pushes a serialized model into the specified queue.
+    /// </summary>
     public Task<HorseResult> Push<T>(string queue, T model, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
-        CancellationToken cancellationToken = default) where T : class
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken) where T : class
     {
         return Push<T>(queue, model, null, waitForCommit, messageHeaders, cancellationToken);
     }
@@ -379,8 +399,7 @@ public class QueueOperator : IDisposable
     /// This is the canonical overload; all other model Push variants delegate to this method.
     /// </summary>
     public async Task<HorseResult> Push<T>(string queue, T model, string messageId, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
-        CancellationToken cancellationToken = default) where T : class
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken) where T : class
     {
         QueueTypeDescriptor descriptor = DescriptorContainer.GetDescriptor(typeof(T));
 
@@ -418,8 +437,7 @@ public class QueueOperator : IDisposable
     /// Pushes an object model to a queue. Used internally when the compile-time type is not available.
     /// </summary>
     internal Task<HorseResult> PushObject(object model, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
-        CancellationToken cancellationToken = default)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
     {
         return PushObject(null, model, null, waitForCommit, messageHeaders, cancellationToken);
     }
@@ -428,8 +446,7 @@ public class QueueOperator : IDisposable
     /// Pushes an object model to a queue. Used internally when the compile-time type is not available.
     /// </summary>
     internal async Task<HorseResult> PushObject(string queue, object model, string messageId, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
-        CancellationToken cancellationToken = default)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
     {
         QueueTypeDescriptor descriptor = DescriptorContainer.GetDescriptor(model.GetType());
 
@@ -514,9 +531,16 @@ public class QueueOperator : IDisposable
     /// <summary>
     /// Pushes raw binary content into a queue.
     /// </summary>
+    public Task<HorseResult> Push(string queue, byte[] data, bool waitForCommit, CancellationToken cancellationToken)
+    {
+        return Push(queue, new MemoryStream(data), null, waitForCommit, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Pushes raw binary content into a queue.
+    /// </summary>
     public Task<HorseResult> Push(string queue, byte[] data, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
-        CancellationToken cancellationToken = default)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
     {
         return Push(queue, new MemoryStream(data), null, waitForCommit, messageHeaders, cancellationToken);
     }
@@ -524,9 +548,16 @@ public class QueueOperator : IDisposable
     /// <summary>
     /// Pushes raw binary content into a queue with an explicit message id.
     /// </summary>
+    public Task<HorseResult> Push(string queue, byte[] data, string messageId, bool waitForCommit, CancellationToken cancellationToken)
+    {
+        return Push(queue, new MemoryStream(data), messageId, waitForCommit, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Pushes raw binary content into a queue with an explicit message id.
+    /// </summary>
     public Task<HorseResult> Push(string queue, byte[] data, string messageId, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
-        CancellationToken cancellationToken = default)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
     {
         return Push(queue, new MemoryStream(data), messageId, waitForCommit, messageHeaders, cancellationToken);
     }
@@ -534,9 +565,16 @@ public class QueueOperator : IDisposable
     /// <summary>
     /// Pushes raw binary content into a queue.
     /// </summary>
+    public Task<HorseResult> Push(string queue, MemoryStream content, bool waitForCommit, CancellationToken cancellationToken)
+    {
+        return Push(queue, content, null, waitForCommit, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Pushes raw binary content into a queue.
+    /// </summary>
     public Task<HorseResult> Push(string queue, MemoryStream content, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
-        CancellationToken cancellationToken = default)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
     {
         return Push(queue, content, null, waitForCommit, messageHeaders, cancellationToken);
     }
@@ -544,9 +582,16 @@ public class QueueOperator : IDisposable
     /// <summary>
     /// Pushes raw binary content into a queue with an explicit message id.
     /// </summary>
+    public Task<HorseResult> Push(string queue, MemoryStream content, string messageId, bool waitForCommit, CancellationToken cancellationToken)
+    {
+        return Push(queue, content, messageId, waitForCommit, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Pushes raw binary content into a queue with an explicit message id.
+    /// </summary>
     public async Task<HorseResult> Push(string queue, MemoryStream content, string messageId, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
-        CancellationToken cancellationToken = default)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage(MessageType.QueueMessage, queue, 0);
         message.Content = content;
@@ -605,8 +650,16 @@ public class QueueOperator : IDisposable
     /// <summary>
     /// Request a message from Pull queue
     /// </summary>
-    public async Task<PullContainer> Pull(PullRequest request, Func<int, HorseMessage, Task> actionForEachMessage = null,
-        CancellationToken cancellationToken = default)
+    public Task<PullContainer> Pull(PullRequest request, CancellationToken cancellationToken)
+    {
+        return Pull(request, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Request a message from Pull queue
+    /// </summary>
+    public async Task<PullContainer> Pull(PullRequest request, Func<int, HorseMessage, Task> actionForEachMessage,
+        CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage(MessageType.QueuePullRequest, request.Queue);
         message.SetMessageId(Client.UniqueIdGenerator.Create());
@@ -651,9 +704,16 @@ public class QueueOperator : IDisposable
     /// <summary>
     /// Subscribes to a queue
     /// </summary>
+    public Task<HorseResult> Subscribe(string queue, bool verifyResponse, CancellationToken cancellationToken)
+    {
+        return Subscribe(queue, verifyResponse, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Subscribes to a queue
+    /// </summary>
     public async Task<HorseResult> Subscribe(string queue, bool verifyResponse,
-        IEnumerable<KeyValuePair<string, string>> headers = null,
-        CancellationToken cancellationToken = default)
+        IEnumerable<KeyValuePair<string, string>> headers, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Server;
@@ -678,10 +738,36 @@ public class QueueOperator : IDisposable
         string queue,
         string partitionLabel,
         bool verifyResponse,
-        int? maxPartitions = null,
-        int? subscribersPerPartition = null,
-        IEnumerable<KeyValuePair<string, string>> additionalHeaders = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
+    {
+        return SubscribePartitioned(queue, partitionLabel, verifyResponse, null, null, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Subscribes to a partitioned queue.
+    /// </summary>
+    public Task<HorseResult> SubscribePartitioned(
+        string queue,
+        string partitionLabel,
+        bool verifyResponse,
+        int? maxPartitions,
+        int? subscribersPerPartition,
+        CancellationToken cancellationToken)
+    {
+        return SubscribePartitioned(queue, partitionLabel, verifyResponse, maxPartitions, subscribersPerPartition, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Subscribes to a partitioned queue.
+    /// </summary>
+    public Task<HorseResult> SubscribePartitioned(
+        string queue,
+        string partitionLabel,
+        bool verifyResponse,
+        int? maxPartitions,
+        int? subscribersPerPartition,
+        IEnumerable<KeyValuePair<string, string>> additionalHeaders,
+        CancellationToken cancellationToken)
     {
         var headers = new List<KeyValuePair<string, string>>();
 
@@ -703,9 +789,17 @@ public class QueueOperator : IDisposable
     /// <summary>
     /// Re-registers the consumer type for another queue name and subscribes to the queue
     /// </summary>
+    public Task<HorseResult> Subscribe<TConsumer, TModel>(string queue, bool verifyResponse, CancellationToken cancellationToken)
+        where TConsumer : IQueueConsumer<TModel>
+    {
+        return Subscribe<TConsumer, TModel>(queue, verifyResponse, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Re-registers the consumer type for another queue name and subscribes to the queue
+    /// </summary>
     public Task<HorseResult> Subscribe<TConsumer, TModel>(string queue, bool verifyResponse,
-        IEnumerable<KeyValuePair<string, string>> headers = null,
-        CancellationToken cancellationToken = default)
+        IEnumerable<KeyValuePair<string, string>> headers, CancellationToken cancellationToken)
         where TConsumer : IQueueConsumer<TModel>
     {
         List<QueueConsumerRegistration> list = Registrations.ToList();
@@ -737,8 +831,7 @@ public class QueueOperator : IDisposable
     /// <summary>
     /// Unsubscribes from a queue
     /// </summary>
-    public async Task<HorseResult> Unsubscribe(string queue, bool verifyResponse,
-        CancellationToken cancellationToken = default)
+    public async Task<HorseResult> Unsubscribe(string queue, bool verifyResponse, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Server;
@@ -755,7 +848,7 @@ public class QueueOperator : IDisposable
     /// <summary>
     /// Unsubscribes from all queues
     /// </summary>
-    public Task<HorseResult> UnsubscribeFromAllQueues(CancellationToken cancellationToken = default)
+    public Task<HorseResult> UnsubscribeFromAllQueues(CancellationToken cancellationToken)
     {
         return Unsubscribe("*", true, cancellationToken);
     }

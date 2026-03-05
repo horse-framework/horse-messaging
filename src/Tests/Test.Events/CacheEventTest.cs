@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Events;
@@ -24,10 +25,10 @@ public class CacheEventTest
 
         await client.ConnectAsync($"horse://localhost:{port}");
 
-        HorseResult cacheResult = await client.Cache.SetString("cache-key", "Hello, World!");
+        HorseResult cacheResult = await client.Cache.SetString("cache-key", "Hello, World!", CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, cacheResult.Code);
 
-        var data = await client.Cache.GetString("cache-key");
+        var data = await client.Cache.GetString("cache-key", CancellationToken.None);
         Assert.Equal("Hello, World!", data.Value);
 
         await Task.Delay(250);
@@ -49,7 +50,7 @@ public class CacheEventTest
 
         await client.ConnectAsync($"horse://localhost:{port}");
 
-        HorseResult cacheResult = await client.Cache.SetString("cache-key", "Hello, World!");
+        HorseResult cacheResult = await client.Cache.SetString("cache-key", "Hello, World!", CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, cacheResult.Code);
 
         await Task.Delay(250);
@@ -71,10 +72,10 @@ public class CacheEventTest
 
         await client.ConnectAsync($"horse://localhost:{port}");
 
-        HorseResult cacheResult = await client.Cache.SetString("cache-key", "Hello, World!");
+        HorseResult cacheResult = await client.Cache.SetString("cache-key", "Hello, World!", CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, cacheResult.Code);
 
-        HorseResult removeResult = await client.Cache.Remove("cache-key");
+        HorseResult removeResult = await client.Cache.Remove("cache-key", CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, removeResult.Code);
 
         await Task.Delay(250);
@@ -96,10 +97,10 @@ public class CacheEventTest
 
         await client.ConnectAsync($"horse://localhost:{port}");
 
-        HorseResult cacheResult = await client.Cache.SetString("cache-key", "Hello, World!");
+        HorseResult cacheResult = await client.Cache.SetString("cache-key", "Hello, World!", CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, cacheResult.Code);
 
-        HorseResult purgeResult = await client.Cache.Purge();
+        HorseResult purgeResult = await client.Cache.Purge(CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, purgeResult.Code);
 
         await Task.Delay(250);

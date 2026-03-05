@@ -1,3 +1,4 @@
+using System.Threading;
 ﻿using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Extensions.Client;
 using Horse.Messaging.Protocol;
@@ -27,7 +28,7 @@ while (true)
     Console.ReadLine();
     try
     {
-        HorseResult? result = await bus.Push(new TestEvent(), true, partitionLabel: "Free");
+        HorseResult? result = await bus.Push(new TestEvent(), true, null, "Free", CancellationToken.None);
         Console.WriteLine($"Message sent: {result.Code}");
     }
     catch (Exception ex)

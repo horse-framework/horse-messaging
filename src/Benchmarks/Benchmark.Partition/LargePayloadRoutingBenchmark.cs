@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Order;
@@ -53,7 +54,7 @@ public class LargePayloadRoutingBenchmark : BenchmarkBase
         {
             _labels[i]    = $"large-p{i}";
             _consumers[i] = ConnectAsync($"large-c{i}").GetAwaiter().GetResult();
-            _consumers[i].Queue.SubscribePartitioned(Queue, _labels[i], verifyResponse: true)
+            _consumers[i].Queue.SubscribePartitioned(Queue, _labels[i], true, CancellationToken.None)
                           .GetAwaiter().GetResult();
         }
 
@@ -94,7 +95,7 @@ public class LargePayloadRoutingBenchmark : BenchmarkBase
             {
                 for (int j = 0; j < perPart; j++)
                     await _producer.Queue.Push(Queue, new System.IO.MemoryStream(payload, writable: false),
-                        waitForCommit: false, headers);
+                        waitForCommit: false, headers, CancellationToken.None);
             });
         }
 

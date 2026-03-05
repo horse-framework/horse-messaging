@@ -1,4 +1,5 @@
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -25,14 +26,14 @@ public class QueueStatusTest
 
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("status-run", true);
+        await consumer.Queue.Subscribe("status-run", true, CancellationToken.None);
 
         HorseMessage received = null;
         consumer.MessageReceived += (_, m) => received = m;
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("status-run", new MemoryStream("hello"u8.ToArray()), true);
+        await producer.Queue.Push("status-run", new MemoryStream("hello"u8.ToArray()), true, CancellationToken.None);
 
         for (int i = 0; i < 30 && received == null; i++)
             await Task.Delay(100);
@@ -59,7 +60,7 @@ public class QueueStatusTest
 
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("status-pause", true);
+        await consumer.Queue.Subscribe("status-pause", true, CancellationToken.None);
 
         HorseMessage received = null;
         consumer.MessageReceived += (_, m) => received = m;
@@ -68,7 +69,7 @@ public class QueueStatusTest
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         // Push while paused
-        await producer.Queue.Push("status-pause", new MemoryStream("paused"u8.ToArray()), false);
+        await producer.Queue.Push("status-pause", new MemoryStream("paused"u8.ToArray()), false, CancellationToken.None);
         await Task.Delay(1000);
 
         // Consumer should NOT receive message while paused
@@ -93,7 +94,7 @@ public class QueueStatusTest
 
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("status-op", true);
+        await consumer.Queue.Subscribe("status-op", true, CancellationToken.None);
 
         HorseMessage received = null;
         consumer.MessageReceived += (_, m) => received = m;
@@ -102,7 +103,7 @@ public class QueueStatusTest
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("status-op", new MemoryStream("push-only"u8.ToArray()), false);
+        await producer.Queue.Push("status-op", new MemoryStream("push-only"u8.ToArray()), false, CancellationToken.None);
         await Task.Delay(1000);
 
         // Message stored but NOT delivered while in OnlyPush
@@ -150,7 +151,7 @@ public class QueueStatusTest
 
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("status-resume", true);
+        await consumer.Queue.Subscribe("status-resume", true, CancellationToken.None);
 
         HorseMessage received = null;
         consumer.MessageReceived += (_, m) => received = m;
@@ -160,7 +161,7 @@ public class QueueStatusTest
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("status-resume", new MemoryStream("resume-me"u8.ToArray()), false);
+        await producer.Queue.Push("status-resume", new MemoryStream("resume-me"u8.ToArray()), false, CancellationToken.None);
         await Task.Delay(500);
         Assert.Null(received);
 
@@ -192,7 +193,7 @@ public class QueueStatusTest
         // Push while running so messages get stored
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("status-oc", new MemoryStream("before-oc"u8.ToArray()), false);
+        await producer.Queue.Push("status-oc", new MemoryStream("before-oc"u8.ToArray()), false, CancellationToken.None);
         await Task.Delay(300);
 
         // Switch to OnlyConsume
@@ -203,7 +204,7 @@ public class QueueStatusTest
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
         consumer.MessageReceived += (_, m) => received = m;
-        await consumer.Queue.Subscribe("status-oc", true);
+        await consumer.Queue.Subscribe("status-oc", true, CancellationToken.None);
 
         for (int i = 0; i < 30 && received == null; i++)
             await Task.Delay(100);

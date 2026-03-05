@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -49,7 +50,7 @@ public class PartitionAutoDestroyTest
         HorseClient client = new HorseClient();
         await client.ConnectAsync("horse://localhost:" + port);
         await client.Queue.Subscribe("ad-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w1") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w1") }, CancellationToken.None);
 
         await Task.Delay(200);
         string partitionId = queue.PartitionManager.Partitions.First().PartitionId;
@@ -70,7 +71,7 @@ public class PartitionAutoDestroyTest
         HorseClient client = new HorseClient();
         await client.ConnectAsync("horse://localhost:" + port);
         await client.Queue.Subscribe("ad-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "wX") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "wX") }, CancellationToken.None);
 
         await Task.Delay(200);
 
@@ -98,9 +99,9 @@ public class PartitionAutoDestroyTest
         await c2.ConnectAsync("horse://localhost:" + port);
 
         await c1.Queue.Subscribe("ad-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "destroyMe") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "destroyMe") }, CancellationToken.None);
         await c2.Queue.Subscribe("ad-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "keepMe") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "keepMe") }, CancellationToken.None);
 
         await Task.Delay(800); // let partition queues fully initialize
 
@@ -144,7 +145,7 @@ public class PartitionAutoDestroyTest
         worker.AutoAcknowledge = true;
         await worker.ConnectAsync("horse://localhost:" + port);
         await worker.Queue.Subscribe("ad-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "active-w") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "active-w") }, CancellationToken.None);
 
         await Task.Delay(200);
         string partId = queue.PartitionManager.Partitions.First().PartitionId;
@@ -172,7 +173,7 @@ public class PartitionAutoDestroyTest
         client.AutoAcknowledge = true;
         await client.ConnectAsync("horse://localhost:" + port);
         await client.Queue.Subscribe("ad-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "emp-w") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "emp-w") }, CancellationToken.None);
 
         await Task.Delay(200);
         string partId = queue.PartitionManager.Partitions.First().PartitionId;
@@ -197,7 +198,7 @@ public class PartitionAutoDestroyTest
         client.AutoAcknowledge = true;
         await client.ConnectAsync("horse://localhost:" + port);
         await client.Queue.Subscribe("ad-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "alive-w") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "alive-w") }, CancellationToken.None);
 
         await Task.Delay(400);
 

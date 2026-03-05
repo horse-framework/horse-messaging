@@ -21,5 +21,5 @@ public interface IDirectMessageHandler<in TModel>
     /// Pass this token to any async I/O calls inside the handler.
     /// </param>
     Task Handle(HorseMessage message, TModel model, HorseClient client,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 }

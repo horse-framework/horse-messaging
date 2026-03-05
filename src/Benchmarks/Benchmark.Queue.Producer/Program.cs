@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Benchmark.Helper;
 using Horse.Messaging.Client;
@@ -53,7 +54,7 @@ class Program
         {
             while (client.IsConnected)
             {
-                await client.Queue.Push(queue, new MemoryStream(bytes), waitForAck);
+                await client.Queue.Push(queue, new MemoryStream(bytes), waitForAck, CancellationToken.None);
                 _counter.Increase();
             }
         }

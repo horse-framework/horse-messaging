@@ -189,7 +189,7 @@ public class QueueManagerSelectionTest
             };
 
             // Push to non-existent queue with Persistent header → should auto-create with Persistent manager
-            await client.Queue.Push("q-header-persist", new MemoryStream(Encode("test")), false, headers);
+            await client.Queue.Push("q-header-persist", new MemoryStream(Encode("test")), false, headers, CancellationToken.None);
             await Task.Delay(500);
 
             HorseQueue queue = rider.Queue.Find("q-header-persist");
@@ -217,7 +217,7 @@ public class QueueManagerSelectionTest
                 new(HorseHeaders.QUEUE_MANAGER, "Memory")
             };
 
-            await client.Queue.Push("q-header-mem", new MemoryStream(Encode("test")), false, headers);
+            await client.Queue.Push("q-header-mem", new MemoryStream(Encode("test")), false, headers, CancellationToken.None);
             await Task.Delay(500);
 
             HorseQueue queue = rider.Queue.Find("q-header-mem");
@@ -261,11 +261,11 @@ public class QueueManagerSelectionTest
                 if (msg.Target == "q-fast") Interlocked.Increment(ref fastReceived);
                 if (msg.Target == "q-durable") Interlocked.Increment(ref durableReceived);
             };
-            await consumer.Queue.Subscribe("q-fast", true);
-            await consumer.Queue.Subscribe("q-durable", true);
+            await consumer.Queue.Subscribe("q-fast", true, CancellationToken.None);
+            await consumer.Queue.Subscribe("q-durable", true, CancellationToken.None);
 
-            await client.Queue.Push("q-fast", new MemoryStream(Encode("fast-msg")), false);
-            await client.Queue.Push("q-durable", new MemoryStream(Encode("durable-msg")), false);
+            await client.Queue.Push("q-fast", new MemoryStream(Encode("fast-msg")), false, CancellationToken.None);
+            await client.Queue.Push("q-durable", new MemoryStream(Encode("durable-msg")), false, CancellationToken.None);
 
             for (int i = 0; i < 30 && (fastReceived < 1 || durableReceived < 1); i++)
                 await Task.Delay(100);
@@ -303,7 +303,7 @@ public class QueueManagerSelectionTest
             {
                 new(HorseHeaders.QUEUE_MANAGER, "Persistent")
             };
-            await client.Queue.Push("q-fixed", new MemoryStream(Encode("msg")), false, headers);
+            await client.Queue.Push("q-fixed", new MemoryStream(Encode("msg")), false, headers, CancellationToken.None);
             await Task.Delay(300);
 
             // Manager should still be Memory

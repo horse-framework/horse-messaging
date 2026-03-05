@@ -1,4 +1,5 @@
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -23,7 +24,7 @@ public class SubscribeUnsubscribeTest
         HorseClient client = new HorseClient();
         await client.ConnectAsync($"horse://localhost:{ctx.Port}");
 
-        HorseResult result = await client.Queue.Subscribe("sub-ok", true);
+        HorseResult result = await client.Queue.Subscribe("sub-ok", true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, result.Code);
 
         client.Disconnect();
@@ -41,8 +42,8 @@ public class SubscribeUnsubscribeTest
         HorseClient client = new HorseClient();
         await client.ConnectAsync($"horse://localhost:{ctx.Port}");
 
-        HorseResult r1 = await client.Queue.Subscribe("sub-twice", true);
-        HorseResult r2 = await client.Queue.Subscribe("sub-twice", true);
+        HorseResult r1 = await client.Queue.Subscribe("sub-twice", true, CancellationToken.None);
+        HorseResult r2 = await client.Queue.Subscribe("sub-twice", true, CancellationToken.None);
 
         Assert.Equal(HorseResultCode.Ok, r1.Code);
         Assert.Equal(HorseResultCode.Ok, r2.Code);
@@ -62,8 +63,8 @@ public class SubscribeUnsubscribeTest
         HorseClient client = new HorseClient();
         await client.ConnectAsync($"horse://localhost:{ctx.Port}");
 
-        await client.Queue.Subscribe("unsub-ok", true);
-        HorseResult result = await client.Queue.Unsubscribe("unsub-ok", true);
+        await client.Queue.Subscribe("unsub-ok", true, CancellationToken.None);
+        HorseResult result = await client.Queue.Unsubscribe("unsub-ok", true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, result.Code);
 
         client.Disconnect();
@@ -82,7 +83,7 @@ public class SubscribeUnsubscribeTest
         await client.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         // Unsubscribe without ever subscribing — server should respond without crashing
-        HorseResult result = await client.Queue.Unsubscribe("unsub-no", true);
+        HorseResult result = await client.Queue.Unsubscribe("unsub-no", true, CancellationToken.None);
         // Ok or NotFound are both acceptable outcomes
         Assert.True(result.Code == HorseResultCode.Ok || result.Code == HorseResultCode.NotFound,
             $"Expected Ok or NotFound but got {result.Code}");
@@ -103,10 +104,10 @@ public class SubscribeUnsubscribeTest
         HorseClient client = new HorseClient();
         await client.ConnectAsync($"horse://localhost:{ctx.Port}");
 
-        await client.Queue.Subscribe("unsub-all-1", true);
-        await client.Queue.Subscribe("unsub-all-2", true);
+        await client.Queue.Subscribe("unsub-all-1", true, CancellationToken.None);
+        await client.Queue.Subscribe("unsub-all-2", true, CancellationToken.None);
 
-        HorseResult result = await client.Queue.UnsubscribeFromAllQueues();
+        HorseResult result = await client.Queue.UnsubscribeFromAllQueues(CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, result.Code);
 
         client.Disconnect();
@@ -123,7 +124,7 @@ public class SubscribeUnsubscribeTest
         await client.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         // Queue doesn't exist, but AutoQueueCreation=true
-        HorseResult result = await client.Queue.Subscribe("auto-create-sub", true);
+        HorseResult result = await client.Queue.Subscribe("auto-create-sub", true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, result.Code);
 
         HorseQueue queue = ctx.Rider.Queue.Find("auto-create-sub");
@@ -147,7 +148,7 @@ public class SubscribeUnsubscribeTest
 
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("disc-sub", true);
+        await consumer.Queue.Subscribe("disc-sub", true, CancellationToken.None);
         await Task.Delay(300);
 
         HorseQueue queue = ctx.Rider.Queue.Find("disc-sub");
@@ -176,19 +177,19 @@ public class SubscribeUnsubscribeTest
         await client.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         // Subscribe
-        await client.Queue.Subscribe("resub-q", true);
+        await client.Queue.Subscribe("resub-q", true, CancellationToken.None);
 
         // Unsubscribe
-        await client.Queue.Unsubscribe("resub-q", true);
+        await client.Queue.Unsubscribe("resub-q", true, CancellationToken.None);
 
         // Re-subscribe → should receive messages
         int received = 0;
         client.MessageReceived += (_, _) => received++;
-        await client.Queue.Subscribe("resub-q", true);
+        await client.Queue.Subscribe("resub-q", true, CancellationToken.None);
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("resub-q", new MemoryStream("hello"u8.ToArray()), true);
+        await producer.Queue.Push("resub-q", new MemoryStream("hello"u8.ToArray()), true, CancellationToken.None);
 
         for (int i = 0; i < 30 && received == 0; i++)
             await Task.Delay(100);
@@ -222,13 +223,13 @@ public class SubscribeUnsubscribeTest
             if (m.Target == "multi-q2") System.Threading.Interlocked.Increment(ref fromQ2);
         };
 
-        await client.Queue.Subscribe("multi-q1", true);
-        await client.Queue.Subscribe("multi-q2", true);
+        await client.Queue.Subscribe("multi-q1", true, CancellationToken.None);
+        await client.Queue.Subscribe("multi-q2", true, CancellationToken.None);
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("multi-q1", new MemoryStream("q1"u8.ToArray()), true);
-        await producer.Queue.Push("multi-q2", new MemoryStream("q2"u8.ToArray()), true);
+        await producer.Queue.Push("multi-q1", new MemoryStream("q1"u8.ToArray()), true, CancellationToken.None);
+        await producer.Queue.Push("multi-q2", new MemoryStream("q2"u8.ToArray()), true, CancellationToken.None);
 
         for (int i = 0; i < 30 && (fromQ1 < 1 || fromQ2 < 1); i++)
             await Task.Delay(100);

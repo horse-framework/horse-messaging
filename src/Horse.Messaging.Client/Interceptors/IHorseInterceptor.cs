@@ -20,5 +20,5 @@ public interface IHorseInterceptor
     /// Pass this token to any async I/O calls inside the interceptor.
     /// </param>
     Task Intercept(HorseMessage message, HorseClient client,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 }

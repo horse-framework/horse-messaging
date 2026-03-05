@@ -1,3 +1,4 @@
+using System.Threading;
 ﻿using System;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Queues;
@@ -18,7 +19,7 @@ namespace RoutingSample.ExceptionConsumer
 			client.Connected += (c) =>
 			{
 				Console.WriteLine("CONNECTED");
-				_ = client.Queue.Subscribe("SAMPLE-EXCEPTION-QUEUE", false);
+				_ = client.Queue.Subscribe("SAMPLE-EXCEPTION-QUEUE", false, CancellationToken.None);
 			};
 			client.Disconnected += (c) => Console.WriteLine("DISCONNECTED");
 			client.MessageReceived += (client, message) => Console.WriteLine("Direct message received");

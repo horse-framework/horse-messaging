@@ -410,7 +410,7 @@ public class PartitionComplexIntegrationTests
         // Push 9 messages WITHOUT label → round-robin
         IHorseQueueBus rrBus = new HorseQueueBus(producer);
         for (int i = 0; i < 9; i++)
-            await rrBus.Push("QueueA", new QueueAModel { TenantId = "rr", Sequence = i });
+            await rrBus.Push("QueueA", new QueueAModel { TenantId = "rr", Sequence = i }, false, CancellationToken.None);
 
         await WaitUntil(() => tracker.TotalCount() >= 12);
         Assert.True(tracker.TotalCount() >= 12);
@@ -903,7 +903,7 @@ public class PartitionComplexIntegrationTests
     {
         tenantId ??= label;
         IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("QueueA", new QueueAModel { TenantId = tenantId, Sequence = sequence }, partitionLabel: label);
+        await bus.Push("QueueA", new QueueAModel { TenantId = tenantId, Sequence = sequence }, false, null, label, CancellationToken.None);
     }
 
     /// <summary>Backward-compatible overload — ignores queue name, delegates to PushModel.</summary>
@@ -988,9 +988,9 @@ public class PartitionComplexIntegrationTests
             for (int i = 0; i < 5; i++)
                 switch (qName)
                 {
-                    case "QueueA": await bus.Push(qName, new QueueAModel { TenantId = label, Sequence = i }, partitionLabel: label); break;
-                    case "QueueB": await bus.Push(qName, new QueueBModel { TenantId = label, Sequence = i }, partitionLabel: label); break;
-                    case "QueueC": await bus.Push(qName, new QueueCModel { TenantId = label, Sequence = i }, partitionLabel: label); break;
+                    case "QueueA": await bus.Push(qName, new QueueAModel { TenantId = label, Sequence = i }, false, null, label, CancellationToken.None); break;
+                    case "QueueB": await bus.Push(qName, new QueueBModel { TenantId = label, Sequence = i }, false, null, label, CancellationToken.None); break;
+                    case "QueueC": await bus.Push(qName, new QueueCModel { TenantId = label, Sequence = i }, false, null, label, CancellationToken.None); break;
                 }
 
         await WaitForConsume(tracker, 45, 15_000);
@@ -1047,7 +1047,7 @@ public class PartitionComplexIntegrationTests
             string targetQueue = $"QueueD-{tier}";
             for (int t = 0; t < tenantCount; t++)
             for (int seq = 0; seq < msgsPerTenant; seq++)
-                await bus.Push(targetQueue, new QueueDModel { TenantId = tenantIds[t], Sequence = seq }, partitionLabel: tenantIds[t]);
+                await bus.Push(targetQueue, new QueueDModel { TenantId = tenantIds[t], Sequence = seq }, false, null, tenantIds[t], CancellationToken.None);
         }
 
         await WaitForConsume(tracker, expectedTotal, 120_000);
@@ -1114,9 +1114,9 @@ public class PartitionComplexIntegrationTests
             {
                 switch (qName)
                 {
-                    case "QueueA": await bus.Push(qName, new QueueAModel { TenantId = label, Sequence = seq }, partitionLabel: label); break;
-                    case "QueueB": await bus.Push(qName, new QueueBModel { TenantId = label, Sequence = seq }, partitionLabel: label); break;
-                    case "QueueC": await bus.Push(qName, new QueueCModel { TenantId = label, Sequence = seq }, partitionLabel: label); break;
+                    case "QueueA": await bus.Push(qName, new QueueAModel { TenantId = label, Sequence = seq }, false, null, label, CancellationToken.None); break;
+                    case "QueueB": await bus.Push(qName, new QueueBModel { TenantId = label, Sequence = seq }, false, null, label, CancellationToken.None); break;
+                    case "QueueC": await bus.Push(qName, new QueueCModel { TenantId = label, Sequence = seq }, false, null, label, CancellationToken.None); break;
                 }
                 abcExpected++;
             }
@@ -1128,7 +1128,7 @@ public class PartitionComplexIntegrationTests
             for (int t = 0; t < tenantCount; t++)
             for (int seq = 0; seq < msgsPerTenant; seq++)
             {
-                await bus.Push(targetQueue, new QueueDModel { TenantId = tenantIds[t], Sequence = seq }, partitionLabel: tenantIds[t]);
+                await bus.Push(targetQueue, new QueueDModel { TenantId = tenantIds[t], Sequence = seq }, false, null, tenantIds[t], CancellationToken.None);
                 dExpected++;
             }
         }
@@ -1179,7 +1179,7 @@ public class PartitionComplexIntegrationTests
         IHorseQueueBus bus = new HorseQueueBus(producer);
 
         foreach (string label in new[] { "free", "standard", "premium" })
-            await bus.Push("QueueA", new QueueAModel { TenantId = label, Sequence = 0 }, partitionLabel: label);
+            await bus.Push("QueueA", new QueueAModel { TenantId = label, Sequence = 0 }, false, null, label, CancellationToken.None);
 
         await Task.Delay(1000);
 
@@ -1229,7 +1229,7 @@ public class PartitionComplexIntegrationTests
 
         string tenantId = Guid.NewGuid().ToString("N");
         foreach (string tier in new[] { "free", "standard", "premium" })
-            await bus.Push($"QueueD-{tier}", new QueueDModel { TenantId = tenantId, Sequence = 1 }, partitionLabel: tenantId);
+            await bus.Push($"QueueD-{tier}", new QueueDModel { TenantId = tenantId, Sequence = 1 }, false, null, tenantId, CancellationToken.None);
 
         await WaitForConsume(tracker, 3, 10_000);
         Assert.Equal(3, tracker.Get("QueueD", tenantId).Count);
@@ -1525,7 +1525,7 @@ public class PartitionComplexIntegrationTests
             receivedByW1.Add(msg.Target); // partition queue name contains parent info
         };
         await w1.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await w1.Queue.Subscribe("IsolatedQ-A", true);
+        await w1.Queue.Subscribe("IsolatedQ-A", true, CancellationToken.None);
         await Task.Delay(200);
 
         // Worker 2: subscribes to IsolatedQ-B pool only
@@ -1537,7 +1537,7 @@ public class PartitionComplexIntegrationTests
             receivedByW2.Add(msg.Target);
         };
         await w2.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await w2.Queue.Subscribe("IsolatedQ-B", true);
+        await w2.Queue.Subscribe("IsolatedQ-B", true, CancellationToken.None);
         await Task.Delay(200);
 
         // Push labeled messages to each queue
@@ -1547,11 +1547,11 @@ public class PartitionComplexIntegrationTests
         {
             await producer.Queue.Push("IsolatedQ-A",
                 System.Text.Encoding.UTF8.GetBytes($"a-msg-{i}"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"tenant-a-{i}") });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"tenant-a-{i}") }, CancellationToken.None);
 
             await producer.Queue.Push("IsolatedQ-B",
                 System.Text.Encoding.UTF8.GetBytes($"b-msg-{i}"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"tenant-b-{i}") });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"tenant-b-{i}") }, CancellationToken.None);
         }
 
         await WaitUntil(() => receivedByW1.Count >= 5 && receivedByW2.Count >= 5, 10_000);
@@ -1648,7 +1648,9 @@ public class PartitionComplexIntegrationTests
         HorseResult result = await bus.Push("LimitedQ",
             new LimitedPartitionModel { Data = "test" },
             waitForCommit: true,
-            partitionLabel: "label-b");
+            messageHeaders: null,
+            partitionLabel: "label-b",
+            cancellationToken: CancellationToken.None);
 
         Assert.NotEqual(HorseResultCode.Ok, result.Code);
 
@@ -1713,10 +1715,10 @@ public class PartitionComplexIntegrationTests
         // Push 4 more labels (total 5 including label-1 from subscribe)
         HorseClient producer = await CreateProducer(ctx.Port);
         IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("UnlimitedQ", new UnlimitedPartitionModel { Data = "t2" }, partitionLabel: "label-2");
-        await bus.Push("UnlimitedQ", new UnlimitedPartitionModel { Data = "t3" }, partitionLabel: "label-3");
-        await bus.Push("UnlimitedQ", new UnlimitedPartitionModel { Data = "t4" }, partitionLabel: "label-4");
-        await bus.Push("UnlimitedQ", new UnlimitedPartitionModel { Data = "t5" }, partitionLabel: "label-5");
+        await bus.Push("UnlimitedQ", new UnlimitedPartitionModel { Data = "t2" }, false, null, "label-2", CancellationToken.None);
+        await bus.Push("UnlimitedQ", new UnlimitedPartitionModel { Data = "t3" }, false, null, "label-3", CancellationToken.None);
+        await bus.Push("UnlimitedQ", new UnlimitedPartitionModel { Data = "t4" }, false, null, "label-4", CancellationToken.None);
+        await bus.Push("UnlimitedQ", new UnlimitedPartitionModel { Data = "t5" }, false, null, "label-5", CancellationToken.None);
         await Task.Delay(500);
 
         // All 5 partitions should exist (no limit since MaxPartitionCount=0)
@@ -1768,7 +1770,7 @@ public class PartitionComplexIntegrationTests
         int received = 0;
         worker.MessageReceived += (_, _) => Interlocked.Increment(ref received);
         await worker.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await worker.Queue.Subscribe("Unlimited-Direct-Q", true);
+        await worker.Queue.Subscribe("Unlimited-Direct-Q", true, CancellationToken.None);
         await Task.Delay(300);
 
         HorseClient producer = await CreateProducer(ctx.Port);
@@ -1778,7 +1780,7 @@ public class PartitionComplexIntegrationTests
         {
             await producer.Queue.Push("Unlimited-Direct-Q",
                 System.Text.Encoding.UTF8.GetBytes($"msg-{i}"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"label-{i}") });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"label-{i}") }, CancellationToken.None);
         }
 
         await WaitUntil(() => queue.PartitionManager.Partitions.Count() >= 5, 5_000);

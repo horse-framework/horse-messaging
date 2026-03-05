@@ -1,3 +1,4 @@
+using System.Threading;
 using Horse.Messaging.Client.Direct.Annotations;
 
 namespace Test.Client.Models;

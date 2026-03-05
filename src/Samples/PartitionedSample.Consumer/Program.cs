@@ -1,3 +1,4 @@
+using System.Threading;
 ﻿﻿using Horse.Messaging.Client;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Client.Queues.Annotations;
@@ -35,11 +36,11 @@ consumer1.Run();
 internal class TestEventConsumer(IHorseQueueBus queueBus) : IQueueConsumer<TestEvent>
 {
     public async Task Consume(HorseMessage message, TestEvent model, HorseClient client,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         Console.WriteLine($"Received TestEvent: {model.Foo}");
         Test.MessageConsumed = true;
-        HorseResult? result = await queueBus.Push(new Test2Event(), true, partitionLabel: Label.Value, cancellationToken: cancellationToken);
+        HorseResult? result = await queueBus.Push(new Test2Event(), true, null, Label.Value, cancellationToken);
         Console.WriteLine($"Message2 sent: {result.Code}");
         HorseMessage? ack = message.CreateAcknowledge();
 
@@ -52,7 +53,7 @@ internal class TestEventConsumer(IHorseQueueBus queueBus) : IQueueConsumer<TestE
 internal class TestEvent2Consumer(IHorseQueueBus queueBus) : IQueueConsumer<Test2Event>
 {
     public async Task Consume(HorseMessage message, Test2Event model, HorseClient client,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         Console.WriteLine($"Received Test2Event: {model.Foo}");
         Test.Message2Consumed = true;
@@ -70,11 +71,11 @@ internal class TestEvent2Consumer(IHorseQueueBus queueBus) : IQueueConsumer<Test
 internal class TestEvent3Consumer(IHorseQueueBus queueBus) : IQueueConsumer<Test3Event>
 {
     public async Task Consume(HorseMessage message, Test3Event model, HorseClient client,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         Console.WriteLine($"Received Test3Event: {model.Foo}");
         Test.Message3Consumed = true;
-        HorseResult? result = await queueBus.Push(new Test4Event(), true, partitionLabel: Label.Value, cancellationToken: cancellationToken);
+        HorseResult? result = await queueBus.Push(new Test4Event(), true, null, Label.Value, cancellationToken);
         Console.WriteLine($"Message4 sent: {result.Code}");
         HorseMessage? ack = message.CreateAcknowledge();
 
@@ -87,7 +88,7 @@ internal class TestEvent3Consumer(IHorseQueueBus queueBus) : IQueueConsumer<Test
 internal class TestEvent4Consumer(IHorseQueueBus queueBus) : IQueueConsumer<Test4Event>
 {
     public Task Consume(HorseMessage message, Test4Event model, HorseClient client,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         Console.WriteLine($"Received Test4Event: {model.Foo}");
         Test.Message4Consumed = true;

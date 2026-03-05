@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Order;
@@ -53,7 +54,7 @@ public class PartitionScalingBenchmark : BenchmarkBase
             _labels[i] = $"scale-{i}";
 
             var consumer = ConnectAsync($"sc-c{i}").GetAwaiter().GetResult();
-            consumer.Queue.SubscribePartitioned(Queue, _labels[i], verifyResponse: true)
+            consumer.Queue.SubscribePartitioned(Queue, _labels[i], true, CancellationToken.None)
                     .GetAwaiter().GetResult();
             _consumers[i] = consumer;
 
@@ -88,7 +89,7 @@ public class PartitionScalingBenchmark : BenchmarkBase
             tasks[idx] = Task.Run(async () =>
             {
                 for (int j = 0; j < perPartition; j++)
-                    await prod.Queue.Push(Queue, NewPayloadStream(), waitForCommit: false, headers);
+                    await prod.Queue.Push(Queue, NewPayloadStream(), waitForCommit: false, headers, CancellationToken.None);
             });
         }
 

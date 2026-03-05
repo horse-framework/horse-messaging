@@ -2,6 +2,7 @@ using System.Text;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -60,7 +61,7 @@ public class PartitionMetricsTest
         HorseClient client = new HorseClient();
         await client.ConnectAsync("horse://localhost:" + port);
         await client.Queue.Subscribe("met-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w1") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w1") }, CancellationToken.None);
 
         await Task.Delay(400);
 
@@ -82,7 +83,7 @@ public class PartitionMetricsTest
         worker.AutoAcknowledge = false;
         await worker.ConnectAsync("horse://localhost:" + port);
         await worker.Queue.Subscribe("met-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "count-w") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "count-w") }, CancellationToken.None);
 
         await Task.Delay(300);
         worker.Disconnect();
@@ -93,7 +94,7 @@ public class PartitionMetricsTest
 
         for (int i = 0; i < 3; i++)
             await producer.Queue.Push("met-q", Encoding.UTF8.GetBytes("m" + i),
-                false, new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "count-w") });
+                false, new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "count-w") }, CancellationToken.None);
 
         await Task.Delay(600);
 
@@ -112,7 +113,7 @@ public class PartitionMetricsTest
             HorseClient client = new HorseClient();
             await client.ConnectAsync("horse://localhost:" + port);
             await client.Queue.Subscribe("met-q", true,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"w{i}") });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"w{i}") }, CancellationToken.None);
         }
 
         await Task.Delay(400);
@@ -131,7 +132,7 @@ public class PartitionMetricsTest
         HorseClient client = new HorseClient();
         await client.ConnectAsync("horse://localhost:" + port);
         await client.Queue.Subscribe("met-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "info-w") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "info-w") }, CancellationToken.None);
 
         await Task.Delay(300);
 
@@ -166,7 +167,7 @@ public class PartitionMetricsTest
         HorseClient client = new HorseClient();
         await client.ConnectAsync("horse://localhost:" + port);
         await client.Queue.Subscribe("met-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "ts-w") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "ts-w") }, CancellationToken.None);
 
         await Task.Delay(200);
 
@@ -187,14 +188,14 @@ public class PartitionMetricsTest
         await producer.ConnectAsync("horse://localhost:" + port);
 
         await worker.Queue.Subscribe("met-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "ts2") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "ts2") }, CancellationToken.None);
         await Task.Delay(800);
 
         PartitionEntry entry = queue.PartitionManager.Partitions.FirstOrDefault(p => p.Label == "ts2");
         Assert.NotNull(entry);
 
         await producer.Queue.Push("met-q", Encoding.UTF8.GetBytes("ts-msg"), false,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "ts2") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "ts2") }, CancellationToken.None);
         await Task.Delay(700);
 
         Assert.NotNull(entry.LastMessageAt);

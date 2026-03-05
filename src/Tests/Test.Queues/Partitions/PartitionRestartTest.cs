@@ -184,7 +184,7 @@ public class PartitionRestartTest : IDisposable
         // ── Phase 1: subscribe, then disconnect ──────────────────────
         HorseClient sub1 = new HorseClient { AutoAcknowledge = true };
         await sub1.ConnectAsync("horse://localhost:" + port);
-        await sub1.Queue.SubscribePartitioned(queueName, label, true);
+        await sub1.Queue.SubscribePartitioned(queueName, label, true, CancellationToken.None);
         await Task.Delay(300);
 
         HorseQueue parent = rider.Queue.Find(queueName);
@@ -199,7 +199,7 @@ public class PartitionRestartTest : IDisposable
 
         for (int i = 0; i < 3; i++)
             await prod.Queue.Push(queueName, Encoding.UTF8.GetBytes($"offline-{i}"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) }, CancellationToken.None);
 
         await Task.Delay(500); // allow flush
 
@@ -212,7 +212,7 @@ public class PartitionRestartTest : IDisposable
         HorseClient sub2 = new HorseClient { AutoAcknowledge = true };
         sub2.MessageReceived += (_, _) => Interlocked.Increment(ref received[0]);
         await sub2.ConnectAsync("horse://localhost:" + port);
-        await sub2.Queue.SubscribePartitioned(queueName, label, true);
+        await sub2.Queue.SubscribePartitioned(queueName, label, true, CancellationToken.None);
 
         await Task.Delay(1000);
         Assert.Equal(3, received[0]);
@@ -285,7 +285,7 @@ public class PartitionRestartTest : IDisposable
         HorseClient worker1 = new HorseClient { AutoAcknowledge = true };
         worker1.MessageReceived += (_, _) => Interlocked.Increment(ref received[0]);
         await worker1.ConnectAsync("horse://localhost:" + port);
-        await worker1.Queue.SubscribePartitioned(queueName, label, true);
+        await worker1.Queue.SubscribePartitioned(queueName, label, true, CancellationToken.None);
         await Task.Delay(300);
 
         HorseClient prod = new HorseClient();
@@ -294,7 +294,7 @@ public class PartitionRestartTest : IDisposable
         // Push 5 messages while connected
         for (int i = 0; i < 5; i++)
             await prod.Queue.Push(queueName, Encoding.UTF8.GetBytes($"online-{i}"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) }, CancellationToken.None);
 
         await Task.Delay(500);
         Assert.Equal(5, received[0]);
@@ -308,7 +308,7 @@ public class PartitionRestartTest : IDisposable
 
         for (int i = 0; i < 4; i++)
             await prod.Queue.Push(queueName, Encoding.UTF8.GetBytes($"offline-{i}"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) }, CancellationToken.None);
 
         await Task.Delay(500); // allow flush to disk
 
@@ -320,7 +320,7 @@ public class PartitionRestartTest : IDisposable
         HorseClient worker2 = new HorseClient { AutoAcknowledge = true };
         worker2.MessageReceived += (_, _) => Interlocked.Increment(ref received2[0]);
         await worker2.ConnectAsync("horse://localhost:" + port);
-        await worker2.Queue.SubscribePartitioned(queueName, label, true);
+        await worker2.Queue.SubscribePartitioned(queueName, label, true, CancellationToken.None);
 
         await Task.Delay(1000);
         Assert.Equal(4, received2[0]);
@@ -346,13 +346,13 @@ public class PartitionRestartTest : IDisposable
         HorseClient workerA = new HorseClient { AutoAcknowledge = true };
         workerA.MessageReceived += (_, _) => Interlocked.Increment(ref aCount[0]);
         await workerA.ConnectAsync("horse://localhost:" + port);
-        await workerA.Queue.SubscribePartitioned(queueName, labelA, true);
+        await workerA.Queue.SubscribePartitioned(queueName, labelA, true, CancellationToken.None);
 
         int[] bCount = { 0 };
         HorseClient workerB = new HorseClient { AutoAcknowledge = true };
         workerB.MessageReceived += (_, _) => Interlocked.Increment(ref bCount[0]);
         await workerB.ConnectAsync("horse://localhost:" + port);
-        await workerB.Queue.SubscribePartitioned(queueName, labelB, true);
+        await workerB.Queue.SubscribePartitioned(queueName, labelB, true, CancellationToken.None);
         await Task.Delay(400);
 
         HorseClient prod = new HorseClient();
@@ -362,9 +362,9 @@ public class PartitionRestartTest : IDisposable
         for (int i = 0; i < 2; i++)
         {
             await prod.Queue.Push(queueName, Encoding.UTF8.GetBytes($"a-online-{i}"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, labelA) });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, labelA) }, CancellationToken.None);
             await prod.Queue.Push(queueName, Encoding.UTF8.GetBytes($"b-online-{i}"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, labelB) });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, labelB) }, CancellationToken.None);
         }
 
         await Task.Delay(600);
@@ -381,11 +381,11 @@ public class PartitionRestartTest : IDisposable
         // Push 3 messages labeled A → stored in A's partition, NOT delivered to B
         for (int i = 0; i < 3; i++)
             await prod.Queue.Push(queueName, Encoding.UTF8.GetBytes($"a-offline-{i}"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, labelA) });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, labelA) }, CancellationToken.None);
 
         // Push 1 more to B (B is still online, receives immediately)
         await prod.Queue.Push(queueName, Encoding.UTF8.GetBytes("b-while-a-offline"), false,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, labelB) });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, labelB) }, CancellationToken.None);
 
         await Task.Delay(600);
 
@@ -400,7 +400,7 @@ public class PartitionRestartTest : IDisposable
         HorseClient workerA2 = new HorseClient { AutoAcknowledge = true };
         workerA2.MessageReceived += (_, _) => Interlocked.Increment(ref aCount2[0]);
         await workerA2.ConnectAsync("horse://localhost:" + port);
-        await workerA2.Queue.SubscribePartitioned(queueName, labelA, true);
+        await workerA2.Queue.SubscribePartitioned(queueName, labelA, true, CancellationToken.None);
 
         await Task.Delay(1000);
         Assert.Equal(3, aCount2[0]);   // receives exactly the 3 buffered messages
@@ -445,7 +445,7 @@ public class PartitionRestartTest : IDisposable
             // Subscribe → creates labeled partition with deterministic name
             HorseClient sub1 = new HorseClient { AutoAcknowledge = false };
             await sub1.ConnectAsync("horse://localhost:" + port1);
-            await sub1.Queue.SubscribePartitioned(queueName, label, true);
+            await sub1.Queue.SubscribePartitioned(queueName, label, true, CancellationToken.None);
             await Task.Delay(300);
 
             HorseQueue p1 = rider1.Queue.Find(queueName);
@@ -462,7 +462,7 @@ public class PartitionRestartTest : IDisposable
             HorseClient prod = new HorseClient();
             await prod.ConnectAsync("horse://localhost:" + port1);
             await prod.Queue.Push(queueName, Encoding.UTF8.GetBytes("restart-payload"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) }, CancellationToken.None);
             await Task.Delay(600); // flush
 
             Assert.Equal(1, e1.Queue.Manager.MessageStore.Count());
@@ -498,7 +498,7 @@ public class PartitionRestartTest : IDisposable
             HorseClient sub2 = new HorseClient { AutoAcknowledge = true };
             sub2.MessageReceived += (_, _) => Interlocked.Increment(ref received[0]);
             await sub2.ConnectAsync("horse://localhost:" + port2);
-            await sub2.Queue.SubscribePartitioned(queueName, label, true);
+            await sub2.Queue.SubscribePartitioned(queueName, label, true, CancellationToken.None);
             await Task.Delay(1000);
 
             // Partition was re-created with the SAME deterministic name

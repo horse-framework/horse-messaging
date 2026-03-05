@@ -1,3 +1,4 @@
+using System.Threading;
 namespace HostedServiceSample.Consumer;
 
 public class TestDirectModel

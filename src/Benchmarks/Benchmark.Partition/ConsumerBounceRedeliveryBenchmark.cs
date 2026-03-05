@@ -48,7 +48,7 @@ public class ConsumerBounceRedeliveryBenchmark : BenchmarkBase
 
         // Create partition by subscribing once
         var initConsumer = ConnectAsync("bounce-init").GetAwaiter().GetResult();
-        initConsumer.Queue.SubscribePartitioned(Queue, Label, verifyResponse: true)
+        initConsumer.Queue.SubscribePartitioned(Queue, Label, true, CancellationToken.None)
                     .GetAwaiter().GetResult();
         initConsumer.Disconnect();
 
@@ -71,7 +71,7 @@ public class ConsumerBounceRedeliveryBenchmark : BenchmarkBase
             new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, Label)
         };
         for (int i = 0; i < MessageCount; i++)
-            await _producer.Queue.Push(Queue, NewPayloadStream(), waitForCommit: false, headers);
+            await _producer.Queue.Push(Queue, NewPayloadStream(), waitForCommit: false, headers, CancellationToken.None);
 
         // ── Phase 2: consumer reconnects and drains ──────────────────────────
         int received = 0;
@@ -86,7 +86,7 @@ public class ConsumerBounceRedeliveryBenchmark : BenchmarkBase
                     tcs.TrySetResult(true);
         };
 
-        await consumer.Queue.SubscribePartitioned(Queue, Label, verifyResponse: true);
+        await consumer.Queue.SubscribePartitioned(Queue, Label, verifyResponse: true, CancellationToken.None);
 
         // Wait for all messages or timeout (30 s)
         await Task.WhenAny(tcs.Task, Task.Delay(TimeSpan.FromSeconds(30)));

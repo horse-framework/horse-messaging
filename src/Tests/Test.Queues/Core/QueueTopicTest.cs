@@ -53,7 +53,7 @@ public class QueueTopicTest
         };
 
         // Push to a non-existent queue with Queue-Topic header → auto-create with topic
-        await producer.Queue.Push("topic-auto-q", new MemoryStream("test"u8.ToArray()), true, headers);
+        await producer.Queue.Push("topic-auto-q", new MemoryStream("test"u8.ToArray()), true, headers, CancellationToken.None);
 
         HorseQueue queue = ctx.Rider.Queue.Find("topic-auto-q");
         Assert.NotNull(queue);
@@ -270,7 +270,7 @@ public class QueueTopicTest
             new(HorseHeaders.QUEUE_TOPIC, "financial")
         };
 
-        await producer.Queue.Push("auto-topic-push", new MemoryStream("data"u8.ToArray()), true, headers);
+        await producer.Queue.Push("auto-topic-push", new MemoryStream("data"u8.ToArray()), true, headers, CancellationToken.None);
 
         HorseQueue queue = ctx.Rider.Queue.Find("auto-topic-push");
         Assert.NotNull(queue);
@@ -293,7 +293,7 @@ public class QueueTopicTest
         var producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
-        await producer.Queue.Push("no-topic-push", new MemoryStream("data"u8.ToArray()), true);
+        await producer.Queue.Push("no-topic-push", new MemoryStream("data"u8.ToArray()), true, CancellationToken.None);
 
         HorseQueue queue = ctx.Rider.Queue.Find("no-topic-push");
         Assert.NotNull(queue);
@@ -326,13 +326,13 @@ public class QueueTopicTest
         var consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
         consumer.MessageReceived += (_, _) => Interlocked.Increment(ref received);
-        await consumer.Queue.Subscribe("topic-stable-q", true);
+        await consumer.Queue.Subscribe("topic-stable-q", true, CancellationToken.None);
 
         var producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         for (int i = 0; i < 5; i++)
-            await producer.Queue.Push("topic-stable-q", new MemoryStream(Encoding.UTF8.GetBytes($"msg-{i}")), true);
+            await producer.Queue.Push("topic-stable-q", new MemoryStream(Encoding.UTF8.GetBytes($"msg-{i}")), true, CancellationToken.None);
 
         for (int i = 0; i < 30 && received < 5; i++)
             await Task.Delay(100);

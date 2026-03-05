@@ -1,4 +1,5 @@
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -35,12 +36,12 @@ public class MessageLimitTest
         // Push 3 messages (within limit)
         for (int i = 0; i < 3; i++)
         {
-            HorseResult r = await producer.Queue.Push("ml-reject", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), true);
+            HorseResult r = await producer.Queue.Push("ml-reject", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), true, CancellationToken.None);
             Assert.Equal(HorseResultCode.Ok, r.Code);
         }
 
         // 4th message exceeds limit → should be rejected
-        HorseResult rejected = await producer.Queue.Push("ml-reject", new MemoryStream("overflow"u8.ToArray()), true);
+        HorseResult rejected = await producer.Queue.Push("ml-reject", new MemoryStream("overflow"u8.ToArray()), true, CancellationToken.None);
         Assert.NotEqual(HorseResultCode.Ok, rejected.Code);
 
         producer.Disconnect();
@@ -69,7 +70,7 @@ public class MessageLimitTest
 
         // Push 5 messages with DeleteOldest strategy
         for (int i = 0; i < 5; i++)
-            await producer.Queue.Push("ml-oldest", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), true);
+            await producer.Queue.Push("ml-oldest", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), true, CancellationToken.None);
 
         await Task.Delay(500);
 
@@ -102,7 +103,7 @@ public class MessageLimitTest
 
         for (int i = 0; i < 50; i++)
         {
-            HorseResult r = await producer.Queue.Push("ml-unlim", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), true);
+            HorseResult r = await producer.Queue.Push("ml-unlim", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), true, CancellationToken.None);
             Assert.Equal(HorseResultCode.Ok, r.Code);
         }
 
@@ -133,7 +134,7 @@ public class MessageLimitTest
         // Exactly 5 messages → all should be accepted
         for (int i = 0; i < 5; i++)
         {
-            HorseResult r = await producer.Queue.Push("ml-exact", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), true);
+            HorseResult r = await producer.Queue.Push("ml-exact", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), true, CancellationToken.None);
             Assert.Equal(HorseResultCode.Ok, r.Code);
         }
 
@@ -166,7 +167,7 @@ public class MessageLimitTest
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         for (int i = 0; i < 5; i++)
-            await producer.Queue.Push("ml-newest", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false);
+            await producer.Queue.Push("ml-newest", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseQueue queue = ctx.Rider.Queue.Find("ml-newest");

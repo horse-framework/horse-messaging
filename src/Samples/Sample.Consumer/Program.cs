@@ -33,10 +33,10 @@ class Program
         {
             Console.ReadLine();
             //await client.Direct.SendByType("Test1", 123, new ModelA { Foo = new string('a', 10000) }, false);
-            await client.Channel.PublishString("Sample", new string('a',10000), false);
+            await client.Channel.PublishString("Sample", new string('a',10000), false, CancellationToken.None);
         }
 
-        var subs = await client.Queue.Subscribe("model-g", true);
+        var subs = await client.Queue.Subscribe("model-g", true, CancellationToken.None);
         Console.WriteLine("subs: " + subs.Code);
 
         while (true)
@@ -52,7 +52,7 @@ class Program
                 ClearAfter = ClearDecision.None,
                 GetQueueMessageCounts = false,
                 Order = MessageOrder.Default
-            }, async (i, message) => { await client.SendAck(message, CancellationToken.None); });
+            }, async (i, message) => { await client.SendAck(message, CancellationToken.None); }, CancellationToken.None);
 
             Console.WriteLine($"pull response is {response.Status} and received {response.ReceivedCount} messages.");
         }

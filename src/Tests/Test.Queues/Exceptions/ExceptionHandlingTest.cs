@@ -380,13 +380,13 @@ public class ExceptionHandlingTest
         {
             errorMessages.Add(msg.Target);
         };
-        await errorConsumer.Queue.Subscribe("error-q", true);
+        await errorConsumer.Queue.Subscribe("error-q", true, CancellationToken.None);
         await Task.Delay(200);
 
         // Send a message to source-q
         HorseClient producer = await ConnectRaw(ctx.Port);
         IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("source-q", new SourceModel { Data = "test-data" });
+        await bus.Push("source-q", new SourceModel { Data = "test-data" }, false, CancellationToken.None);
 
         await WaitUntil(() => tracker.ThrowCount >= 1);
         await Task.Delay(1000); // Allow time for MoveOnError to propagate
@@ -444,7 +444,7 @@ public class ExceptionHandlingTest
         {
             errorQueueMsgs.Add(msg);
         };
-        await errorConsumer.Queue.Subscribe("error-q", true);
+        await errorConsumer.Queue.Subscribe("error-q", true, CancellationToken.None);
         await Task.Delay(200);
 
         // Track what arrives at source-q (the original queue)
@@ -454,12 +454,12 @@ public class ExceptionHandlingTest
         {
             sourceQueueMsgs.Add(msg);
         };
-        await sourceWatcher.Queue.Subscribe("source-q", true);
+        await sourceWatcher.Queue.Subscribe("source-q", true, CancellationToken.None);
         await Task.Delay(200);
 
         HorseClient producer = await ConnectRaw(ctx.Port);
         IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("source-q", new SourceModel { Data = "bug-test" });
+        await bus.Push("source-q", new SourceModel { Data = "bug-test" }, false, CancellationToken.None);
 
         await WaitUntil(() => tracker.ThrowCount >= 1);
         await Task.Delay(2000);
@@ -514,12 +514,12 @@ public class ExceptionHandlingTest
         {
             logMessages.Add(msg);
         };
-        await logConsumer.Queue.Subscribe("exception-log-q", true);
+        await logConsumer.Queue.Subscribe("exception-log-q", true, CancellationToken.None);
         await Task.Delay(200);
 
         HorseClient producer = await ConnectRaw(ctx.Port);
         IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("source-q", new SourceModel { Data = "push-exc-test" });
+        await bus.Push("source-q", new SourceModel { Data = "push-exc-test" }, false, CancellationToken.None);
 
         await WaitUntil(() => tracker.ThrowCount >= 1);
         await WaitUntil(() => logMessages.Count >= 1, 5_000);
@@ -585,17 +585,17 @@ public class ExceptionHandlingTest
         ConcurrentBag<HorseMessage> specificLogs = new();
         HorseClient specificConsumer = await ConnectRaw(ctx.Port);
         specificConsumer.MessageReceived += (_, msg) => specificLogs.Add(msg);
-        await specificConsumer.Queue.Subscribe("specific-exception-log-q", true);
+        await specificConsumer.Queue.Subscribe("specific-exception-log-q", true, CancellationToken.None);
 
         ConcurrentBag<HorseMessage> defaultLogs = new();
         HorseClient defaultConsumer = await ConnectRaw(ctx.Port);
         defaultConsumer.MessageReceived += (_, msg) => defaultLogs.Add(msg);
-        await defaultConsumer.Queue.Subscribe("exception-log-q", true);
+        await defaultConsumer.Queue.Subscribe("exception-log-q", true, CancellationToken.None);
         await Task.Delay(200);
 
         HorseClient producer = await ConnectRaw(ctx.Port);
         IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("source-q", new SourceModel { Data = "specific-exc-test" });
+        await bus.Push("source-q", new SourceModel { Data = "specific-exc-test" }, false, CancellationToken.None);
 
         await WaitUntil(() => tracker.ThrowCount >= 1);
         await WaitUntil(() => specificLogs.Count >= 1, 5_000);
@@ -657,17 +657,17 @@ public class ExceptionHandlingTest
         ConcurrentBag<HorseMessage> specificLogs = new();
         HorseClient specificConsumer = await ConnectRaw(ctx.Port);
         specificConsumer.MessageReceived += (_, msg) => specificLogs.Add(msg);
-        await specificConsumer.Queue.Subscribe("specific-exception-log-q", true);
+        await specificConsumer.Queue.Subscribe("specific-exception-log-q", true, CancellationToken.None);
 
         ConcurrentBag<HorseMessage> defaultLogs = new();
         HorseClient defaultConsumer = await ConnectRaw(ctx.Port);
         defaultConsumer.MessageReceived += (_, msg) => defaultLogs.Add(msg);
-        await defaultConsumer.Queue.Subscribe("exception-log-q", true);
+        await defaultConsumer.Queue.Subscribe("exception-log-q", true, CancellationToken.None);
         await Task.Delay(200);
 
         HorseClient producer = await ConnectRaw(ctx.Port);
         IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("source-q", new SourceModel { Data = "unmatched-exc-test" });
+        await bus.Push("source-q", new SourceModel { Data = "unmatched-exc-test" }, false, CancellationToken.None);
 
         await WaitUntil(() => tracker.ThrowCount >= 1);
         await WaitUntil(() => defaultLogs.Count >= 1, 5_000);
@@ -716,7 +716,7 @@ public class ExceptionHandlingTest
 
         HorseClient producer = await ConnectRaw(ctx.Port);
         IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("source-q", new SourceModel { Data = "nack-test" });
+        await bus.Push("source-q", new SourceModel { Data = "nack-test" }, false, CancellationToken.None);
 
         await WaitUntil(() => tracker.ThrowCount >= 1);
         await Task.Delay(500);
@@ -765,12 +765,12 @@ public class ExceptionHandlingTest
         ConcurrentBag<HorseMessage> logMessages = new();
         HorseClient logConsumer = await ConnectRaw(ctx.Port);
         logConsumer.MessageReceived += (_, msg) => logMessages.Add(msg);
-        await logConsumer.Queue.Subscribe("exception-log-q", true);
+        await logConsumer.Queue.Subscribe("exception-log-q", true, CancellationToken.None);
         await Task.Delay(200);
 
         HorseClient producer = await ConnectRaw(ctx.Port);
         IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("source-q", new SourceModel { Data = "retry-test" });
+        await bus.Push("source-q", new SourceModel { Data = "retry-test" }, false, CancellationToken.None);
 
         // [Retry(3, 50)] → 3 retries × 50ms delay
         await WaitUntil(() => tracker.ThrowCount >= 3, 5_000);
@@ -812,7 +812,7 @@ public class ExceptionHandlingTest
         ConcurrentBag<HorseMessage> logMessages = new();
         HorseClient logConsumer = await ConnectRaw(ctx.Port);
         logConsumer.MessageReceived += (_, msg) => logMessages.Add(msg);
-        await logConsumer.Queue.Subscribe("exception-log-q", true);
+        await logConsumer.Queue.Subscribe("exception-log-q", true, CancellationToken.None);
         await Task.Delay(200);
 
         // After first throw, turn off throwing so retry succeeds
@@ -824,7 +824,7 @@ public class ExceptionHandlingTest
 
         HorseClient producer = await ConnectRaw(ctx.Port);
         IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("source-q", new SourceModel { Data = "retry-succeed-test" });
+        await bus.Push("source-q", new SourceModel { Data = "retry-succeed-test" }, false, CancellationToken.None);
 
         // Wait for retry to succeed
         await WaitUntil(() => tracker.ConsumedMessages.Count >= 1, 5_000);
@@ -878,17 +878,17 @@ public class ExceptionHandlingTest
         ConcurrentBag<HorseMessage> errorMsgs = new();
         HorseClient errorConsumer = await ConnectRaw(ctx.Port);
         errorConsumer.MessageReceived += (_, msg) => errorMsgs.Add(msg);
-        await errorConsumer.Queue.Subscribe("error-q", true);
+        await errorConsumer.Queue.Subscribe("error-q", true, CancellationToken.None);
 
         ConcurrentBag<HorseMessage> logMsgs = new();
         HorseClient logConsumer = await ConnectRaw(ctx.Port);
         logConsumer.MessageReceived += (_, msg) => logMsgs.Add(msg);
-        await logConsumer.Queue.Subscribe("exception-log-q", true);
+        await logConsumer.Queue.Subscribe("exception-log-q", true, CancellationToken.None);
         await Task.Delay(200);
 
         HorseClient producer = await ConnectRaw(ctx.Port);
         IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("source-q", new SourceModel { Data = "combined-test" });
+        await bus.Push("source-q", new SourceModel { Data = "combined-test" }, false, CancellationToken.None);
 
         await WaitUntil(() => tracker.ThrowCount >= 1);
         await Task.Delay(2000);
@@ -941,17 +941,17 @@ public class ExceptionHandlingTest
         ConcurrentBag<HorseMessage> errorMsgs = new();
         HorseClient errorConsumer = await ConnectRaw(ctx.Port);
         errorConsumer.MessageReceived += (_, msg) => errorMsgs.Add(msg);
-        await errorConsumer.Queue.Subscribe("error-q", true);
+        await errorConsumer.Queue.Subscribe("error-q", true, CancellationToken.None);
 
         ConcurrentBag<HorseMessage> logMsgs = new();
         HorseClient logConsumer = await ConnectRaw(ctx.Port);
         logConsumer.MessageReceived += (_, msg) => logMsgs.Add(msg);
-        await logConsumer.Queue.Subscribe("exception-log-q", true);
+        await logConsumer.Queue.Subscribe("exception-log-q", true, CancellationToken.None);
         await Task.Delay(200);
 
         HorseClient producer = await ConnectRaw(ctx.Port);
         IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("source-q", new SourceModel { Data = "happy-test" });
+        await bus.Push("source-q", new SourceModel { Data = "happy-test" }, false, CancellationToken.None);
 
         await WaitUntil(() => tracker.ConsumedMessages.Count >= 1, 5_000);
         await Task.Delay(500);
@@ -1010,7 +1010,7 @@ public class ExceptionHandlingTest
 
         HorseClient producer = await ConnectRaw(ctx.Port);
         IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("source-q", new SourceModel { Data = "nack-reason-test" });
+        await bus.Push("source-q", new SourceModel { Data = "nack-reason-test" }, false, CancellationToken.None);
 
         await WaitUntil(() => tracker.ThrowCount >= 1);
         await Task.Delay(500);
@@ -1054,7 +1054,7 @@ public class ExceptionHandlingTest
         ConcurrentBag<HorseMessage> logMessages = new();
         HorseClient logConsumer = await ConnectRaw(ctx.Port);
         logConsumer.MessageReceived += (_, msg) => logMessages.Add(msg);
-        await logConsumer.Queue.Subscribe("exception-log-q", true);
+        await logConsumer.Queue.Subscribe("exception-log-q", true, CancellationToken.None);
         await Task.Delay(200);
 
         HorseClient producer = await ConnectRaw(ctx.Port);
@@ -1062,7 +1062,7 @@ public class ExceptionHandlingTest
 
         int messageCount = 5;
         for (int i = 0; i < messageCount; i++)
-            await bus.Push("source-q", new SourceModel { Data = $"multi-{i}" });
+            await bus.Push("source-q", new SourceModel { Data = $"multi-{i}" }, false, CancellationToken.None);
 
         await WaitUntil(() => tracker.ThrowCount >= messageCount, 10_000);
         await WaitUntil(() => logMessages.Count >= messageCount, 10_000);

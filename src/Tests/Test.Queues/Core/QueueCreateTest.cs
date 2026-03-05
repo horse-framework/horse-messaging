@@ -1,4 +1,5 @@
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -62,7 +63,7 @@ public class QueueCreateTest
         await client.ConnectAsync($"horse://localhost:{ctx.Port}");
         Assert.True(client.IsConnected);
 
-        await client.Queue.Push("auto-push-q", new MemoryStream("hello"u8.ToArray()), true);
+        await client.Queue.Push("auto-push-q", new MemoryStream("hello"u8.ToArray()), true, CancellationToken.None);
         await Task.Delay(500);
 
         HorseQueue queue = ctx.Rider.Queue.Find("auto-push-q");
@@ -82,7 +83,7 @@ public class QueueCreateTest
         await client.ConnectAsync($"horse://localhost:{ctx.Port}");
         Assert.True(client.IsConnected);
 
-        HorseResult result = await client.Queue.Subscribe("auto-sub-q", true);
+        HorseResult result = await client.Queue.Subscribe("auto-sub-q", true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, result.Code);
 
         HorseQueue queue = ctx.Rider.Queue.Find("auto-sub-q");
@@ -200,7 +201,7 @@ public class QueueCreateTest
         HorseClient client = new HorseClient();
         await client.ConnectAsync($"horse://localhost:{ctx.Port}");
 
-        HorseResult result = await client.Queue.Subscribe("no-auto-q", true);
+        HorseResult result = await client.Queue.Subscribe("no-auto-q", true, CancellationToken.None);
         // When auto creation is off, subscribe should not silently create
         HorseQueue queue = ctx.Rider.Queue.Find("no-auto-q");
         Assert.Null(queue);

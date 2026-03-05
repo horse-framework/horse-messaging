@@ -24,7 +24,7 @@ public interface IHorseRequestHandler<in TRequest, TResponse>
     /// Pass this token to any async I/O calls inside the handler.
     /// </param>
     Task<TResponse> Handle(TRequest request, HorseMessage rawMessage, HorseClient client,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 
     /// <summary>
     /// Executed if an exception is thrown in Handle method
@@ -35,5 +35,5 @@ public interface IHorseRequestHandler<in TRequest, TResponse>
     /// <param name="client">Horse MQ connection client</param>
     /// <param name="cancellationToken">Cancellation token passed from the executor.</param>
     Task<ErrorResponse> OnError(Exception exception, TRequest request, HorseMessage rawMessage, HorseClient client,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 }

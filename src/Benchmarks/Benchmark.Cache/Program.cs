@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -26,12 +27,12 @@ class Program
         client.Connected += c => Console.WriteLine("Connected to the server");
         await client.ConnectAsync(hostname);
 
-        HorseResult result = await client.Cache.SetString("A", "Hello, World!", TimeSpan.FromMinutes(30));
+        HorseResult result = await client.Cache.SetString("A", "Hello, World!", TimeSpan.FromMinutes(30), CancellationToken.None);
         Console.WriteLine($"Set Cache Item: {result.Code}");
 
         Console.Write("Press enter to start to get and check the cache data");
         Console.ReadLine();
-        var cacheData = await client.Cache.GetString("A");
+        var cacheData = await client.Cache.GetString("A", CancellationToken.None);
         Console.WriteLine($"Received: {cacheData.Value}");
         Console.WriteLine();
 
@@ -66,7 +67,7 @@ class Program
                         await Task.Delay(1);
                         
                     for (int j = 0; j < max; j++)
-                        await c.Cache.GetString("A");
+                        await c.Cache.GetString("A", CancellationToken.None);
                 }));
             }
 

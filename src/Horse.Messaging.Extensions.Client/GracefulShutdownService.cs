@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
@@ -35,8 +35,10 @@ internal class GracefulShutdownService(
         // Mark client as shutdown executed to prevent HorseClient's internal handlers from running
         client.GracefulShutdownExecuted = true;
 
-        await client.Queue.UnsubscribeFromAllQueues();
-        await client.Channel.UnsubscribeFromAllChannels();
+        using var shutdownCts = new CancellationTokenSource(maxWait);
+
+        await client.Queue.UnsubscribeFromAllQueues(shutdownCts.Token);
+        await client.Channel.UnsubscribeFromAllChannels(shutdownCts.Token);
         
         int min = Convert.ToInt32(minWait.TotalMilliseconds);
         int max = Convert.ToInt32(maxWait.TotalMilliseconds);
@@ -54,8 +56,7 @@ internal class GracefulShutdownService(
             // ignored
         }
 
-        // Use CancellationToken.None to prevent TaskCanceledException during shutdown
-        await Task.Delay(min, CancellationToken.None);
+        await Task.Delay(min, shutdownCts.Token);
 
         while (min < max)
         {
@@ -65,7 +66,7 @@ internal class GracefulShutdownService(
             if (client.Queue.ActiveConsumeOperations == 0 && client.Channel.ActiveChannelOperations == 0)
                 break;
             
-            await Task.Delay(250, CancellationToken.None);
+            await Task.Delay(250, shutdownCts.Token);
             min += 250;
         }
         

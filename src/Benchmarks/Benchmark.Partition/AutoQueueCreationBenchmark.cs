@@ -53,10 +53,10 @@ public class AutoQueueCreationBenchmark : BenchmarkBase
             consumers[i] = await ConnectAsync($"auto-c{i}");
             await consumers[i].Queue.SubscribePartitioned(
                 queueName,
-                partitionLabel:         $"auto-t{i}",
-                verifyResponse:         true,
-                maxPartitions:          PartitionCount,
-                subscribersPerPartition: 1);
+                $"auto-t{i}",
+                true,
+                PartitionCount,
+                1, CancellationToken.None);
         }
 
         // push 5 messages to verify the queue is live
@@ -66,7 +66,7 @@ public class AutoQueueCreationBenchmark : BenchmarkBase
             new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"auto-t0")
         };
         for (int j = 0; j < 5; j++)
-            await producer.Queue.Push(queueName, NewPayloadStream(), waitForCommit: false, headers);
+            await producer.Queue.Push(queueName, NewPayloadStream(), waitForCommit: false, headers, CancellationToken.None);
 
         producer.Disconnect();
         foreach (var c in consumers) c.Disconnect();

@@ -75,7 +75,7 @@ public class QueueEventTest
 
         await client.ConnectAsync($"horse://localhost:{port}");
 
-        HorseResult subscribeResult = await client.Queue.Subscribe("test-queue", true);
+        HorseResult subscribeResult = await client.Queue.Subscribe("test-queue", true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, subscribeResult.Code);
 
         await Task.Delay(250);
@@ -97,13 +97,13 @@ public class QueueEventTest
 
         await client.ConnectAsync($"horse://localhost:{port}");
 
-        HorseResult subscribeResult = await client.Queue.Subscribe("test-queue", true);
+        HorseResult subscribeResult = await client.Queue.Subscribe("test-queue", true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, subscribeResult.Code);
 
         await Task.Delay(250);
         Assert.Equal(0, QueueUnsubscribeHandler.Count);
 
-        HorseResult unsubscribeResult = await client.Queue.Unsubscribe("test-queue", true);
+        HorseResult unsubscribeResult = await client.Queue.Unsubscribe("test-queue", true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, unsubscribeResult.Code);
 
         await Task.Delay(250);

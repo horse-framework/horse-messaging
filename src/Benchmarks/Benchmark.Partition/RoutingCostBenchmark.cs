@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Order;
@@ -46,7 +47,7 @@ public class RoutingCostBenchmark : BenchmarkBase
         {
             _labels[i] = $"rt-{i}";
             var c = ConnectAsync($"rt-c{i}").GetAwaiter().GetResult();
-            c.Queue.SubscribePartitioned(Queue, _labels[i], verifyResponse: true)
+            c.Queue.SubscribePartitioned(Queue, _labels[i], true, CancellationToken.None)
              .GetAwaiter().GetResult();
             // We intentionally do NOT store consumers — they stay connected (keeps partitions alive)
             // but we never disconnect them here.  GlobalCleanup stops the server.
@@ -72,7 +73,7 @@ public class RoutingCostBenchmark : BenchmarkBase
             {
                 new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, _labels[i])
             };
-            await _producer.Queue.Push(Queue, NewPayloadStream(), waitForCommit: false, headers);
+            await _producer.Queue.Push(Queue, NewPayloadStream(), waitForCommit: false, headers, CancellationToken.None);
         }
     }
 
@@ -81,7 +82,7 @@ public class RoutingCostBenchmark : BenchmarkBase
     {
         // Push without label — hits the round-robin path inside PartitionManager
         for (int i = 0; i < PartitionCount; i++)
-            await _producer.Queue.Push(Queue, NewPayloadStream(), waitForCommit: false);
+            await _producer.Queue.Push(Queue, NewPayloadStream(), waitForCommit: false, CancellationToken.None);
     }
 }
 

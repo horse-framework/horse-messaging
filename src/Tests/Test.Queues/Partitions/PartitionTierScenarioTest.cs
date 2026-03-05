@@ -107,19 +107,19 @@ public class PartitionTierScenarioTest
     private static async Task SubscribeLabeled(HorseClient client, string queue, string label)
     {
         await client.Queue.Subscribe(queue, true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) }, CancellationToken.None);
     }
 
     private static async Task SubscribeNoLabel(HorseClient client, string queue)
     {
-        await client.Queue.Subscribe(queue, true);
+        await client.Queue.Subscribe(queue, true, CancellationToken.None);
     }
 
     private static async Task PushWithLabel(HorseClient producer, string queue, string label, string body = null)
     {
         body ??= $"{queue}:{label}";
         await producer.Queue.Push(queue, Encoding.UTF8.GetBytes(body), false,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) }, CancellationToken.None);
     }
 
     #endregion
@@ -914,12 +914,12 @@ public class PartitionTierScenarioTest
         HorseClient w2 = await Connect(port);
 
         HorseResult r1 = await w1.Queue.Subscribe("LimitQueue", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "free") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "free") }, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, r1.Code);
 
         // Second worker with same label → full
         HorseResult r2 = await w2.Queue.Subscribe("LimitQueue", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "free") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "free") }, CancellationToken.None);
         Assert.Equal(HorseResultCode.LimitExceeded, r2.Code);
     }
 
@@ -1041,7 +1041,7 @@ public class PartitionTierScenarioTest
         Assert.True(consumer.IsConnected);
 
         // Transform: "TestEvent" → "TestEvent-Free", no label → enters worker pool
-        await consumer.Queue.Subscribe("TestEvent-Free", true);
+        await consumer.Queue.Subscribe("TestEvent-Free", true, CancellationToken.None);
         await Task.Delay(500);
 
         // Queue should be auto-created with global partition config
@@ -1057,7 +1057,7 @@ public class PartitionTierScenarioTest
         await producer.Queue.Push("TestEvent-Free",
             Encoding.UTF8.GetBytes("{\"Foo\":\"Bar\"}"),
             false,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "sample-tenant") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "sample-tenant") }, CancellationToken.None);
 
         await Task.Delay(800);
 
@@ -1128,7 +1128,7 @@ public class PartitionTierScenarioTest
 
         // Trigger auto-creation by subscribing
         HorseClient worker = await Connect(port);
-        await worker.Queue.Subscribe("InheritTest-Queue", true);
+        await worker.Queue.Subscribe("InheritTest-Queue", true, CancellationToken.None);
         await Task.Delay(300);
 
         HorseQueue queue = rider.Queue.Find("InheritTest-Queue");

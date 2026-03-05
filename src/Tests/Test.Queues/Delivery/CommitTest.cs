@@ -1,4 +1,5 @@
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -28,7 +29,7 @@ public class CommitTest
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         // waitForCommit=false with CommitWhen.None → fast return
-        HorseResult result = await producer.Queue.Push("commit-none", new MemoryStream("msg"u8.ToArray()), false);
+        HorseResult result = await producer.Queue.Push("commit-none", new MemoryStream("msg"u8.ToArray()), false, CancellationToken.None);
         Assert.NotNull(result);
 
         producer.Disconnect();
@@ -50,7 +51,7 @@ public class CommitTest
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
-        HorseResult result = await producer.Queue.Push("commit-recv", new MemoryStream("msg"u8.ToArray()), true);
+        HorseResult result = await producer.Queue.Push("commit-recv", new MemoryStream("msg"u8.ToArray()), true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, result.Code);
 
         producer.Disconnect();
@@ -72,12 +73,12 @@ public class CommitTest
         // Need at least one subscriber for "AfterSent" to resolve
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("commit-sent", true);
+        await consumer.Queue.Subscribe("commit-sent", true, CancellationToken.None);
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
-        HorseResult result = await producer.Queue.Push("commit-sent", new MemoryStream("msg"u8.ToArray()), true);
+        HorseResult result = await producer.Queue.Push("commit-sent", new MemoryStream("msg"u8.ToArray()), true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, result.Code);
 
         producer.Disconnect();
@@ -101,12 +102,12 @@ public class CommitTest
         HorseClient consumer = new HorseClient();
         consumer.AutoAcknowledge = true;
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("commit-ack", true);
+        await consumer.Queue.Subscribe("commit-ack", true, CancellationToken.None);
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
-        HorseResult result = await producer.Queue.Push("commit-ack", new MemoryStream("msg"u8.ToArray()), true);
+        HorseResult result = await producer.Queue.Push("commit-ack", new MemoryStream("msg"u8.ToArray()), true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, result.Code);
 
         producer.Disconnect();
@@ -130,7 +131,7 @@ public class CommitTest
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         // waitForCommit=false → producer doesn't wait regardless of server setting
-        HorseResult result = await producer.Queue.Push("commit-noblock", new MemoryStream("msg"u8.ToArray()), false);
+        HorseResult result = await producer.Queue.Push("commit-noblock", new MemoryStream("msg"u8.ToArray()), false, CancellationToken.None);
         Assert.NotNull(result);
 
         producer.Disconnect();

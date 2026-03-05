@@ -28,7 +28,7 @@ internal class EventSubscriberExecutor : ExecutorBase
     }
 
     public override async Task Execute(HorseClient client, HorseMessage message, object model,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         HorseEvent horseEvent = (HorseEvent) model;
         ProvidedHandler providedHandler = null;
@@ -58,7 +58,7 @@ internal class EventSubscriberExecutor : ExecutorBase
     }
 
     private async Task Handle(IHorseEventHandler handler, HorseMessage message, HorseEvent horseEvent,
-        HorseClient client, CancellationToken cancellationToken = default)
+        HorseClient client, CancellationToken cancellationToken)
     {
         if (Retry == null)
         {

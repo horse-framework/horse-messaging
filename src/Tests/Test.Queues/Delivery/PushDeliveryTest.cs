@@ -28,14 +28,14 @@ public class PushDeliveryTest
 
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("push-single", true);
+        await consumer.Queue.Subscribe("push-single", true, CancellationToken.None);
 
         HorseMessage received = null;
         consumer.MessageReceived += (_, m) => received = m;
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("push-single", new MemoryStream("hello"u8.ToArray()), true);
+        await producer.Queue.Push("push-single", new MemoryStream("hello"u8.ToArray()), true, CancellationToken.None);
 
         for (int i = 0; i < 30 && received == null; i++)
             await Task.Delay(100);
@@ -64,22 +64,22 @@ public class PushDeliveryTest
 
         HorseClient c1 = new HorseClient();
         await c1.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await c1.Queue.Subscribe("push-multi", true);
+        await c1.Queue.Subscribe("push-multi", true, CancellationToken.None);
         c1.MessageReceived += (_, _) => count1++;
 
         HorseClient c2 = new HorseClient();
         await c2.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await c2.Queue.Subscribe("push-multi", true);
+        await c2.Queue.Subscribe("push-multi", true, CancellationToken.None);
         c2.MessageReceived += (_, _) => count2++;
 
         HorseClient c3 = new HorseClient();
         await c3.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await c3.Queue.Subscribe("push-multi", true);
+        await c3.Queue.Subscribe("push-multi", true, CancellationToken.None);
         c3.MessageReceived += (_, _) => count3++;
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("push-multi", new MemoryStream("broadcast"u8.ToArray()), true);
+        await producer.Queue.Push("push-multi", new MemoryStream("broadcast"u8.ToArray()), true, CancellationToken.None);
 
         for (int i = 0; i < 30 && (count1 == 0 || count2 == 0 || count3 == 0); i++)
             await Task.Delay(100);
@@ -109,7 +109,7 @@ public class PushDeliveryTest
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("push-store", new MemoryStream("stored"u8.ToArray()), false);
+        await producer.Queue.Push("push-store", new MemoryStream("stored"u8.ToArray()), false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseQueue queue = ctx.Rider.Queue.Find("push-store");
@@ -134,7 +134,7 @@ public class PushDeliveryTest
 
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("push-content", true);
+        await consumer.Queue.Subscribe("push-content", true, CancellationToken.None);
 
         HorseMessage received = null;
         consumer.MessageReceived += (_, m) => received = m;
@@ -142,7 +142,7 @@ public class PushDeliveryTest
         string longContent = new string('X', 5000);
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("push-content", new MemoryStream(System.Text.Encoding.UTF8.GetBytes(longContent)), true);
+        await producer.Queue.Push("push-content", new MemoryStream(System.Text.Encoding.UTF8.GetBytes(longContent)), true, CancellationToken.None);
 
         for (int i = 0; i < 30 && received == null; i++)
             await Task.Delay(100);
@@ -170,14 +170,14 @@ public class PushDeliveryTest
         List<string> receivedMessages = new();
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("push-order", true);
+        await consumer.Queue.Subscribe("push-order", true, CancellationToken.None);
         consumer.MessageReceived += (_, m) => { lock (receivedMessages) receivedMessages.Add(m.ToString()); };
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         for (int i = 0; i < 10; i++)
-            await producer.Queue.Push("push-order", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), true);
+            await producer.Queue.Push("push-order", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), true, CancellationToken.None);
 
         for (int i = 0; i < 50 && receivedMessages.Count < 10; i++)
             await Task.Delay(100);
@@ -205,7 +205,7 @@ public class PushDeliveryTest
 
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("push-hdr", true);
+        await consumer.Queue.Subscribe("push-hdr", true, CancellationToken.None);
 
         HorseMessage received = null;
         consumer.MessageReceived += (_, m) => received = m;
@@ -218,7 +218,7 @@ public class PushDeliveryTest
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("push-hdr", new MemoryStream("with headers"u8.ToArray()), true, headers);
+        await producer.Queue.Push("push-hdr", new MemoryStream("with headers"u8.ToArray()), true, headers, CancellationToken.None);
 
         for (int i = 0; i < 30 && received == null; i++)
             await Task.Delay(100);
@@ -269,7 +269,7 @@ public class PushDeliveryTest
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
         consumer.MessageReceived += (_, m) => { lock (received) received.Add(m.ToString()); };
-        await consumer.Queue.Subscribe("push-pri", true);
+        await consumer.Queue.Subscribe("push-pri", true, CancellationToken.None);
 
         for (int i = 0; i < 30 && received.Count < 4; i++)
             await Task.Delay(100);
@@ -298,7 +298,7 @@ public class PushDeliveryTest
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
         for (int i = 0; i < 3; i++)
-            await producer.Queue.Push("push-delayed-sub", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"stored-{i}")), false);
+            await producer.Queue.Push("push-delayed-sub", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"stored-{i}")), false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseQueue queue = ctx.Rider.Queue.Find("push-delayed-sub");
@@ -309,7 +309,7 @@ public class PushDeliveryTest
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
         consumer.MessageReceived += (_, m) => { lock (received) received.Add(m.ToString()); };
-        await consumer.Queue.Subscribe("push-delayed-sub", true);
+        await consumer.Queue.Subscribe("push-delayed-sub", true, CancellationToken.None);
 
         for (int i = 0; i < 50 && received.Count < 3; i++)
             await Task.Delay(100);
@@ -366,14 +366,14 @@ public class PushDeliveryTest
 
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("push-empty", true);
+        await consumer.Queue.Subscribe("push-empty", true, CancellationToken.None);
 
         HorseMessage received = null;
         consumer.MessageReceived += (_, m) => received = m;
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("push-empty", new MemoryStream(System.Array.Empty<byte>()), true);
+        await producer.Queue.Push("push-empty", new MemoryStream(System.Array.Empty<byte>()), true, CancellationToken.None);
 
         for (int i = 0; i < 30 && received == null; i++)
             await Task.Delay(100);
@@ -400,7 +400,7 @@ public class PushDeliveryTest
 
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("push-large", true);
+        await consumer.Queue.Subscribe("push-large", true, CancellationToken.None);
 
         HorseMessage received = null;
         consumer.MessageReceived += (_, m) => received = m;
@@ -410,7 +410,7 @@ public class PushDeliveryTest
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("push-large", new MemoryStream(largeData), true);
+        await producer.Queue.Push("push-large", new MemoryStream(largeData), true, CancellationToken.None);
 
         for (int i = 0; i < 50 && received == null; i++)
             await Task.Delay(100);
@@ -437,7 +437,7 @@ public class PushDeliveryTest
 
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("push-disc", true);
+        await consumer.Queue.Subscribe("push-disc", true, CancellationToken.None);
 
         // First message delivered
         HorseMessage received = null;
@@ -445,7 +445,7 @@ public class PushDeliveryTest
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("push-disc", new MemoryStream("msg1"u8.ToArray()), true);
+        await producer.Queue.Push("push-disc", new MemoryStream("msg1"u8.ToArray()), true, CancellationToken.None);
 
         for (int i = 0; i < 30 && received == null; i++)
             await Task.Delay(100);
@@ -456,7 +456,7 @@ public class PushDeliveryTest
         await Task.Delay(500);
 
         // Second message should be stored
-        await producer.Queue.Push("push-disc", new MemoryStream("msg2"u8.ToArray()), false);
+        await producer.Queue.Push("push-disc", new MemoryStream("msg2"u8.ToArray()), false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseQueue queue = ctx.Rider.Queue.Find("push-disc");

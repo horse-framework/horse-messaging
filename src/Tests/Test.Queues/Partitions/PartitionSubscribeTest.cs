@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -52,7 +53,7 @@ public class PartitionSubscribeTest
         Assert.True(client.IsConnected);
 
         HorseResult result = await client.Queue.Subscribe("part-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "worker-1") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "worker-1") }, CancellationToken.None);
 
         Assert.Equal(HorseResultCode.Ok, result.Code);
 
@@ -74,7 +75,7 @@ public class PartitionSubscribeTest
         await client.ConnectAsync("horse://localhost:" + port);
 
         HorseResult result = await client.Queue.Subscribe("part-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "label-x") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "label-x") }, CancellationToken.None);
 
         Assert.Equal(HorseResultCode.Ok, result.Code);
         Assert.NotNull(queue.PartitionManager.Partitions.FirstOrDefault(p => p.Label == "label-x"));
@@ -94,12 +95,12 @@ public class PartitionSubscribeTest
         await c2.ConnectAsync("horse://localhost:" + port);
 
         HorseResult r1 = await c1.Queue.Subscribe("part-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "shared-label") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "shared-label") }, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, r1.Code);
 
         // second same-label client: partition is full → no fallback → LimitExceeded
         HorseResult r2 = await c2.Queue.Subscribe("part-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "shared-label") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "shared-label") }, CancellationToken.None);
         Assert.Equal(HorseResultCode.LimitExceeded, r2.Code);
 
         await Task.Delay(200);
@@ -122,9 +123,9 @@ public class PartitionSubscribeTest
         await c2.ConnectAsync("horse://localhost:" + port);
 
         await c1.Queue.Subscribe("part-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w1") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w1") }, CancellationToken.None);
         await c2.Queue.Subscribe("part-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w2") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w2") }, CancellationToken.None);
 
         await Task.Delay(200);
 
@@ -142,7 +143,7 @@ public class PartitionSubscribeTest
         HorseClient client = new HorseClient();
         await client.ConnectAsync("horse://localhost:" + port);
 
-        HorseResult result = await client.Queue.Subscribe("part-q", true);
+        HorseResult result = await client.Queue.Subscribe("part-q", true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, result.Code);
 
         await Task.Delay(200);
@@ -163,8 +164,8 @@ public class PartitionSubscribeTest
         await c1.ConnectAsync("horse://localhost:" + port);
         await c2.ConnectAsync("horse://localhost:" + port);
 
-        await c1.Queue.Subscribe("part-q", true);
-        await c2.Queue.Subscribe("part-q", true);
+        await c1.Queue.Subscribe("part-q", true, CancellationToken.None);
+        await c2.Queue.Subscribe("part-q", true, CancellationToken.None);
 
         await Task.Delay(200);
 
@@ -188,13 +189,13 @@ public class PartitionSubscribeTest
         await c3.ConnectAsync("horse://localhost:" + port);
 
         // Two no-label subscribers fill up the 2 partitions
-        HorseResult r1 = await c1.Queue.Subscribe("part-q", true);
-        HorseResult r2 = await c2.Queue.Subscribe("part-q", true);
+        HorseResult r1 = await c1.Queue.Subscribe("part-q", true, CancellationToken.None);
+        HorseResult r2 = await c2.Queue.Subscribe("part-q", true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, r1.Code);
         Assert.Equal(HorseResultCode.Ok, r2.Code);
 
         // 3rd no-label subscriber: max reached → LimitExceeded
-        HorseResult r3 = await c3.Queue.Subscribe("part-q", true);
+        HorseResult r3 = await c3.Queue.Subscribe("part-q", true, CancellationToken.None);
         Assert.Equal(HorseResultCode.LimitExceeded, r3.Code);
 
         await Task.Delay(200);
@@ -237,7 +238,7 @@ public class PartitionSubscribeTest
         HorseClient client = new HorseClient();
         await client.ConnectAsync("horse://localhost:" + port);
         await client.Queue.Subscribe("part-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w1") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w1") }, CancellationToken.None);
 
         await Task.Delay(200);
 
@@ -265,10 +266,10 @@ public class PartitionSubscribeTest
         // Use the new ergonomic overload
         HorseResult result = await client.Queue.SubscribePartitioned(
             "part-q",
-            partitionLabel: "worker-a",
-            verifyResponse: true,
-            maxPartitions: 8,
-            subscribersPerPartition: 2);
+            "worker-a",
+            true,
+            8,
+            2, CancellationToken.None);
 
         Assert.Equal(HorseResultCode.Ok, result.Code);
         await Task.Delay(200);
@@ -295,10 +296,10 @@ public class PartitionSubscribeTest
         // Queue "auto-part-q" does not exist yet; headers tell the server to create it partitioned
         HorseResult result = await client.Queue.SubscribePartitioned(
             "auto-part-q",
-            partitionLabel: "w1",
-            verifyResponse: true,
-            maxPartitions: 5,
-            subscribersPerPartition: 1);
+            "w1",
+            true,
+            5,
+            1, CancellationToken.None);
 
         Assert.Equal(HorseResultCode.Ok, result.Code);
         await Task.Delay(400);

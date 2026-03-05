@@ -12,9 +12,7 @@ namespace Horse.Messaging.Client.Cache;
 
 internal class HorseCache<TIdentifier> : HorseCache, IHorseCache<TIdentifier>
 {
-    internal HorseCache(HorseClient client) : base(client)
-    {
-    }
+    internal HorseCache(HorseClient client) : base(client) { }
 }
 
 internal class HorseCache : IHorseCache
@@ -28,8 +26,20 @@ internal class HorseCache : IHorseCache
 
     #region Get
 
-    /// <inheritdoc />
-    public async Task<HorseCacheData<string>> GetString(string key, CancellationToken cancellationToken = default)
+    public async Task<HorseCacheData<TData>> Get<TData>(string key, CancellationToken cancellationToken)
+    {
+        HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.GetCache);
+        HorseModelResult<TData> result = await _client.SendAsync<TData>(message, cancellationToken);
+
+        if (result == null)
+            return default;
+
+        HorseCacheData<TData> data = CreateCacheData<TData>(key, result.Result.Message);
+        data.Value = result.Model;
+        return data;
+    }
+
+    public async Task<HorseCacheData<string>> GetString(string key, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.GetCache);
         HorseResult result = await _client.SendAsync(message, true, cancellationToken);
@@ -42,12 +52,29 @@ internal class HorseCache : IHorseCache
         return data;
     }
 
-    /// <inheritdoc />
-    public Task<HorseCacheData<int>> GetIncrementalValue(string key, int increment = 1, CancellationToken cancellationToken = default)
+    public async Task<HorseCacheData<byte[]>> GetData(string key, CancellationToken cancellationToken)
+    {
+        HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.GetCache);
+        HorseResult result = await _client.SendAsync(message, true, cancellationToken);
+
+        if (result == null || result.Code != HorseResultCode.Ok)
+            return null;
+
+        HorseCacheData<byte[]> data = CreateCacheData<byte[]>(key, result.Message);
+        data.Value = result.Message.Content.ToArray();
+        return data;
+    }
+
+    public Task<HorseCacheData<int>> GetIncrementalValue(string key, CancellationToken cancellationToken)
+        => GetIncrementalValue(key, TimeSpan.Zero, 1, cancellationToken);
+
+    public Task<HorseCacheData<int>> GetIncrementalValue(string key, int increment, CancellationToken cancellationToken)
         => GetIncrementalValue(key, TimeSpan.Zero, increment, cancellationToken);
 
-    /// <inheritdoc />
-    public async Task<HorseCacheData<int>> GetIncrementalValue(string key, TimeSpan duration, int increment = 1, CancellationToken cancellationToken = default)
+    public Task<HorseCacheData<int>> GetIncrementalValue(string key, TimeSpan duration, CancellationToken cancellationToken)
+        => GetIncrementalValue(key, duration, 1, cancellationToken);
+
+    public async Task<HorseCacheData<int>> GetIncrementalValue(string key, TimeSpan duration, int increment, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.GetIncrementalCache);
 
@@ -77,34 +104,6 @@ internal class HorseCache : IHorseCache
         };
     }
 
-    /// <inheritdoc />
-    public async Task<HorseCacheData<byte[]>> GetData(string key, CancellationToken cancellationToken = default)
-    {
-        HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.GetCache);
-        HorseResult result = await _client.SendAsync(message, true, cancellationToken);
-
-        if (result == null || result.Code != HorseResultCode.Ok)
-            return null;
-
-        HorseCacheData<byte[]> data = CreateCacheData<byte[]>(key, result.Message);
-        data.Value = result.Message.Content.ToArray();
-        return data;
-    }
-
-    /// <inheritdoc />
-    public async Task<HorseCacheData<TData>> Get<TData>(string key, CancellationToken cancellationToken = default)
-    {
-        HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.GetCache);
-        HorseModelResult<TData> result = await _client.SendAsync<TData>(message, cancellationToken);
-
-        if (result == null)
-            return default;
-
-        HorseCacheData<TData> data = CreateCacheData<TData>(key, result.Result.Message);
-        data.Value = result.Model;
-        return data;
-    }
-
     private static HorseCacheData<T> CreateCacheData<T>(string key, HorseMessage message)
     {
         string expiry = message.FindHeader(HorseHeaders.EXPIRY);
@@ -125,19 +124,19 @@ internal class HorseCache : IHorseCache
         return data;
     }
 
-    /// <summary>
-    /// Finds in all cache keys
-    /// </summary>
-    public async Task<HorseModelResult<List<CacheInformation>>> List(string filter = null, CancellationToken cancellationToken = default)
+    public Task<HorseModelResult<List<CacheInformation>>> List(CancellationToken cancellationToken)
+        => List(null, cancellationToken);
+
+    public async Task<HorseModelResult<List<CacheInformation>>> List(string filter, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Cache;
         message.SetMessageId(_client.UniqueIdGenerator.Create());
         message.ContentType = KnownContentTypes.GetCacheList;
-        
+
         if (!string.IsNullOrEmpty(filter))
             message.AddHeader(HorseHeaders.FILTER, filter);
-        
+
         return await _client.SendAsync<List<CacheInformation>>(message, cancellationToken);
     }
 
@@ -145,148 +144,112 @@ internal class HorseCache : IHorseCache
 
     #region Set
 
-    /// <inheritdoc />
-    public Task<HorseResult> Set<TData>(string key, TData data, string[] tags = null, bool persistent = false, CancellationToken cancellationToken = default)
+    public Task<HorseResult> Set<TData>(string key, TData data, CancellationToken cancellationToken)
+        => Set(key, data, null, false, cancellationToken);
+
+    public Task<HorseResult> Set<TData>(string key, TData data, string[] tags, bool persistent, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
         _client.MessageSerializer.Serialize(message, data);
-
-        if (persistent)
-            message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
-        
-        if (tags != null && tags.Length > 0)
-            message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
-
+        if (persistent) message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
+        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
         return _client.SendAsync(message, true, cancellationToken);
     }
 
-    /// <inheritdoc />
-    public Task<HorseResult> Set<TData>(string key, TData data, TimeSpan duration, string[] tags = null, bool persistent = false, CancellationToken cancellationToken = default)
+    public Task<HorseResult> Set<TData>(string key, TData data, TimeSpan duration, CancellationToken cancellationToken)
+        => Set(key, data, duration, null, false, cancellationToken);
+
+    public Task<HorseResult> Set<TData>(string key, TData data, TimeSpan duration, string[] tags, bool persistent, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
         _client.MessageSerializer.Serialize(message, data);
         message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
-
-        if (persistent)
-            message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
-        
-        if (tags != null && tags.Length > 0)
-            message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
-
+        if (persistent) message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
+        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
         return _client.SendAsync(message, true, cancellationToken);
     }
 
-    /// <inheritdoc />
-    public Task<HorseResult> Set<TData>(string key, TData data, TimeSpan duration, TimeSpan expirationWarningDuration, string[] tags = null, bool persistent = false, CancellationToken cancellationToken = default)
+    public Task<HorseResult> Set<TData>(string key, TData data, TimeSpan duration, TimeSpan expirationWarningDuration, string[] tags, bool persistent, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
         _client.MessageSerializer.Serialize(message, data);
         message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
         message.SetOrAddHeader(HorseHeaders.WARNING_DURATION, Convert.ToInt32(expirationWarningDuration.TotalSeconds).ToString());
-
-        if (persistent)
-            message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
-        
-        if (tags != null && tags.Length > 0)
-            message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
-
+        if (persistent) message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
+        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
         return _client.SendAsync(message, true, cancellationToken);
     }
 
-    /// <inheritdoc />
-    public Task<HorseResult> SetString(string key, string data, string[] tags = null, bool persistent = false, CancellationToken cancellationToken = default)
+    public Task<HorseResult> SetString(string key, string data, CancellationToken cancellationToken)
+        => SetString(key, data, null, false, cancellationToken);
+
+    public Task<HorseResult> SetString(string key, string data, string[] tags, bool persistent, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
         message.SetStringContent(data);
-
-        if (persistent)
-            message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
-        
-        if (tags != null && tags.Length > 0)
-            message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
-
+        if (persistent) message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
+        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
         return _client.SendAsync(message, true, cancellationToken);
     }
 
-    /// <inheritdoc />
-    public Task<HorseResult> SetString(string key, string data, TimeSpan duration, string[] tags = null, bool persistent = false, CancellationToken cancellationToken = default)
+    public Task<HorseResult> SetString(string key, string data, TimeSpan duration, CancellationToken cancellationToken)
+        => SetString(key, data, duration, null, false, cancellationToken);
+
+    public Task<HorseResult> SetString(string key, string data, TimeSpan duration, string[] tags, bool persistent, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
         message.SetStringContent(data);
         message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
-
-        if (persistent)
-            message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
-        
-        if (tags != null && tags.Length > 0)
-            message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
-
+        if (persistent) message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
+        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
         return _client.SendAsync(message, true, cancellationToken);
     }
 
-    /// <inheritdoc />
-    public Task<HorseResult> SetString(string key, string data, TimeSpan duration, TimeSpan expirationWarningDuration, string[] tags = null, bool persistent = false, CancellationToken cancellationToken = default)
+    public Task<HorseResult> SetString(string key, string data, TimeSpan duration, TimeSpan expirationWarningDuration, string[] tags, bool persistent, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
         message.SetStringContent(data);
         message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
         message.SetOrAddHeader(HorseHeaders.WARNING_DURATION, Convert.ToInt32(expirationWarningDuration.TotalSeconds).ToString());
-
-        if (persistent)
-            message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
-        
-        if (tags != null && tags.Length > 0)
-            message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
-
+        if (persistent) message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
+        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
         return _client.SendAsync(message, true, cancellationToken);
     }
 
-    /// <inheritdoc />
-    public Task<HorseResult> SetData(string key, byte[] data, string[] tags = null, bool persistent = false, CancellationToken cancellationToken = default)
+    public Task<HorseResult> SetData(string key, byte[] data, CancellationToken cancellationToken)
+        => SetData(key, data, null, false, cancellationToken);
+
+    public Task<HorseResult> SetData(string key, byte[] data, string[] tags, bool persistent, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
-
-        if (persistent)
-            message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
-        
-        if (tags != null && tags.Length > 0)
-            message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
-
+        if (persistent) message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
+        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
         message.Content = new MemoryStream(data);
         message.CalculateLengths();
         return _client.SendAsync(message, true, cancellationToken);
     }
 
-    /// <inheritdoc />
-    public Task<HorseResult> SetData(string key, byte[] data, TimeSpan duration, string[] tags = null, bool persistent = false, CancellationToken cancellationToken = default)
+    public Task<HorseResult> SetData(string key, byte[] data, TimeSpan duration, CancellationToken cancellationToken)
+        => SetData(key, data, duration, null, false, cancellationToken);
+
+    public Task<HorseResult> SetData(string key, byte[] data, TimeSpan duration, string[] tags, bool persistent, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
         message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
-
-        if (persistent)
-            message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
-        
-        if (tags != null && tags.Length > 0)
-            message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
-
+        if (persistent) message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
+        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
         message.Content = new MemoryStream(data);
         message.CalculateLengths();
         return _client.SendAsync(message, true, cancellationToken);
     }
 
-    /// <inheritdoc />
-    public Task<HorseResult> SetData(string key, byte[] data, TimeSpan duration, TimeSpan expirationWarningDuration, string[] tags = null, bool persistent = false, CancellationToken cancellationToken = default)
+    public Task<HorseResult> SetData(string key, byte[] data, TimeSpan duration, TimeSpan expirationWarningDuration, string[] tags, bool persistent, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
         message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
         message.SetOrAddHeader(HorseHeaders.WARNING_DURATION, Convert.ToInt32(expirationWarningDuration.TotalSeconds).ToString());
-
-        if (persistent)
-            message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
-
-        if (tags != null && tags.Length > 0)
-            message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
-
+        if (persistent) message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
+        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
         message.Content = new MemoryStream(data);
         message.CalculateLengths();
         return _client.SendAsync(message, true, cancellationToken);
@@ -296,22 +259,19 @@ internal class HorseCache : IHorseCache
 
     #region Remove
 
-    /// <inheritdoc />
-    public Task<HorseResult> Remove(string key, CancellationToken cancellationToken = default)
+    public Task<HorseResult> Remove(string key, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.RemoveCache);
         return _client.SendAsync(message, true, cancellationToken);
     }
 
-    /// <inheritdoc />
-    public Task<HorseResult> Purge(CancellationToken cancellationToken = default)
+    public Task<HorseResult> Purge(CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, null, KnownContentTypes.PurgeCache);
         return _client.SendAsync(message, true, cancellationToken);
     }
 
-    /// <inheritdoc />
-    public Task<HorseResult> PurgeByTag(string tag, CancellationToken cancellationToken = default)
+    public Task<HorseResult> PurgeByTag(string tag, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, null, KnownContentTypes.PurgeCache);
         message.SetOrAddHeader(HorseHeaders.TAG, tag);

@@ -63,12 +63,12 @@ public class PartitionRouteTest
         worker.MessageReceived += (_, _) => Interlocked.Increment(ref received);
 
         await worker.Queue.Subscribe("route-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w1") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w1") }, CancellationToken.None);
 
         await Task.Delay(300);
 
         await producer.Queue.Push("route-q", Encoding.UTF8.GetBytes("msg"), false,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w1") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w1") }, CancellationToken.None);
 
         await Task.Delay(600);
         Assert.Equal(1, received);
@@ -95,12 +95,12 @@ public class PartitionRouteTest
         };
 
         await worker.Queue.Subscribe("route-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "px") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "px") }, CancellationToken.None);
 
         await Task.Delay(300);
 
         await producer.Queue.Push("route-q", Encoding.UTF8.GetBytes("msg"), false,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "px") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "px") }, CancellationToken.None);
 
         await Task.Delay(600);
         Assert.NotNull(receivedPartitionId);
@@ -128,11 +128,11 @@ public class PartitionRouteTest
         };
 
         await worker.Queue.Subscribe("route-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "strip-test") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "strip-test") }, CancellationToken.None);
         await Task.Delay(300);
 
         await producer.Queue.Push("route-q", Encoding.UTF8.GetBytes("msg"), false,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "strip-test") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "strip-test") }, CancellationToken.None);
 
         await Task.Delay(600);
         Assert.Null(labelHeader);
@@ -160,17 +160,17 @@ public class PartitionRouteTest
         w2.MessageReceived += (_, _) => Interlocked.Increment(ref receivedW2);
 
         await w1.Queue.Subscribe("route-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "wA") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "wA") }, CancellationToken.None);
         await w2.Queue.Subscribe("route-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "wB") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "wB") }, CancellationToken.None);
 
         await Task.Delay(400);
 
         for (int i = 0; i < 2; i++)
-            await producer.Queue.Push("route-q", Encoding.UTF8.GetBytes("msg"), false, new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "wA") });
+            await producer.Queue.Push("route-q", Encoding.UTF8.GetBytes("msg"), false, new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "wA") }, CancellationToken.None);
 
         for (int i = 0; i < 2; i++)
-            await producer.Queue.Push("route-q", Encoding.UTF8.GetBytes("msg"), false, new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "wB") });
+            await producer.Queue.Push("route-q", Encoding.UTF8.GetBytes("msg"), false, new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "wB") }, CancellationToken.None);
 
         await Task.Delay(1500);
 
@@ -198,10 +198,10 @@ public class PartitionRouteTest
         worker.MessageReceived += (_, _) => Interlocked.Increment(ref received);
 
         // No-label subscribe creates a partition
-        await worker.Queue.Subscribe("route-q", true);
+        await worker.Queue.Subscribe("route-q", true, CancellationToken.None);
         await Task.Delay(300);
 
-        await producer.Queue.Push("route-q", Encoding.UTF8.GetBytes("rr-msg"), false);
+        await producer.Queue.Push("route-q", Encoding.UTF8.GetBytes("rr-msg"), false, CancellationToken.None);
 
         await Task.Delay(600);
         Assert.Equal(1, received);
@@ -219,7 +219,7 @@ public class PartitionRouteTest
         await producer.ConnectAsync("horse://localhost:" + ctx.Port);
 
         // Push to a label that has no subscriber yet
-        await producer.Queue.Push("route-q", Encoding.UTF8.GetBytes("msg"), false, new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "unknown-label") });
+        await producer.Queue.Push("route-q", Encoding.UTF8.GetBytes("msg"), false, new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "unknown-label") }, CancellationToken.None);
 
         await Task.Delay(600);
 
@@ -268,8 +268,8 @@ public class PartitionRouteTest
         await worker2.ConnectAsync("horse://localhost:" + ctx.Port);
 
         // Label-less subscribe — each worker gets its own partition
-        await worker1.Queue.Subscribe("noorp-q", true);
-        await worker2.Queue.Subscribe("noorp-q", true);
+        await worker1.Queue.Subscribe("noorp-q", true, CancellationToken.None);
+        await worker2.Queue.Subscribe("noorp-q", true, CancellationToken.None);
         await Task.Delay(500);
 
         // 2 partitions created, each with 1 client
@@ -303,7 +303,7 @@ public class PartitionRouteTest
         await producer.ConnectAsync("horse://localhost:" + ctx.Port);
 
         // No subscriber, label-less push
-        HorseResult result = await producer.Queue.Push("noorp2-q", Encoding.UTF8.GetBytes("hello"), true);
+        HorseResult result = await producer.Queue.Push("noorp2-q", Encoding.UTF8.GetBytes("hello"), true, CancellationToken.None);
         Assert.NotEqual(HorseResultCode.Ok, result.Code);
     }
 
@@ -326,14 +326,14 @@ public class PartitionRouteTest
 
         // Subscribe to 3 labeled partitions (fills MaxPartitionCount)
         await worker.Queue.Subscribe("limit-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "l1") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "l1") }, CancellationToken.None);
         await Task.Delay(200);
 
         // Push messages with labels l1, l2, l3 → create partitions via push
         await producer.Queue.Push("limit-q", Encoding.UTF8.GetBytes("msg"), false,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "l2") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "l2") }, CancellationToken.None);
         await producer.Queue.Push("limit-q", Encoding.UTF8.GetBytes("msg"), false,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "l3") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "l3") }, CancellationToken.None);
 
         await Task.Delay(300);
 
@@ -342,7 +342,7 @@ public class PartitionRouteTest
 
         // 4th label push should fail (MaxPartitionCount reached)
         HorseResult result = await producer.Queue.Push("limit-q", Encoding.UTF8.GetBytes("msg"), true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "l4") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "l4") }, CancellationToken.None);
 
         Assert.NotEqual(HorseResultCode.Ok, result.Code);
 
@@ -366,12 +366,12 @@ public class PartitionRouteTest
         await producer.ConnectAsync("horse://localhost:" + ctx.Port);
 
         await worker.Queue.Subscribe("reuse-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "a") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "a") }, CancellationToken.None);
         await Task.Delay(200);
 
         // Create 2nd partition via push
         await producer.Queue.Push("reuse-q", Encoding.UTF8.GetBytes("msg"), false,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "b") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "b") }, CancellationToken.None);
         await Task.Delay(200);
 
         Assert.Equal(2, queue.PartitionManager.Partitions.Count());
@@ -381,7 +381,7 @@ public class PartitionRouteTest
         worker.MessageReceived += (_, _) => Interlocked.Increment(ref received);
 
         await producer.Queue.Push("reuse-q", Encoding.UTF8.GetBytes("reuse"), false,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "a") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "a") }, CancellationToken.None);
 
         await Task.Delay(600);
 
@@ -408,11 +408,11 @@ public class PartitionRouteTest
 
         // Subscribe 3 different labels → fills MaxPartitionCount
         HorseResult r1 = await c1.Queue.Subscribe("sublimit-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "x1") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "x1") }, CancellationToken.None);
         HorseResult r2 = await c2.Queue.Subscribe("sublimit-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "x2") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "x2") }, CancellationToken.None);
         HorseResult r3 = await c3.Queue.Subscribe("sublimit-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "x3") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "x3") }, CancellationToken.None);
 
         Assert.Equal(HorseResultCode.Ok, r1.Code);
         Assert.Equal(HorseResultCode.Ok, r2.Code);
@@ -423,7 +423,7 @@ public class PartitionRouteTest
 
         // 4th label subscribe → should be rejected (MaxPartitionCount reached)
         HorseResult r4 = await c4.Queue.Subscribe("sublimit-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "x4") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "x4") }, CancellationToken.None);
         Assert.Equal(HorseResultCode.LimitExceeded, r4.Code);
 
         // Still only 3 partitions

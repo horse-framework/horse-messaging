@@ -57,9 +57,9 @@ public class PartitionUnsubscribeTest
         await c2.ConnectAsync("horse://localhost:" + ctx.Port);
 
         await c1.Queue.Subscribe("unsub-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w1") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w1") }, CancellationToken.None);
         await c2.Queue.Subscribe("unsub-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w1") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w1") }, CancellationToken.None);
         await Task.Delay(200);
 
         c1.Disconnect();
@@ -100,7 +100,7 @@ public class PartitionUnsubscribeTest
         await consumer.ConnectAsync("horse://localhost:" + ctx.Port);
 
         await consumer.Queue.Subscribe("unsub-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w2") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w2") }, CancellationToken.None);
         await Task.Delay(200);
 
         consumer.Disconnect();
@@ -134,10 +134,10 @@ public class PartitionUnsubscribeTest
         await consumer.ConnectAsync("horse://localhost:" + ctx.Port);
 
         await consumer.Queue.Subscribe("unsub-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "a") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "a") }, CancellationToken.None);
         await Task.Delay(100);
 
-        HorseResult result = await consumer.Queue.UnsubscribeFromAllQueues();
+        HorseResult result = await consumer.Queue.UnsubscribeFromAllQueues(CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, result.Code);
 
         consumer.Disconnect();

@@ -64,7 +64,7 @@ public abstract class ExecutorBase
     /// Executes the message
     /// </summary>
     public abstract Task Execute(HorseClient client, HorseMessage message, object model,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 
     /// <summary>
     /// Sends negative ack
@@ -167,7 +167,7 @@ public abstract class ExecutorBase
             ConsumingMessage = consumingMessage
         });
 
-        return client.Queue.PushObject(transportable, false);
+        return client.Queue.PushObject(transportable, false, null, client.ConsumeToken);
     }
 
     private Task TransportToRouter(HorseClient client, TransportExceptionDescriptor item, Exception exception, HorseMessage consumingMessage)
@@ -183,7 +183,7 @@ public abstract class ExecutorBase
             ConsumingMessage = consumingMessage
         });
 
-        return client.Router.PublishObject(null, transportable);
+        return client.Router.PublishObject(null, transportable, null, false, null, null, client.ConsumeToken);
     }
 
     #endregion

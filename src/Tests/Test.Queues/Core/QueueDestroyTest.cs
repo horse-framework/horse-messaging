@@ -1,4 +1,5 @@
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -25,8 +26,8 @@ public class QueueDestroyTest
 
         HorseClient client = new HorseClient();
         await client.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await client.Queue.Subscribe("dest-dis", true);
-        await client.Queue.Unsubscribe("dest-dis", true);
+        await client.Queue.Subscribe("dest-dis", true, CancellationToken.None);
+        await client.Queue.Unsubscribe("dest-dis", true, CancellationToken.None);
         await Task.Delay(2000);
 
         Assert.NotNull(ctx.Rider.Queue.Find("dest-dis"));
@@ -48,12 +49,12 @@ public class QueueDestroyTest
 
         HorseClient client = new HorseClient();
         await client.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await client.Queue.Subscribe("dest-nc", true);
+        await client.Queue.Subscribe("dest-nc", true, CancellationToken.None);
         await Task.Delay(200);
 
         Assert.NotNull(ctx.Rider.Queue.Find("dest-nc"));
 
-        await client.Queue.Unsubscribe("dest-nc", true);
+        await client.Queue.Unsubscribe("dest-nc", true, CancellationToken.None);
 
         // Wait for auto-destroy check (timer runs every 5s)
         for (int i = 0; i < 40 && ctx.Rider.Queue.Find("dest-nc") != null; i++)
@@ -146,7 +147,7 @@ public class QueueDestroyTest
         // Push message without subscriber so it stays in store
         HorseClient client = new HorseClient();
         await client.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await client.Queue.Push("dest-pending", new MemoryStream("msg"u8.ToArray()), false);
+        await client.Queue.Push("dest-pending", new MemoryStream("msg"u8.ToArray()), false, CancellationToken.None);
         await Task.Delay(500);
 
         Assert.False(queue.IsEmpty);
@@ -207,7 +208,7 @@ public class QueueDestroyTest
 
         HorseClient client = new HorseClient();
         await client.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await client.Queue.Subscribe("dest-empty-sub", true);
+        await client.Queue.Subscribe("dest-empty-sub", true, CancellationToken.None);
         await Task.Delay(500);
 
         // Queue has no messages but has consumer → should survive with Empty policy
@@ -218,7 +219,7 @@ public class QueueDestroyTest
         Assert.NotNull(ctx.Rider.Queue.Find("dest-empty-sub"));
 
         // Now unsubscribe → should destroy
-        await client.Queue.Unsubscribe("dest-empty-sub", true);
+        await client.Queue.Unsubscribe("dest-empty-sub", true, CancellationToken.None);
 
         for (int i = 0; i < 40 && ctx.Rider.Queue.Find("dest-empty-sub") != null; i++)
             await Task.Delay(250);

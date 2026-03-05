@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Order;
@@ -56,12 +57,11 @@ public class PartitionVsFlatRoundRobinBenchmark : BenchmarkBase
         for (int i = 0; i < WorkerCount; i++)
         {
             var fw = ConnectAsync($"flat-w{i}").GetAwaiter().GetResult();
-            fw.Queue.Subscribe(FlatQueue, verifyResponse: true).GetAwaiter().GetResult();
+            fw.Queue.Subscribe(FlatQueue, true, CancellationToken.None).GetAwaiter().GetResult();
             _flatWorkers[i] = fw;
 
             var pw = ConnectAsync($"part-w{i}").GetAwaiter().GetResult();
-            pw.Queue.SubscribePartitioned(PartQueue, partitionLabel: null, verifyResponse: true,
-                maxPartitions: WorkerCount, subscribersPerPartition: 1)
+            pw.Queue.SubscribePartitioned(PartQueue, null, true, WorkerCount, 1, CancellationToken.None)
               .GetAwaiter().GetResult();
             _partWorkers[i] = pw;
         }
@@ -82,14 +82,14 @@ public class PartitionVsFlatRoundRobinBenchmark : BenchmarkBase
     public async Task FlatRoundRobin()
     {
         for (int i = 0; i < MessageCount; i++)
-            await _producer.Queue.Push(FlatQueue, NewPayloadStream(), waitForCommit: false);
+            await _producer.Queue.Push(FlatQueue, NewPayloadStream(), waitForCommit: false, CancellationToken.None);
     }
 
     [Benchmark(Description = "PartitionedRoundRobin")]
     public async Task PartitionedRoundRobin()
     {
         for (int i = 0; i < MessageCount; i++)
-            await _producer.Queue.Push(PartQueue, NewPayloadStream(), waitForCommit: false);
+            await _producer.Queue.Push(PartQueue, NewPayloadStream(), waitForCommit: false, CancellationToken.None);
     }
 }
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -34,7 +35,7 @@ public class DelayBetweenMessagesTest
         int receivedCount = 0;
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("delay-zero", true);
+        await consumer.Queue.Subscribe("delay-zero", true, CancellationToken.None);
         consumer.MessageReceived += (_, _) => receivedCount++;
 
         HorseClient producer = new HorseClient();
@@ -42,7 +43,7 @@ public class DelayBetweenMessagesTest
 
         var sw = Stopwatch.StartNew();
         for (int i = 0; i < 5; i++)
-            await producer.Queue.Push("delay-zero", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"fast-{i}")), true);
+            await producer.Queue.Push("delay-zero", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"fast-{i}")), true, CancellationToken.None);
 
         for (int i = 0; i < 30 && receivedCount < 5; i++)
             await Task.Delay(100);
@@ -77,14 +78,14 @@ public class DelayBetweenMessagesTest
         List<DateTime> deliveryTimes = new();
         HorseClient consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("delay-500", true);
+        await consumer.Queue.Subscribe("delay-500", true, CancellationToken.None);
         consumer.MessageReceived += (_, _) => { lock (deliveryTimes) deliveryTimes.Add(DateTime.UtcNow); };
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         for (int i = 0; i < 3; i++)
-            await producer.Queue.Push("delay-500", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"slow-{i}")), true);
+            await producer.Queue.Push("delay-500", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"slow-{i}")), true, CancellationToken.None);
 
         // 3 messages with 500ms delay each → ~1000ms minimum total wait
         // Use generous timeout: up to 8 seconds

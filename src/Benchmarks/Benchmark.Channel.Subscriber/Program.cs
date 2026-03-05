@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Benchmark.Helper;
 using Horse.Messaging.Client;
@@ -36,7 +37,7 @@ class Program
         for (int i = 1; i <= count; i++)
         {
             string name = "channel-" + i;
-            HorseResult result = await client.Channel.Subscribe(name, true);
+            HorseResult result = await client.Channel.Subscribe(name, true, CancellationToken.None);
             Console.WriteLine($"Subscription to {name} result: {result.Code}");
         }
 

@@ -16,20 +16,24 @@ internal sealed class InterceptorRunner(List<InterceptorTypeDescriptor> descript
     /// <param name="message"></param>
     /// <param name="client"></param>
     /// <param name="handlerFactory"></param>
+    internal Task RunBeforeInterceptors(HorseMessage message, HorseClient client, CancellationToken cancellationToken)
+    {
+        return RunBeforeInterceptors(message, client, null, cancellationToken);
+    }
+
     internal async Task RunBeforeInterceptors(HorseMessage message, HorseClient client,
-        IHandlerFactory handlerFactory = null, CancellationToken cancellationToken = default)
+        IHandlerFactory handlerFactory, CancellationToken cancellationToken)
     {
         await EvalInterceptors(message, client, handlerFactory, true, cancellationToken);
     }
 
-    /// <summary>
-    /// Run after interceptors
-    /// </summary>
-    /// <param name="message"></param>
-    /// <param name="client"></param>
-    /// <param name="handlerFactory"></param>
+    internal Task RunAfterInterceptors(HorseMessage message, HorseClient client, CancellationToken cancellationToken)
+    {
+        return RunAfterInterceptors(message, client, null, cancellationToken);
+    }
+
     internal async Task RunAfterInterceptors(HorseMessage message, HorseClient client,
-        IHandlerFactory handlerFactory = null, CancellationToken cancellationToken = default)
+        IHandlerFactory handlerFactory, CancellationToken cancellationToken)
     {
         await EvalInterceptors(message, client, handlerFactory, false, cancellationToken);
     }

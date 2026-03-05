@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Order;
@@ -48,7 +49,7 @@ public class LabeledPushThroughputBenchmark : BenchmarkBase
         {
             _labels[i] = $"tenant-{i}";
             var c = ConnectAsync($"consumer-{i}").GetAwaiter().GetResult();
-            c.Queue.SubscribePartitioned(Queue, _labels[i], verifyResponse: true)
+            c.Queue.SubscribePartitioned(Queue, _labels[i], true, CancellationToken.None)
              .GetAwaiter().GetResult();
             _consumers[i] = c;
         }
@@ -80,7 +81,7 @@ public class LabeledPushThroughputBenchmark : BenchmarkBase
                     new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label)
                 };
                 for (int j = 0; j < perLabel; j++)
-                    await _producer.Queue.Push(Queue, NewPayloadStream(), waitForCommit: false, headers);
+                    await _producer.Queue.Push(Queue, NewPayloadStream(), waitForCommit: false, headers, CancellationToken.None);
             });
         }
 

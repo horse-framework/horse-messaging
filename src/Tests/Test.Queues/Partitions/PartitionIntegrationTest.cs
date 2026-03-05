@@ -60,7 +60,7 @@ public class PartitionIntegrationTest
             await client.ConnectAsync("horse://localhost:" + ctx.Port);
             client.MessageReceived += (_, _) => Interlocked.Increment(ref received[idx]);
             await client.Queue.Subscribe("FetchOrders", true,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"worker-{i}") });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"worker-{i}") }, CancellationToken.None);
         }
 
         await Task.Delay(800);
@@ -71,7 +71,7 @@ public class PartitionIntegrationTest
         for (int i = 0; i < 10; i++)
             for (int m = 0; m < 5; m++)
                 await producer.Queue.Push("FetchOrders", Encoding.UTF8.GetBytes($"order-{m}"), false,
-                    new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"worker-{i}") });
+                    new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"worker-{i}") }, CancellationToken.None);
 
         await Task.Delay(3000);
 
@@ -98,9 +98,9 @@ public class PartitionIntegrationTest
         wB.MessageReceived += (_, _) => Interlocked.Increment(ref receivedB);
 
         await wA.Queue.Subscribe("Orders", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "partA") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "partA") }, CancellationToken.None);
         await wB.Queue.Subscribe("Orders", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "partB") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "partB") }, CancellationToken.None);
 
         await Task.Delay(500);
 
@@ -109,7 +109,7 @@ public class PartitionIntegrationTest
 
         for (int i = 0; i < 4; i++)
             await producer.Queue.Push("Orders", Encoding.UTF8.GetBytes($"msg-{i}"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, i % 2 == 0 ? "partA" : "partB") });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, i % 2 == 0 ? "partA" : "partB") }, CancellationToken.None);
 
         await Task.Delay(1500);
 
@@ -128,7 +128,7 @@ public class PartitionIntegrationTest
             var client = new HorseClient();
             await client.ConnectAsync("horse://localhost:" + ctx.Port);
             await client.Queue.Subscribe("DynQ", true,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"dyn-{i}") });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"dyn-{i}") }, CancellationToken.None);
             await Task.Delay(100);
         }
 
@@ -150,7 +150,7 @@ public class PartitionIntegrationTest
             var client = new HorseClient();
             await client.ConnectAsync("horse://localhost:" + ctx.Port);
             await client.Queue.Subscribe("UniqueQ", true,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"ul-{i}") });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"ul-{i}") }, CancellationToken.None);
         }
 
         await Task.Delay(500);
@@ -171,7 +171,7 @@ public class PartitionIntegrationTest
         HorseClient client = new HorseClient();
         await client.ConnectAsync("horse://localhost:" + ctx.Port);
         await client.Queue.Subscribe("NamingQ", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "naming-w") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "naming-w") }, CancellationToken.None);
 
         await Task.Delay(200);
 
@@ -188,7 +188,7 @@ public class PartitionIntegrationTest
         HorseClient client = new HorseClient();
         await client.ConnectAsync("horse://localhost:" + ctx.Port);
         await client.Queue.Subscribe("TeardownQ", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "td-w") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "td-w") }, CancellationToken.None);
 
         await Task.Delay(200);
         Assert.NotEmpty(queue.PartitionManager.Partitions);

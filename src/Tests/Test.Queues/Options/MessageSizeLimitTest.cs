@@ -1,4 +1,5 @@
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -33,7 +34,7 @@ public class MessageSizeLimitTest
 
         // 50 bytes — well under limit
         byte[] data = new byte[50];
-        HorseResult result = await producer.Queue.Push("sz-under", new MemoryStream(data), true);
+        HorseResult result = await producer.Queue.Push("sz-under", new MemoryStream(data), true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, result.Code);
 
         producer.Disconnect();
@@ -61,7 +62,7 @@ public class MessageSizeLimitTest
 
         // 200 bytes — over the limit
         byte[] data = new byte[200];
-        HorseResult result = await producer.Queue.Push("sz-over", new MemoryStream(data), true);
+        HorseResult result = await producer.Queue.Push("sz-over", new MemoryStream(data), true, CancellationToken.None);
         Assert.NotEqual(HorseResultCode.Ok, result.Code);
 
         producer.Disconnect();
@@ -89,7 +90,7 @@ public class MessageSizeLimitTest
 
         // 100KB — should be accepted with no limit
         byte[] data = new byte[100 * 1024];
-        HorseResult result = await producer.Queue.Push("sz-unlim", new MemoryStream(data), true);
+        HorseResult result = await producer.Queue.Push("sz-unlim", new MemoryStream(data), true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, result.Code);
 
         producer.Disconnect();

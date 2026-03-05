@@ -1,3 +1,4 @@
+using System.Threading;
 namespace AdvancedSample.Service;
 
 public static class SampleServiceFactory

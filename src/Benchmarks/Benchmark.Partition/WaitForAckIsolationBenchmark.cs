@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Order;
@@ -65,15 +66,14 @@ public class WaitForAckIsolationBenchmark : BenchmarkBase
         {
             // Flat consumers: subscribe and immediately auto-ack
             var fc = ConnectAsync($"flat-c{i}").GetAwaiter().GetResult();
-            fc.Queue.Subscribe(FlatQueue, verifyResponse: true).GetAwaiter().GetResult();
+            fc.Queue.Subscribe(FlatQueue, true, CancellationToken.None).GetAwaiter().GetResult();
             fc.AutoAcknowledge = true;
             _flatConsumers[i] = fc;
 
             // Partitioned consumers: each gets own label, immediately auto-ack
             string label = $"worker-{i}";
             var pc = ConnectAsync($"part-c{i}").GetAwaiter().GetResult();
-            pc.Queue.SubscribePartitioned(PartQueue, label, verifyResponse: true,
-                maxPartitions: WorkerCount, subscribersPerPartition: 1)
+            pc.Queue.SubscribePartitioned(PartQueue, label, true, WorkerCount, 1, CancellationToken.None)
               .GetAwaiter().GetResult();
             pc.AutoAcknowledge = true;
             _partConsumers[i] = pc;
@@ -97,7 +97,7 @@ public class WaitForAckIsolationBenchmark : BenchmarkBase
         int sent = 0;
         while (sent < MessageCount)
         {
-            await _producer.Queue.Push(FlatQueue, NewPayloadStream(), waitForCommit: false);
+            await _producer.Queue.Push(FlatQueue, NewPayloadStream(), waitForCommit: false, CancellationToken.None);
             sent++;
         }
     }
@@ -119,7 +119,7 @@ public class WaitForAckIsolationBenchmark : BenchmarkBase
                     new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label)
                 };
                 for (int j = 0; j < count; j++)
-                    await _producer.Queue.Push(PartQueue, NewPayloadStream(), waitForCommit: false, headers);
+                    await _producer.Queue.Push(PartQueue, NewPayloadStream(), waitForCommit: false, headers, CancellationToken.None);
             });
         }
 

@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -30,9 +31,9 @@ public class ClientLimitTest
         await c2.ConnectAsync($"horse://localhost:{ctx.Port}");
         await c3.ConnectAsync($"horse://localhost:{ctx.Port}");
 
-        HorseResult r1 = await c1.Queue.Subscribe("cl-ok", true);
-        HorseResult r2 = await c2.Queue.Subscribe("cl-ok", true);
-        HorseResult r3 = await c3.Queue.Subscribe("cl-ok", true);
+        HorseResult r1 = await c1.Queue.Subscribe("cl-ok", true, CancellationToken.None);
+        HorseResult r2 = await c2.Queue.Subscribe("cl-ok", true, CancellationToken.None);
+        HorseResult r3 = await c3.Queue.Subscribe("cl-ok", true, CancellationToken.None);
 
         Assert.Equal(HorseResultCode.Ok, r1.Code);
         Assert.Equal(HorseResultCode.Ok, r2.Code);
@@ -63,11 +64,11 @@ public class ClientLimitTest
         await c2.ConnectAsync($"horse://localhost:{ctx.Port}");
         await c3.ConnectAsync($"horse://localhost:{ctx.Port}");
 
-        await c1.Queue.Subscribe("cl-full", true);
-        await c2.Queue.Subscribe("cl-full", true);
+        await c1.Queue.Subscribe("cl-full", true, CancellationToken.None);
+        await c2.Queue.Subscribe("cl-full", true, CancellationToken.None);
 
         // Third client exceeds limit
-        HorseResult r3 = await c3.Queue.Subscribe("cl-full", true);
+        HorseResult r3 = await c3.Queue.Subscribe("cl-full", true, CancellationToken.None);
         Assert.Equal(HorseResultCode.LimitExceeded, r3.Code);
 
         c1.Disconnect();
@@ -93,7 +94,7 @@ public class ClientLimitTest
         {
             clients[i] = new HorseClient();
             await clients[i].ConnectAsync($"horse://localhost:{ctx.Port}");
-            HorseResult r = await clients[i].Queue.Subscribe("cl-unlim", true);
+            HorseResult r = await clients[i].Queue.Subscribe("cl-unlim", true, CancellationToken.None);
             Assert.Equal(HorseResultCode.Ok, r.Code);
         }
 
@@ -119,24 +120,24 @@ public class ClientLimitTest
 
         HorseClient c1 = new HorseClient();
         await c1.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await c1.Queue.Subscribe("cl-leave", true);
+        await c1.Queue.Subscribe("cl-leave", true, CancellationToken.None);
 
         HorseClient c2 = new HorseClient();
         await c2.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await c2.Queue.Subscribe("cl-leave", true);
+        await c2.Queue.Subscribe("cl-leave", true, CancellationToken.None);
 
         // Third client should be rejected
         HorseClient c3 = new HorseClient();
         await c3.ConnectAsync($"horse://localhost:{ctx.Port}");
-        HorseResult r3 = await c3.Queue.Subscribe("cl-leave", true);
+        HorseResult r3 = await c3.Queue.Subscribe("cl-leave", true, CancellationToken.None);
         Assert.NotEqual(HorseResultCode.Ok, r3.Code);
 
         // c1 leaves
-        await c1.Queue.Unsubscribe("cl-leave", true);
+        await c1.Queue.Unsubscribe("cl-leave", true, CancellationToken.None);
         await Task.Delay(300);
 
         // Now c3 should be accepted
-        HorseResult r3Again = await c3.Queue.Subscribe("cl-leave", true);
+        HorseResult r3Again = await c3.Queue.Subscribe("cl-leave", true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, r3Again.Code);
 
         HorseQueue queue = ctx.Rider.Queue.Find("cl-leave");

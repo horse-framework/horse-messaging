@@ -382,11 +382,11 @@ public class RedeliveryTest
                 }
             };
             await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-            await consumer.Queue.Subscribe("redeliver-q", true);
+            await consumer.Queue.Subscribe("redeliver-q", true, CancellationToken.None);
             await Task.Delay(300);
 
             HorseClient producer = await ConnectRaw(ctx.Port);
-            await producer.Queue.Push("redeliver-q", new MemoryStream(System.Text.Encoding.UTF8.GetBytes("test-data")), false);
+            await producer.Queue.Push("redeliver-q", new MemoryStream(System.Text.Encoding.UTF8.GetBytes("test-data")), false, CancellationToken.None);
 
             await WaitUntil(() => consumeCount >= 3, 15_000);
             await Task.Delay(500);
@@ -431,11 +431,11 @@ public class RedeliveryTest
                 firstDeliveryHeader = msg.FindHeader(HorseHeaders.DELIVERY);
             };
             await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-            await consumer.Queue.Subscribe("redeliver-q", true);
+            await consumer.Queue.Subscribe("redeliver-q", true, CancellationToken.None);
             await Task.Delay(300);
 
             HorseClient producer = await ConnectRaw(ctx.Port);
-            await producer.Queue.Push("redeliver-q", new MemoryStream(System.Text.Encoding.UTF8.GetBytes("first-msg")), false);
+            await producer.Queue.Push("redeliver-q", new MemoryStream(System.Text.Encoding.UTF8.GetBytes("first-msg")), false, CancellationToken.None);
 
             await WaitUntil(() => firstDeliveryHeader != "NOT_CHECKED", 5_000);
             await Task.Delay(200);
@@ -493,11 +493,11 @@ public class RedeliveryTest
                     await client.SendAck(msg, CancellationToken.None); // ACK → remove from redelivery
             };
             await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-            await consumer.Queue.Subscribe("redeliver-q", true);
+            await consumer.Queue.Subscribe("redeliver-q", true, CancellationToken.None);
             await Task.Delay(300);
 
             HorseClient producer = await ConnectRaw(ctx.Port);
-            await producer.Queue.Push("redeliver-q", new MemoryStream(System.Text.Encoding.UTF8.GetBytes("ack-clear-test")), false);
+            await producer.Queue.Push("redeliver-q", new MemoryStream(System.Text.Encoding.UTF8.GetBytes("ack-clear-test")), false, CancellationToken.None);
 
             await WaitUntil(() => consumeCount >= 2, 10_000);
             await Task.Delay(1000);
@@ -564,13 +564,13 @@ public class RedeliveryTest
                 }
             };
             await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-            await consumer.Queue.Subscribe("redeliver-q", true);
+            await consumer.Queue.Subscribe("redeliver-q", true, CancellationToken.None);
             await Task.Delay(300);
 
             HorseClient producer = await ConnectRaw(ctx.Port);
-            await producer.Queue.Push("redeliver-q", new MemoryStream(System.Text.Encoding.UTF8.GetBytes("msg-1")), false);
-            await producer.Queue.Push("redeliver-q", new MemoryStream(System.Text.Encoding.UTF8.GetBytes("msg-2")), false);
-            await producer.Queue.Push("redeliver-q", new MemoryStream(System.Text.Encoding.UTF8.GetBytes("msg-3")), false);
+            await producer.Queue.Push("redeliver-q", new MemoryStream(System.Text.Encoding.UTF8.GetBytes("msg-1")), false, CancellationToken.None);
+            await producer.Queue.Push("redeliver-q", new MemoryStream(System.Text.Encoding.UTF8.GetBytes("msg-2")), false, CancellationToken.None);
+            await producer.Queue.Push("redeliver-q", new MemoryStream(System.Text.Encoding.UTF8.GetBytes("msg-3")), false, CancellationToken.None);
 
             await WaitUntil(() => totalConsumed >= 3, 20_000);
             await Task.Delay(500);

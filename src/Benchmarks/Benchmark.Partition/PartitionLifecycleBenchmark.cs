@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Order;
@@ -69,8 +70,8 @@ public class PartitionLifecycleBenchmark : BenchmarkBase
             labels[i]    = $"lc-{Guid.NewGuid():N}";   // unique label per iteration
             consumers[i] = await ConnectAsync($"lc-c{i}");
             await consumers[i].Queue.SubscribePartitioned(
-                Queue, labels[i], verifyResponse: true,
-                maxPartitions: PartitionsToCreate + 5, subscribersPerPartition: 1);
+                Queue, labels[i], true,
+                PartitionsToCreate + 5, 1, CancellationToken.None);
         }
 
         // ── push 10 messages to each partition ──────────────────────────────
@@ -85,7 +86,7 @@ public class PartitionLifecycleBenchmark : BenchmarkBase
             tasks[i] = Task.Run(async () =>
             {
                 for (int j = 0; j < 10; j++)
-                    await _producer.Queue.Push(Queue, NewPayloadStream(), waitForCommit: false, headers);
+                    await _producer.Queue.Push(Queue, NewPayloadStream(), waitForCommit: false, headers, CancellationToken.None);
             });
         }
         await Task.WhenAll(tasks);

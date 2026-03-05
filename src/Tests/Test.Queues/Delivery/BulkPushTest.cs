@@ -38,7 +38,7 @@ public class BulkPushTest
         var consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
         consumer.MessageReceived += (_, m) => received.Add(m.GetStringContent());
-        await consumer.Queue.Subscribe("bulk-raw", true);
+        await consumer.Queue.Subscribe("bulk-raw", true, CancellationToken.None);
 
         var producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
@@ -77,7 +77,7 @@ public class BulkPushTest
 
         var consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("bulk-raw-cb", true);
+        await consumer.Queue.Subscribe("bulk-raw-cb", true, CancellationToken.None);
         int consumerReceived = 0;
         consumer.MessageReceived += (_, _) => Interlocked.Increment(ref consumerReceived);
 
@@ -159,13 +159,13 @@ public class BulkPushTest
         consumer1.ClientId = "c1";
         await consumer1.ConnectAsync($"horse://localhost:{ctx.Port}");
         consumer1.MessageReceived += (_, _) => Interlocked.Increment(ref c1Count);
-        await consumer1.Queue.Subscribe("bulk-rr", true);
+        await consumer1.Queue.Subscribe("bulk-rr", true, CancellationToken.None);
 
         var consumer2 = new HorseClient();
         consumer2.ClientId = "c2";
         await consumer2.ConnectAsync($"horse://localhost:{ctx.Port}");
         consumer2.MessageReceived += (_, _) => Interlocked.Increment(ref c2Count);
-        await consumer2.Queue.Subscribe("bulk-rr", true);
+        await consumer2.Queue.Subscribe("bulk-rr", true, CancellationToken.None);
 
         var producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
@@ -238,7 +238,7 @@ public class BulkPushTest
         var consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
         consumer.MessageReceived += (_, m) => received = m;
-        await consumer.Queue.Subscribe("bulk-headers", true);
+        await consumer.Queue.Subscribe("bulk-headers", true, CancellationToken.None);
 
         var producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
@@ -284,7 +284,7 @@ public class BulkPushTest
         var consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
         consumer.MessageReceived += (_, m) => received.Add(m.GetStringContent());
-        await consumer.Queue.Subscribe("bulk-model", true);
+        await consumer.Queue.Subscribe("bulk-model", true, CancellationToken.None);
 
         var producer = new HorseClient();
         producer.ResponseTimeout = TimeSpan.FromSeconds(10);
@@ -321,7 +321,7 @@ public class BulkPushTest
 
         var consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("bulk-model-cb", true);
+        await consumer.Queue.Subscribe("bulk-model-cb", true, CancellationToken.None);
         consumer.MessageReceived += (_, _) => { };
 
         var producer = new HorseClient();
@@ -371,7 +371,7 @@ public class BulkPushTest
         var consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
         consumer.MessageReceived += (_, m) => messageIds.Add(m.MessageId);
-        await consumer.Queue.Subscribe("bulk-unique-id", true);
+        await consumer.Queue.Subscribe("bulk-unique-id", true, CancellationToken.None);
 
         var producer = new HorseClient();
         producer.ResponseTimeout = TimeSpan.FromSeconds(10);
@@ -414,7 +414,7 @@ public class BulkPushTest
         var consumer = new HorseClient();
         await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
         consumer.MessageReceived += (_, _) => Interlocked.Increment(ref received);
-        await consumer.Queue.Subscribe("bulk-large", true);
+        await consumer.Queue.Subscribe("bulk-large", true, CancellationToken.None);
 
         var producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");

@@ -86,8 +86,8 @@ public class PartitionQueueTypeTest
         await worker1.ConnectAsync("horse://localhost:" + port);
         await worker2.ConnectAsync("horse://localhost:" + port);
 
-        await worker1.Queue.SubscribePartitioned("pp1-q", "w1", true);
-        await worker2.Queue.SubscribePartitioned("pp1-q", "w2", true);
+        await worker1.Queue.SubscribePartitioned("pp1-q", "w1", true, CancellationToken.None);
+        await worker2.Queue.SubscribePartitioned("pp1-q", "w2", true, CancellationToken.None);
         await Task.Delay(400);
 
         HorseClient producer = new HorseClient();
@@ -96,7 +96,7 @@ public class PartitionQueueTypeTest
         // 4 mesajı w1 label'ı ile gönder
         for (int i = 0; i < 4; i++)
             await producer.Queue.Push("pp1-q", Encoding.UTF8.GetBytes("msg"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w1") });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w1") }, CancellationToken.None);
 
         await Task.Delay(800);
 
@@ -120,8 +120,8 @@ public class PartitionQueueTypeTest
         await worker1.ConnectAsync("horse://localhost:" + port);
         await worker2.ConnectAsync("horse://localhost:" + port);
 
-        await worker1.Queue.SubscribePartitioned("pp2-q", "labelA", true);
-        await worker2.Queue.SubscribePartitioned("pp2-q", "labelB", true);
+        await worker1.Queue.SubscribePartitioned("pp2-q", "labelA", true, CancellationToken.None);
+        await worker2.Queue.SubscribePartitioned("pp2-q", "labelB", true, CancellationToken.None);
         await Task.Delay(400);
 
         HorseClient producer = new HorseClient();
@@ -129,10 +129,10 @@ public class PartitionQueueTypeTest
 
         for (int i = 0; i < 3; i++)
             await producer.Queue.Push("pp2-q", Encoding.UTF8.GetBytes("msg"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "labelA") });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "labelA") }, CancellationToken.None);
         for (int i = 0; i < 5; i++)
             await producer.Queue.Push("pp2-q", Encoding.UTF8.GetBytes("msg"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "labelB") });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "labelB") }, CancellationToken.None);
 
         await Task.Delay(800);
 
@@ -161,8 +161,8 @@ public class PartitionQueueTypeTest
         await workerB.ConnectAsync("horse://localhost:" + port);
 
         // Her ikisi de aynı label → aynı partition
-        await workerA.Queue.SubscribePartitioned("pb-q", "shared", true);
-        await workerB.Queue.SubscribePartitioned("pb-q", "shared", true);
+        await workerA.Queue.SubscribePartitioned("pb-q", "shared", true, CancellationToken.None);
+        await workerB.Queue.SubscribePartitioned("pb-q", "shared", true, CancellationToken.None);
         await Task.Delay(400);
 
         // Partition'da 2 subscriber olmalı
@@ -173,7 +173,7 @@ public class PartitionQueueTypeTest
         await producer.ConnectAsync("horse://localhost:" + port);
 
         await producer.Queue.Push("pb-q", Encoding.UTF8.GetBytes("hello"), false,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "shared") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "shared") }, CancellationToken.None);
 
         await Task.Delay(600);
 
@@ -201,8 +201,8 @@ public class PartitionQueueTypeTest
         await worker1.ConnectAsync("horse://localhost:" + port);
         await worker2.ConnectAsync("horse://localhost:" + port);
 
-        await worker1.Queue.SubscribePartitioned("rr1-q", "t1", true);
-        await worker2.Queue.SubscribePartitioned("rr1-q", "t2", true);
+        await worker1.Queue.SubscribePartitioned("rr1-q", "t1", true, CancellationToken.None);
+        await worker2.Queue.SubscribePartitioned("rr1-q", "t2", true, CancellationToken.None);
         await Task.Delay(400);
 
         HorseClient producer = new HorseClient();
@@ -210,7 +210,7 @@ public class PartitionQueueTypeTest
 
         for (int i = 0; i < 4; i++)
             await producer.Queue.Push("rr1-q", Encoding.UTF8.GetBytes("msg"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "t1") });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "t1") }, CancellationToken.None);
 
         await Task.Delay(800);
 
@@ -239,8 +239,8 @@ public class PartitionQueueTypeTest
         await workerB.ConnectAsync("horse://localhost:" + port);
 
         // Her ikisi de aynı label → aynı partition
-        await workerA.Queue.SubscribePartitioned("rr2-q", "shared", true);
-        await workerB.Queue.SubscribePartitioned("rr2-q", "shared", true);
+        await workerA.Queue.SubscribePartitioned("rr2-q", "shared", true, CancellationToken.None);
+        await workerB.Queue.SubscribePartitioned("rr2-q", "shared", true, CancellationToken.None);
         await Task.Delay(400);
 
         var part = queue.PartitionManager.Partitions.First();
@@ -251,7 +251,7 @@ public class PartitionQueueTypeTest
 
         for (int i = 0; i < 4; i++)
             await producer.Queue.Push("rr2-q", Encoding.UTF8.GetBytes("msg"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "shared") });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "shared") }, CancellationToken.None);
 
         await Task.Delay(800);
 
@@ -287,13 +287,13 @@ public class PartitionQueueTypeTest
         rrWorker2.MessageReceived += (_, _) => Interlocked.Increment(ref rrW2[0]);
         await rrWorker1.ConnectAsync("horse://localhost:" + portRR);
         await rrWorker2.ConnectAsync("horse://localhost:" + portRR);
-        await rrWorker1.Queue.Subscribe("cmp-rr-q", true);
-        await rrWorker2.Queue.Subscribe("cmp-rr-q", true);
+        await rrWorker1.Queue.Subscribe("cmp-rr-q", true, CancellationToken.None);
+        await rrWorker2.Queue.Subscribe("cmp-rr-q", true, CancellationToken.None);
         await Task.Delay(300);
         HorseClient rrProducer = new HorseClient();
         await rrProducer.ConnectAsync("horse://localhost:" + portRR);
         for (int i = 0; i < 4; i++)
-            await rrProducer.Queue.Push("cmp-rr-q", Encoding.UTF8.GetBytes("msg"), false);
+            await rrProducer.Queue.Push("cmp-rr-q", Encoding.UTF8.GetBytes("msg"), false, CancellationToken.None);
         await Task.Delay(1000);
 
         // RoundRobin: worker1 meşgul → atlanır, mesajlar worker2'ye de gider
@@ -322,14 +322,14 @@ public class PartitionQueueTypeTest
         ptWorker2.MessageReceived += (_, _) => Interlocked.Increment(ref ptW2[0]);
         await ptWorker1.ConnectAsync("horse://localhost:" + portPT);
         await ptWorker2.ConnectAsync("horse://localhost:" + portPT);
-        await ptWorker1.Queue.SubscribePartitioned("cmp-pt-q", "w1-label", true);
-        await ptWorker2.Queue.SubscribePartitioned("cmp-pt-q", "w2-label", true);
+        await ptWorker1.Queue.SubscribePartitioned("cmp-pt-q", "w1-label", true, CancellationToken.None);
+        await ptWorker2.Queue.SubscribePartitioned("cmp-pt-q", "w2-label", true, CancellationToken.None);
         await Task.Delay(300);
         HorseClient ptProducer = new HorseClient();
         await ptProducer.ConnectAsync("horse://localhost:" + portPT);
         for (int i = 0; i < 4; i++)
             await ptProducer.Queue.Push("cmp-pt-q", Encoding.UTF8.GetBytes("msg"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w1-label") });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w1-label") }, CancellationToken.None);
         await Task.Delay(1000);
 
         // Partition: mesajlar w1'e ait partition'da bekler, w2 hiç almadı
@@ -354,14 +354,14 @@ public class PartitionQueueTypeTest
         HorseClient worker = new HorseClient { AutoAcknowledge = true };
         worker.MessageReceived += (_, _) => Interlocked.Increment(ref received[0]);
         await worker.ConnectAsync("horse://localhost:" + port);
-        await worker.Queue.SubscribePartitioned("pull1-q", "pw1", true);
+        await worker.Queue.SubscribePartitioned("pull1-q", "pw1", true, CancellationToken.None);
         await Task.Delay(400);
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync("horse://localhost:" + port);
 
         await producer.Queue.Push("pull1-q", Encoding.UTF8.GetBytes("stored"), false,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "pw1") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "pw1") }, CancellationToken.None);
 
         await Task.Delay(400);
 
@@ -371,7 +371,7 @@ public class PartitionQueueTypeTest
 
         // Pull isteği gönder
         PullContainer container = await worker.Queue.Pull(
-            new PullRequest { Queue = part.Queue.Name, Count = 1 });
+            new PullRequest { Queue = part.Queue.Name, Count = 1 }, CancellationToken.None);
 
         await Task.Delay(400);
 
@@ -387,14 +387,14 @@ public class PartitionQueueTypeTest
         HorseClient worker = new HorseClient { AutoAcknowledge = true };
         worker.MessageReceived += (_, _) => Interlocked.Increment(ref received[0]);
         await worker.ConnectAsync("horse://localhost:" + port);
-        await worker.Queue.SubscribePartitioned("pull2-q", "pw2", true);
+        await worker.Queue.SubscribePartitioned("pull2-q", "pw2", true, CancellationToken.None);
         await Task.Delay(400);
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync("horse://localhost:" + port);
 
         await producer.Queue.Push("pull2-q", Encoding.UTF8.GetBytes("stored"), false,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "pw2") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "pw2") }, CancellationToken.None);
 
         // Pull etmeden 800ms bekle — otomatik iletilmemeli
         await Task.Delay(800);
@@ -414,8 +414,8 @@ public class PartitionQueueTypeTest
         HorseClient worker2 = new HorseClient { AutoAcknowledge = true };
         await worker1.ConnectAsync("horse://localhost:" + port);
         await worker2.ConnectAsync("horse://localhost:" + port);
-        await worker1.Queue.SubscribePartitioned("pull3-q", "p1", true);
-        await worker2.Queue.SubscribePartitioned("pull3-q", "p2", true);
+        await worker1.Queue.SubscribePartitioned("pull3-q", "p1", true, CancellationToken.None);
+        await worker2.Queue.SubscribePartitioned("pull3-q", "p2", true, CancellationToken.None);
         await Task.Delay(400);
 
         HorseClient producer = new HorseClient();
@@ -423,9 +423,9 @@ public class PartitionQueueTypeTest
 
         for (int i = 0; i < 2; i++)
             await producer.Queue.Push("pull3-q", Encoding.UTF8.GetBytes("p1-msg"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "p1") });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "p1") }, CancellationToken.None);
         await producer.Queue.Push("pull3-q", Encoding.UTF8.GetBytes("p2-msg"), false,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "p2") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "p2") }, CancellationToken.None);
         await Task.Delay(300);
 
         var part1 = queue.PartitionManager.Partitions.First(p => p.Label == "p1");
@@ -447,12 +447,12 @@ public class PartitionQueueTypeTest
 
         HorseClient c1 = new HorseClient();
         await c1.ConnectAsync("horse://localhost:" + portRR);
-        await c1.Queue.SubscribePartitioned("inh-rr-q", "lbl", true);
+        await c1.Queue.SubscribePartitioned("inh-rr-q", "lbl", true, CancellationToken.None);
         await Task.Delay(300);
 
         HorseClient c2 = new HorseClient();
         await c2.ConnectAsync("horse://localhost:" + portPL);
-        await c2.Queue.SubscribePartitioned("inh-pl-q", "lbl", true);
+        await c2.Queue.SubscribePartitioned("inh-pl-q", "lbl", true, CancellationToken.None);
         await Task.Delay(300);
 
         var rrPart = queueRR.PartitionManager.Partitions.First();
@@ -475,13 +475,13 @@ public class PartitionQueueTypeTest
             var (rider, port, _) = await CreateServer("eq-push-q", QueueType.Push, subscribersPerPartition: 1);
             HorseClient w = MakeWorker(totalPush);
             await w.ConnectAsync("horse://localhost:" + port);
-            await w.Queue.SubscribePartitioned("eq-push-q", "lbl", true);
+            await w.Queue.SubscribePartitioned("eq-push-q", "lbl", true, CancellationToken.None);
             await Task.Delay(300);
             HorseClient p = new HorseClient();
             await p.ConnectAsync("horse://localhost:" + port);
             for (int i = 0; i < 5; i++)
                 await p.Queue.Push("eq-push-q", Encoding.UTF8.GetBytes("m"), false,
-                    new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "lbl") });
+                    new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "lbl") }, CancellationToken.None);
             await Task.Delay(600);
         }
 
@@ -490,13 +490,13 @@ public class PartitionQueueTypeTest
             var (rider, port, _) = await CreateServer("eq-rr-q", QueueType.RoundRobin, subscribersPerPartition: 1);
             HorseClient w = MakeWorker(totalRR);
             await w.ConnectAsync("horse://localhost:" + port);
-            await w.Queue.SubscribePartitioned("eq-rr-q", "lbl", true);
+            await w.Queue.SubscribePartitioned("eq-rr-q", "lbl", true, CancellationToken.None);
             await Task.Delay(300);
             HorseClient p = new HorseClient();
             await p.ConnectAsync("horse://localhost:" + port);
             for (int i = 0; i < 5; i++)
                 await p.Queue.Push("eq-rr-q", Encoding.UTF8.GetBytes("m"), false,
-                    new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "lbl") });
+                    new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "lbl") }, CancellationToken.None);
             await Task.Delay(600);
         }
 
@@ -543,8 +543,8 @@ public class PartitionQueueTypeTest
 
         await workerA.ConnectAsync("horse://localhost:" + port);
         await workerB.ConnectAsync("horse://localhost:" + port);
-        await workerA.Queue.SubscribePartitioned("iso-q", "tenantA", true);
-        await workerB.Queue.SubscribePartitioned("iso-q", "tenantB", true);
+        await workerA.Queue.SubscribePartitioned("iso-q", "tenantA", true, CancellationToken.None);
+        await workerB.Queue.SubscribePartitioned("iso-q", "tenantB", true, CancellationToken.None);
         await Task.Delay(400);
 
         HorseClient producer = new HorseClient();
@@ -553,9 +553,9 @@ public class PartitionQueueTypeTest
         for (int i = 0; i < 3; i++)
         {
             await producer.Queue.Push("iso-q", Encoding.UTF8.GetBytes("a-msg"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "tenantA") });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "tenantA") }, CancellationToken.None);
             await producer.Queue.Push("iso-q", Encoding.UTF8.GetBytes("b-msg"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "tenantB") });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "tenantB") }, CancellationToken.None);
         }
 
         await Task.Delay(1500);

@@ -1211,8 +1211,9 @@ public class HorseClientBuilder
 
     private static void Shutdown(HorseClient client, TimeSpan minWait, TimeSpan maxWait)
     {
-        _ = client.Queue.UnsubscribeFromAllQueues();
-        _ = client.Channel.UnsubscribeFromAllChannels();
+        using var shutdownCts = new CancellationTokenSource(maxWait);
+        _ = client.Queue.UnsubscribeFromAllQueues(shutdownCts.Token);
+        _ = client.Channel.UnsubscribeFromAllChannels(shutdownCts.Token);
         
         int min = Convert.ToInt32(minWait.TotalMilliseconds);
         int max = Convert.ToInt32(maxWait.TotalMilliseconds);

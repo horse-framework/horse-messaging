@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Extensions.Client;
@@ -18,10 +19,10 @@ IHost host = Host.CreateDefaultBuilder(args)
         {
             client = c;
             await Task.Delay(2500);
-            await c.Channel.Subscribe("Test", false);
+            await c.Channel.Subscribe("Test", false, CancellationToken.None);
             await Task.Delay(2500);
             string abc = new string('x', 560000);
-            await c.Channel.PublishString("Test", abc);
+            await c.Channel.PublishString("Test", abc, CancellationToken.None);
         });
         cfg.OnMessageReceived(msg => Console.WriteLine(msg.ToString().Substring(0, 14)));
     })
@@ -48,6 +49,6 @@ while (true)
         continue;
     }
 
-    var result = await client.Queue.Push("Foo", Encoding.UTF8.GetBytes(line), true);
+    var result = await client.Queue.Push("Foo", Encoding.UTF8.GetBytes(line), true, CancellationToken.None);
     Console.WriteLine("result: " + result.Code);
 }

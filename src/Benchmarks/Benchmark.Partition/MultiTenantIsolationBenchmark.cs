@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Order;
@@ -56,16 +57,14 @@ public class MultiTenantIsolationBenchmark : BenchmarkBase
         {
             _labels[i] = $"tenant-{i}";
             var c = ConnectAsync($"mt-c{i}").GetAwaiter().GetResult();
-            c.Queue.SubscribePartitioned(Queue, _labels[i], verifyResponse: true,
-                maxPartitions: TenantCount + 2, subscribersPerPartition: 1)
+            c.Queue.SubscribePartitioned(Queue, _labels[i], true, TenantCount + 2, 1, CancellationToken.None)
              .GetAwaiter().GetResult();
             _consumers[i] = c;
         }
 
         // noisy tenant consumer
         var noisy = ConnectAsync("noisy-consumer").GetAwaiter().GetResult();
-        noisy.Queue.SubscribePartitioned(Queue, NoisyLabel, verifyResponse: true,
-            maxPartitions: TenantCount + 2, subscribersPerPartition: 1)
+        noisy.Queue.SubscribePartitioned(Queue, NoisyLabel, true, TenantCount + 2, 1, CancellationToken.None)
              .GetAwaiter().GetResult();
         _consumers[TenantCount] = noisy;
 
@@ -94,7 +93,7 @@ public class MultiTenantIsolationBenchmark : BenchmarkBase
         var noisyTask = Task.Run(async () =>
         {
             for (int i = 0; i < noisyMessages; i++)
-                await _noisyProd.Queue.Push(Queue, NewPayloadStream(), waitForCommit: false, noisyHeaders);
+                await _noisyProd.Queue.Push(Queue, NewPayloadStream(), waitForCommit: false, noisyHeaders, CancellationToken.None);
         });
 
         // Normal tenants push their messages concurrently
@@ -109,7 +108,7 @@ public class MultiTenantIsolationBenchmark : BenchmarkBase
             tenantTasks[i] = Task.Run(async () =>
             {
                 for (int j = 0; j < MessageCount; j++)
-                    await _producer.Queue.Push(Queue, NewPayloadStream(), waitForCommit: false, headers);
+                    await _producer.Queue.Push(Queue, NewPayloadStream(), waitForCommit: false, headers, CancellationToken.None);
             });
         }
 

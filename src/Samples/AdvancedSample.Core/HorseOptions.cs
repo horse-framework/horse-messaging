@@ -1,3 +1,4 @@
+using System.Threading;
 namespace AdvancedSample.Core;
 
 public class HorseOptions

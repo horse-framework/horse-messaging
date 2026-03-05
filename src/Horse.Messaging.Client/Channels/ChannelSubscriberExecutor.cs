@@ -47,14 +47,14 @@ internal class ChannelSubscriberExecutor<TModel> : ExecutorBase
         try
         {
             if (_subscriber != null)
-                await Handle(_subscriber, message, t, client, cancellationToken: cancellationToken);
+                await Handle(_subscriber, message, t, client, cancellationToken);
 
             else if (_subscriberFactoryCreator != null)
             {
                 IHandlerFactory handlerFactory = _subscriberFactoryCreator();
                 providedHandler = handlerFactory.CreateHandler(_subscriberType);
                 IChannelSubscriber<TModel> consumer = (IChannelSubscriber<TModel>) providedHandler.Service;
-                await Handle(consumer, message, t, client, cancellationToken: cancellationToken);
+                await Handle(consumer, message, t, client, cancellationToken);
             }
             else
                 throw new NullReferenceException("There is no consumer defined");
@@ -70,7 +70,7 @@ internal class ChannelSubscriberExecutor<TModel> : ExecutorBase
     }
 
     private async Task Handle(IChannelSubscriber<TModel> subscriber, HorseMessage message, TModel model,
-        HorseClient client, CancellationToken cancellationToken = default)
+        HorseClient client, CancellationToken cancellationToken)
     {
         if (Retry == null)
         {

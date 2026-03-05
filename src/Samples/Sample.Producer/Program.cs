@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 
@@ -62,7 +63,7 @@ class Program
 
             Stopwatch sw = Stopwatch.StartNew();
             for (int i = 0; i < 10; i++)
-                await client.Queue.Push(a, true);
+                await client.Queue.Push(a, true, CancellationToken.None);
 
             sw.Stop();
 
@@ -77,7 +78,7 @@ class Program
             // var result = await client.Direct.Request<ResponseModel>(new RequestModel());
             // Console.WriteLine($"Push: {result.Code} ${JsonSerializer.Serialize(result.Model)}");
 /*
-                var result = await client.Queue.Push("SampleTestEvent", new TestEvent(), true);
+                var result = await client.Queue.Push("SampleTestEvent", new TestEvent(), true, CancellationToken.None);
 
                 Console.WriteLine($"Push: {result.Code} {result.Reason} ${JsonSerializer.Serialize(result)}");*/
             Console.ReadLine();

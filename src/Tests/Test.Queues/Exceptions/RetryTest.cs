@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
+using System.Threading;
 using Horse.Messaging.Client.Annotations;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Client.Queues.Annotations;
@@ -276,7 +277,7 @@ public class RetryTest
 
         HorseClient producer = await ConnectRaw(ctx.Port);
         IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("retry-q", new RetryModel { Data = "r3-test" });
+        await bus.Push("retry-q", new RetryModel { Data = "r3-test" }, false, CancellationToken.None);
 
         await WaitUntil(() => tracker.ThrowCount >= 3, 5_000);
         await Task.Delay(200);
@@ -302,7 +303,7 @@ public class RetryTest
 
         HorseClient producer = await ConnectRaw(ctx.Port);
         IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("retry-q", new RetryModel { Data = "r5-test" });
+        await bus.Push("retry-q", new RetryModel { Data = "r5-test" }, false, CancellationToken.None);
 
         await WaitUntil(() => tracker.ThrowCount >= 5, 5_000);
         await Task.Delay(200);
@@ -328,7 +329,7 @@ public class RetryTest
 
         HorseClient producer = await ConnectRaw(ctx.Port);
         IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("retry-q", new RetryModel { Data = "r1-test" });
+        await bus.Push("retry-q", new RetryModel { Data = "r1-test" }, false, CancellationToken.None);
 
         await WaitUntil(() => tracker.ThrowCount >= 1, 5_000);
         await Task.Delay(200);
@@ -362,7 +363,7 @@ public class RetryTest
 
         HorseClient producer = await ConnectRaw(ctx.Port);
         IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("retry-q", new RetryModel { Data = "succeed-2nd" });
+        await bus.Push("retry-q", new RetryModel { Data = "succeed-2nd" }, false, CancellationToken.None);
 
         await WaitUntil(() => tracker.ConsumedMessages.Count >= 1, 5_000);
         await Task.Delay(200);
@@ -389,7 +390,7 @@ public class RetryTest
 
         HorseClient producer = await ConnectRaw(ctx.Port);
         IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("retry-q", new RetryModel { Data = "succeed-3rd" });
+        await bus.Push("retry-q", new RetryModel { Data = "succeed-3rd" }, false, CancellationToken.None);
 
         await WaitUntil(() => tracker.ConsumedMessages.Count >= 1, 5_000);
         await Task.Delay(200);
@@ -415,7 +416,7 @@ public class RetryTest
 
         HorseClient producer = await ConnectRaw(ctx.Port);
         IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("retry-q", new RetryModel { Data = "no-retry" });
+        await bus.Push("retry-q", new RetryModel { Data = "no-retry" }, false, CancellationToken.None);
 
         await WaitUntil(() => tracker.ConsumedMessages.Count >= 1, 5_000);
         await Task.Delay(200);
@@ -455,7 +456,7 @@ public class RetryTest
 
         HorseClient producer = await ConnectRaw(ctx.Port);
         IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("retry-q", new RetryModel { Data = "ignored-exc" });
+        await bus.Push("retry-q", new RetryModel { Data = "ignored-exc" }, false, CancellationToken.None);
 
         await WaitUntil(() => tracker.ThrowCount >= 1, 5_000);
         await Task.Delay(300);
@@ -487,7 +488,7 @@ public class RetryTest
 
         HorseClient producer = await ConnectRaw(ctx.Port);
         IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("retry-q", new RetryModel { Data = "normal-retry" });
+        await bus.Push("retry-q", new RetryModel { Data = "normal-retry" }, false, CancellationToken.None);
 
         await WaitUntil(() => tracker.ThrowCount >= 3, 5_000);
         await Task.Delay(200);
@@ -529,12 +530,12 @@ public class RetryTest
         ConcurrentBag<HorseMessage> logMsgs = new();
         HorseClient logConsumer = await ConnectRaw(ctx.Port);
         logConsumer.MessageReceived += (_, msg) => logMsgs.Add(msg);
-        await logConsumer.Queue.Subscribe("exception-log-q", true);
+        await logConsumer.Queue.Subscribe("exception-log-q", true, CancellationToken.None);
         await Task.Delay(200);
 
         HorseClient producer = await ConnectRaw(ctx.Port);
         IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("retry-q", new RetryModel { Data = "retry-push-exc" });
+        await bus.Push("retry-q", new RetryModel { Data = "retry-push-exc" }, false, CancellationToken.None);
 
         await WaitUntil(() => tracker.ThrowCount >= 3, 5_000);
         await WaitUntil(() => logMsgs.Count >= 1, 5_000);
@@ -575,12 +576,12 @@ public class RetryTest
         ConcurrentBag<HorseMessage> logMsgs = new();
         HorseClient logConsumer = await ConnectRaw(ctx.Port);
         logConsumer.MessageReceived += (_, msg) => logMsgs.Add(msg);
-        await logConsumer.Queue.Subscribe("exception-log-q", true);
+        await logConsumer.Queue.Subscribe("exception-log-q", true, CancellationToken.None);
         await Task.Delay(200);
 
         HorseClient producer = await ConnectRaw(ctx.Port);
         IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("retry-q", new RetryModel { Data = "retry-ok" });
+        await bus.Push("retry-q", new RetryModel { Data = "retry-ok" }, false, CancellationToken.None);
 
         await WaitUntil(() => tracker.ConsumedMessages.Count >= 1, 5_000);
         await Task.Delay(500);
@@ -623,12 +624,12 @@ public class RetryTest
         ConcurrentBag<HorseMessage> errorMsgs = new();
         HorseClient errorConsumer = await ConnectRaw(ctx.Port);
         errorConsumer.MessageReceived += (_, msg) => errorMsgs.Add(msg);
-        await errorConsumer.Queue.Subscribe("retry-error-q", true);
+        await errorConsumer.Queue.Subscribe("retry-error-q", true, CancellationToken.None);
         await Task.Delay(200);
 
         HorseClient producer = await ConnectRaw(ctx.Port);
         IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("retry-q", new RetryModel { Data = "retry-move" });
+        await bus.Push("retry-q", new RetryModel { Data = "retry-move" }, false, CancellationToken.None);
 
         await WaitUntil(() => tracker.ThrowCount >= 3, 5_000);
         await WaitUntil(() => errorMsgs.Count >= 1, 5_000);
@@ -668,7 +669,7 @@ public class RetryTest
 
         int msgCount = 3;
         for (int i = 0; i < msgCount; i++)
-            await bus.Push("retry-q", new RetryModel { Data = $"multi-{i}" });
+            await bus.Push("retry-q", new RetryModel { Data = $"multi-{i}" }, false, CancellationToken.None);
 
         // Each message retried 3 times → 9 total attempts
         await WaitUntil(() => tracker.ThrowCount >= msgCount * 3, 10_000);

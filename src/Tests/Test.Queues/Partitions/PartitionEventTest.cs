@@ -73,7 +73,7 @@ public class PartitionEventTest
         HorseClient client = new HorseClient();
         await client.ConnectAsync("horse://localhost:" + port);
         await client.Queue.Subscribe("ev-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "h1") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "h1") }, CancellationToken.None);
 
         await Task.Delay(300);
 
@@ -96,9 +96,9 @@ public class PartitionEventTest
         await c1.ConnectAsync("horse://localhost:" + port);
         await c2.ConnectAsync("horse://localhost:" + port);
         await c1.Queue.Subscribe("ev-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "lbl1") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "lbl1") }, CancellationToken.None);
         await c2.Queue.Subscribe("ev-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "lbl2") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "lbl2") }, CancellationToken.None);
 
         await Task.Delay(300);
 
@@ -136,7 +136,7 @@ public class PartitionEventTest
         HorseClient client = new HorseClient();
         await client.ConnectAsync("horse://localhost:" + port);
         await client.Queue.Subscribe("dh-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "kill-me") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "kill-me") }, CancellationToken.None);
 
         await Task.Delay(200);
         client.Disconnect();
@@ -176,7 +176,7 @@ public class PartitionEventTest
         HorseClient worker = new HorseClient();
         await worker.ConnectAsync("horse://localhost:" + port);
         await worker.Queue.Subscribe("client-ev-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w-fire") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w-fire") }, CancellationToken.None);
 
         await Task.Delay(600);
 

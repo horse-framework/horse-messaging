@@ -183,7 +183,7 @@ public class PartitionConfigPersistenceTest : IDisposable
 
             // Trigger auto-creation via subscribe
             HorseClient client = await Connect(port1);
-            await client.Queue.Subscribe(queueName, true);
+            await client.Queue.Subscribe(queueName, true, CancellationToken.None);
             await Task.Delay(500);
 
             HorseQueue q1 = rider1.Queue.Find(queueName);
@@ -250,7 +250,7 @@ public class PartitionConfigPersistenceTest : IDisposable
 
         // Subscribe triggers auto-creation
         HorseClient client = await Connect(ctx.Port);
-        await client.Queue.Subscribe("inherit-sub-q", true);
+        await client.Queue.Subscribe("inherit-sub-q", true, CancellationToken.None);
         await Task.Delay(300);
 
         HorseQueue queue = ctx.Rider.Queue.Find("inherit-sub-q");
@@ -286,7 +286,7 @@ public class PartitionConfigPersistenceTest : IDisposable
         // Push triggers auto-creation via QueueMessageHandler.FindQueue
         HorseClient producer = await Connect(ctx.Port);
         await producer.Queue.Push("inherit-push-q", Encoding.UTF8.GetBytes("test"), false,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "t1") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "t1") }, CancellationToken.None);
         await Task.Delay(400);
 
         HorseQueue queue = ctx.Rider.Queue.Find("inherit-push-q");
@@ -322,10 +322,10 @@ public class PartitionConfigPersistenceTest : IDisposable
         HorseClient client = await Connect(ctx.Port);
         await client.Queue.SubscribePartitioned(
             "header-preserve-q",
-            partitionLabel: "w1",
-            verifyResponse: true,
-            maxPartitions: 10,
-            subscribersPerPartition: 3);
+            "w1",
+            true,
+            10,
+            3, CancellationToken.None);
         await Task.Delay(400);
 
         HorseQueue queue = ctx.Rider.Queue.Find("header-preserve-q");
@@ -358,10 +358,10 @@ public class PartitionConfigPersistenceTest : IDisposable
         HorseClient client = await Connect(ctx.Port);
         await client.Queue.SubscribePartitioned(
             "header-null-q",
-            partitionLabel: "w1",
-            verifyResponse: true,
-            maxPartitions: 4,
-            subscribersPerPartition: 2);
+            "w1",
+            true,
+            4,
+            2, CancellationToken.None);
         await Task.Delay(400);
 
         HorseQueue queue = ctx.Rider.Queue.Find("header-null-q");
@@ -400,7 +400,7 @@ public class PartitionConfigPersistenceTest : IDisposable
         int received = 0;
         HorseClient worker = await Connect(ctx.Port);
         worker.MessageReceived += (_, _) => Interlocked.Increment(ref received);
-        await worker.Queue.Subscribe("e2e-aa-q", true);
+        await worker.Queue.Subscribe("e2e-aa-q", true, CancellationToken.None);
         await Task.Delay(300);
 
         HorseQueue queue = ctx.Rider.Queue.Find("e2e-aa-q");
@@ -414,7 +414,7 @@ public class PartitionConfigPersistenceTest : IDisposable
         // Push labeled message
         HorseClient producer = await Connect(ctx.Port);
         await producer.Queue.Push("e2e-aa-q", Encoding.UTF8.GetBytes("hello"), false,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "tenant-x") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "tenant-x") }, CancellationToken.None);
         await Task.Delay(600);
 
         // Worker should have been auto-assigned and received the message
@@ -460,13 +460,13 @@ public class PartitionConfigPersistenceTest : IDisposable
 
             // Subscribe a consumer with label so the partition is created
             HorseClient tempWorker = await Connect(port1);
-            await tempWorker.Queue.SubscribePartitioned(queueName, "lbl-1", true);
+            await tempWorker.Queue.SubscribePartitioned(queueName, "lbl-1", true, CancellationToken.None);
             await Task.Delay(300);
 
             // Push a message with label
             HorseClient prod = await Connect(port1);
             await prod.Queue.Push(queueName, Encoding.UTF8.GetBytes("buffered-msg"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "lbl-1") });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "lbl-1") }, CancellationToken.None);
             await Task.Delay(300);
 
             // Disconnect consumer so message stays in partition
@@ -475,7 +475,7 @@ public class PartitionConfigPersistenceTest : IDisposable
 
             // Push another message while consumer is offline
             await prod.Queue.Push(queueName, Encoding.UTF8.GetBytes("offline-msg"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "lbl-1") });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "lbl-1") }, CancellationToken.None);
             await Task.Delay(500);
 
             // Verify queue config saved

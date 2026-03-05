@@ -1,4 +1,5 @@
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -32,12 +33,12 @@ public class MessageIdUniqueCheckTest
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
         // Push first with explicit message id
-        HorseResult r1 = await producer.Queue.Push("uid-on", new MemoryStream("first"u8.ToArray()), "dup-id-001", true);
+        HorseResult r1 = await producer.Queue.Push("uid-on", new MemoryStream("first"u8.ToArray()), "dup-id-001", true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, r1.Code);
 
         // Push with same message id using waitForCommit=false (to avoid client tracker duplicate)
         // then check server store count to verify rejection
-        await producer.Queue.Push("uid-on", new MemoryStream("second"u8.ToArray()), "dup-id-001", false);
+        await producer.Queue.Push("uid-on", new MemoryStream("second"u8.ToArray()), "dup-id-001", false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseQueue queue = ctx.Rider.Queue.Find("uid-on");
@@ -67,11 +68,11 @@ public class MessageIdUniqueCheckTest
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
-        HorseResult r1 = await producer.Queue.Push("uid-off", new MemoryStream("first"u8.ToArray()), "dup-id-002", true);
+        HorseResult r1 = await producer.Queue.Push("uid-off", new MemoryStream("first"u8.ToArray()), "dup-id-002", true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, r1.Code);
 
         // Same id but unique check off → use waitForCommit=false to avoid client tracker issue
-        await producer.Queue.Push("uid-off", new MemoryStream("second"u8.ToArray()), "dup-id-002", false);
+        await producer.Queue.Push("uid-off", new MemoryStream("second"u8.ToArray()), "dup-id-002", false, CancellationToken.None);
         await Task.Delay(500);
 
         HorseQueue queue = ctx.Rider.Queue.Find("uid-off");

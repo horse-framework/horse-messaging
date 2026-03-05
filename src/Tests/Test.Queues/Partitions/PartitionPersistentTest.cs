@@ -142,7 +142,7 @@ public class PartitionPersistentTest : IDisposable
 
         HorseClient worker = new HorseClient { AutoAcknowledge = true };
         await worker.ConnectAsync("horse://localhost:" + port);
-        await worker.Queue.SubscribePartitioned("ptype-q", "lbl", true);
+        await worker.Queue.SubscribePartitioned("ptype-q", "lbl", true, CancellationToken.None);
         await Task.Delay(400);
 
         HorseQueue parentQueue = rider.Queue.Find("ptype-q");
@@ -206,8 +206,8 @@ public class PartitionPersistentTest : IDisposable
         HorseClient w2 = new HorseClient { AutoAcknowledge = false };
         await w1.ConnectAsync("horse://localhost:" + port);
         await w2.ConnectAsync("horse://localhost:" + port);
-        await w1.Queue.SubscribePartitioned("persist-files", "fileA", true);
-        await w2.Queue.SubscribePartitioned("persist-files", "fileB", true);
+        await w1.Queue.SubscribePartitioned("persist-files", "fileA", true, CancellationToken.None);
+        await w2.Queue.SubscribePartitioned("persist-files", "fileB", true, CancellationToken.None);
         await Task.Delay(400);
 
         HorseClient prod = new HorseClient();
@@ -215,10 +215,10 @@ public class PartitionPersistentTest : IDisposable
 
         for (int i = 0; i < 3; i++)
             await prod.Queue.Push("persist-files", Encoding.UTF8.GetBytes($"a-{i}"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "fileA") });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "fileA") }, CancellationToken.None);
         for (int i = 0; i < 2; i++)
             await prod.Queue.Push("persist-files", Encoding.UTF8.GetBytes($"b-{i}"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "fileB") });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "fileB") }, CancellationToken.None);
 
         await Task.Delay(700); // allow flush
 
@@ -254,13 +254,13 @@ public class PartitionPersistentTest : IDisposable
 
         HorseClient worker = new HorseClient { AutoAcknowledge = true };
         await worker.ConnectAsync("horse://localhost:" + port);
-        await worker.Queue.SubscribePartitioned("persist-disk", "disk-lbl", true);
+        await worker.Queue.SubscribePartitioned("persist-disk", "disk-lbl", true, CancellationToken.None);
         await Task.Delay(400);
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync("horse://localhost:" + port);
         await producer.Queue.Push("persist-disk", Encoding.UTF8.GetBytes("disk-payload"), false,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "disk-lbl") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "disk-lbl") }, CancellationToken.None);
 
         await Task.Delay(600); // allow flush
 
@@ -296,7 +296,7 @@ public class PartitionPersistentTest : IDisposable
         HorseClient worker = new HorseClient { AutoAcknowledge = true };
         worker.MessageReceived += (_, _) => Interlocked.Increment(ref consumed[0]);
         await worker.ConnectAsync("horse://localhost:" + port);
-        await worker.Queue.SubscribePartitioned("persist-destroy", "destroyLbl", true);
+        await worker.Queue.SubscribePartitioned("persist-destroy", "destroyLbl", true, CancellationToken.None);
         await Task.Delay(300);
 
         HorseClient prod = new HorseClient();
@@ -304,7 +304,7 @@ public class PartitionPersistentTest : IDisposable
 
         for (int i = 0; i < 2; i++)
             await prod.Queue.Push("persist-destroy", Encoding.UTF8.GetBytes($"msg-{i}"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "destroyLbl") });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "destroyLbl") }, CancellationToken.None);
 
         await Task.Delay(500);
         Assert.Equal(2, consumed[0]);

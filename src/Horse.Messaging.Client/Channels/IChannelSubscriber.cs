@@ -21,7 +21,7 @@ public interface IChannelSubscriber<in TModel>
     /// Pass this token to any async I/O calls inside the handler.
     /// </param>
     Task Handle(TModel model, HorseMessage rawMessage, HorseClient client,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 
     /// <summary>
     /// Triggered when an exception is thrown while consuming the message
@@ -32,5 +32,5 @@ public interface IChannelSubscriber<in TModel>
     /// <param name="client">Consumer client</param>
     /// <param name="cancellationToken">Cancellation token passed from the executor.</param>
     Task Error(Exception exception, TModel model, HorseMessage rawMessage, HorseClient client,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 }

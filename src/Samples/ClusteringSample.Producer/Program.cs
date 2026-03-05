@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -41,7 +42,7 @@ class Program
                 hasConnection = true;
             }
 
-            HorseResult result = await client.Queue.Push(new Foo {No = no}, true);
+            HorseResult result = await client.Queue.Push(new Foo {No = no}, true, CancellationToken.None);
             Console.WriteLine($"Message #{no} Push Result {result.Code} ");
                 
             if (result.Code == HorseResultCode.Ok)

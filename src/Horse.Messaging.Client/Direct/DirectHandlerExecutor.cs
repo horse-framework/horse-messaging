@@ -48,7 +48,7 @@ internal class DirectHandlerExecutor<TModel> : ExecutorBase
     }
 
     public override async Task Execute(HorseClient client, HorseMessage message, object model,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         TModel t = (TModel) model;
         ProvidedHandler providedHandler = null;
@@ -57,7 +57,7 @@ internal class DirectHandlerExecutor<TModel> : ExecutorBase
         {
             if (_messageHandler != null)
             {
-                await Handle(_messageHandler, message, t, client, cancellationToken: cancellationToken);
+                await Handle(_messageHandler, message, t, client, null, cancellationToken);
                 
             }
             else if (_consumerFactoryCreator != null)
@@ -87,13 +87,13 @@ internal class DirectHandlerExecutor<TModel> : ExecutorBase
     }
 
     private async Task Handle(IDirectMessageHandler<TModel> messageHandler, HorseMessage message, TModel model,
-        HorseClient client, IHandlerFactory handlerFactory = null, CancellationToken cancellationToken = default)
+        HorseClient client, IHandlerFactory handlerFactory, CancellationToken cancellationToken)
     {
         if (Retry == null)
         {
-            await _interceptorRunner.RunBeforeInterceptors(message, client, cancellationToken: cancellationToken);
+            await _interceptorRunner.RunBeforeInterceptors(message, client, cancellationToken);
             await messageHandler.Handle(message, model, client, cancellationToken);
-            await _interceptorRunner.RunAfterInterceptors(message, client, cancellationToken: cancellationToken);
+            await _interceptorRunner.RunAfterInterceptors(message, client, cancellationToken);
             return;
         }
 

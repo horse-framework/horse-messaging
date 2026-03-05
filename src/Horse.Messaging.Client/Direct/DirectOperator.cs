@@ -48,11 +48,19 @@ public class DirectOperator
     #region Send
 
     /// <summary>
-    /// Sends raw binary content to a direct target identified by <paramref name="target"/>.
+    /// Sends raw binary content to a direct target.
+    /// </summary>
+    public Task<HorseResult> SendAsync(string target, ushort contentType, MemoryStream content, bool waitAcknowledge,
+        CancellationToken cancellationToken)
+    {
+        return SendAsync(target, contentType, content, waitAcknowledge, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sends raw binary content to a direct target.
     /// </summary>
     public async Task<HorseResult> SendAsync(string target, ushort contentType, MemoryStream content, bool waitAcknowledge,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
-        CancellationToken cancellationToken = default)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage();
         message.SetTarget(target);
@@ -70,31 +78,55 @@ public class DirectOperator
     }
 
     /// <summary>
-    /// Sends a serialized model to receivers with the given <paramref name="name"/>.
+    /// Sends a serialized model to receivers with the given name.
     /// </summary>
-    public async Task<HorseResult> SendByName<T>(string name, ushort contentType, T model, bool waitAcknowledge,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
-        CancellationToken cancellationToken = default)
+    public Task<HorseResult> SendByName<T>(string name, ushort contentType, T model, bool waitAcknowledge,
+        CancellationToken cancellationToken)
     {
-        return await SendById<T>("@name:" + name, contentType, model, waitAcknowledge, messageHeaders, cancellationToken);
+        return SendById<T>("@name:" + name, contentType, model, waitAcknowledge, null, cancellationToken);
     }
 
     /// <summary>
-    /// Sends a serialized model to receivers with the given <paramref name="type"/>.
+    /// Sends a serialized model to receivers with the given name.
     /// </summary>
-    public async Task<HorseResult> SendByType<T>(string type, ushort contentType, T model, bool waitAcknowledge,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
-        CancellationToken cancellationToken = default)
+    public Task<HorseResult> SendByName<T>(string name, ushort contentType, T model, bool waitAcknowledge,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
     {
-        return await SendById<T>("@type:" + type, contentType, model, waitAcknowledge, messageHeaders, cancellationToken);
+        return SendById<T>("@name:" + name, contentType, model, waitAcknowledge, messageHeaders, cancellationToken);
     }
 
     /// <summary>
-    /// Sends a serialized model to a direct receiver by its unique <paramref name="id"/>.
+    /// Sends a serialized model to receivers with the given type.
+    /// </summary>
+    public Task<HorseResult> SendByType<T>(string type, ushort contentType, T model, bool waitAcknowledge,
+        CancellationToken cancellationToken)
+    {
+        return SendById<T>("@type:" + type, contentType, model, waitAcknowledge, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sends a serialized model to receivers with the given type.
+    /// </summary>
+    public Task<HorseResult> SendByType<T>(string type, ushort contentType, T model, bool waitAcknowledge,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
+    {
+        return SendById<T>("@type:" + type, contentType, model, waitAcknowledge, messageHeaders, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sends a serialized model to a direct receiver by its unique id.
+    /// </summary>
+    public Task<HorseResult> SendById<T>(string id, ushort contentType, T model, bool waitAcknowledge,
+        CancellationToken cancellationToken)
+    {
+        return SendById(id, contentType, model, waitAcknowledge, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sends a serialized model to a direct receiver by its unique id.
     /// </summary>
     public async Task<HorseResult> SendById<T>(string id, ushort contentType, T model, bool waitAcknowledge,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
-        CancellationToken cancellationToken = default)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage();
         message.SetTarget(id);
@@ -113,12 +145,18 @@ public class DirectOperator
     }
 
     /// <summary>
-    /// Sends a serialized model to a direct receiver.
-    /// The target is resolved from the <typeparamref name="T"/> attribute.
+    /// Sends a serialized model to a direct receiver resolved from the model's attribute.
+    /// </summary>
+    public Task<HorseResult> Send<T>(T model, bool waitAcknowledge, CancellationToken cancellationToken)
+    {
+        return Send(model, waitAcknowledge, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sends a serialized model to a direct receiver resolved from the model's attribute.
     /// </summary>
     public async Task<HorseResult> Send<T>(T model, bool waitAcknowledge,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
-        CancellationToken cancellationToken = default)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
     {
         DirectTypeDescriptor descriptor = _descriptorContainer.GetDescriptor<T>();
         HorseMessage message = descriptor.CreateMessage();
@@ -139,28 +177,43 @@ public class DirectOperator
     }
 
     /// <summary>
-    /// Sends raw binary content to receivers with the given <paramref name="name"/>.
+    /// Sends raw binary content to receivers with the given name.
     /// </summary>
-    public async Task<HorseResult> SendByName(string name, ushort contentType, MemoryStream content, bool waitAcknowledge,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
-        CancellationToken cancellationToken = default)
+    public Task<HorseResult> SendByName(string name, ushort contentType, MemoryStream content, bool waitAcknowledge,
+        CancellationToken cancellationToken)
     {
-        return await SendById("@name:" + name, contentType, content, waitAcknowledge, messageHeaders, cancellationToken);
+        return SendById("@name:" + name, contentType, content, waitAcknowledge, null, cancellationToken);
     }
 
     /// <summary>
-    /// Sends raw binary content to receivers with the given <paramref name="type"/>.
+    /// Sends raw binary content to receivers with the given name.
     /// </summary>
-    public async Task<HorseResult> SendByType(string type, ushort contentType, MemoryStream content, bool waitAcknowledge,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
-        CancellationToken cancellationToken = default)
+    public Task<HorseResult> SendByName(string name, ushort contentType, MemoryStream content, bool waitAcknowledge,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
     {
-        return await SendById("@type:" + type, contentType, content, waitAcknowledge, messageHeaders, cancellationToken);
+        return SendById("@name:" + name, contentType, content, waitAcknowledge, messageHeaders, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sends raw binary content to receivers with the given type.
+    /// </summary>
+    public Task<HorseResult> SendByType(string type, ushort contentType, MemoryStream content, bool waitAcknowledge,
+        CancellationToken cancellationToken)
+    {
+        return SendById("@type:" + type, contentType, content, waitAcknowledge, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sends raw binary content to receivers with the given type.
+    /// </summary>
+    public Task<HorseResult> SendByType(string type, ushort contentType, MemoryStream content, bool waitAcknowledge,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
+    {
+        return SendById("@type:" + type, contentType, content, waitAcknowledge, messageHeaders, cancellationToken);
     }
 
     private async Task<HorseResult> SendById(string id, ushort contentType, MemoryStream content, bool waitAcknowledge,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
-        CancellationToken cancellationToken = default)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage();
         message.SetTarget(id);
@@ -183,22 +236,36 @@ public class DirectOperator
     #region Request
 
     /// <summary>
-    /// Sends a model request and waits for a typed <typeparamref name="TResponse"/> response.
-    /// The target is resolved from the model's attribute.
+    /// Sends a model request and waits for a typed response. Target resolved from attribute.
+    /// </summary>
+    public Task<HorseResult<TResponse>> Request<TResponse>(object model, CancellationToken cancellationToken)
+    {
+        return Request<TResponse>(null, null, model, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sends a model request and waits for a typed response. Target resolved from attribute.
     /// </summary>
     public Task<HorseResult<TResponse>> Request<TResponse>(object model,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
-        CancellationToken cancellationToken = default)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
     {
         return Request<TResponse>(null, null, model, messageHeaders, cancellationToken);
     }
 
     /// <summary>
-    /// Sends a model request to a specific <paramref name="target"/> and waits for a typed <typeparamref name="TResponse"/> response.
+    /// Sends a model request to a specific target and waits for a typed response.
+    /// </summary>
+    public Task<HorseResult<TResponse>> Request<TResponse>(string target, ushort? contentType, object model,
+        CancellationToken cancellationToken)
+    {
+        return Request<TResponse>(target, contentType, model, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sends a model request to a specific target and waits for a typed response.
     /// </summary>
     public async Task<HorseResult<TResponse>> Request<TResponse>(string target, ushort? contentType, object model,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
-        CancellationToken cancellationToken = default)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
     {
         DirectTypeDescriptor descriptor = _descriptorContainer.GetDescriptor(model.GetType());
 
@@ -226,11 +293,19 @@ public class DirectOperator
     }
 
     /// <summary>
-    /// Sends a raw binary request to a <paramref name="target"/> and waits for a raw response.
+    /// Sends a raw binary request and waits for a raw response.
+    /// </summary>
+    public Task<HorseMessage> Request(string target, ushort contentType, MemoryStream content,
+        CancellationToken cancellationToken)
+    {
+        return Request(target, contentType, content, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sends a raw binary request and waits for a raw response.
     /// </summary>
     public async Task<HorseMessage> Request(string target, ushort contentType, MemoryStream content,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
-        CancellationToken cancellationToken = default)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage(MessageType.DirectMessage, target, contentType);
         message.Content = content;
@@ -243,12 +318,19 @@ public class DirectOperator
     }
 
     /// <summary>
-    /// Sends a raw string request to a <paramref name="target"/> and waits for a raw response.
-    /// The <paramref name="contentType"/> parameter disambiguates this from model-based overloads.
+    /// Sends a raw string request and waits for a raw response.
+    /// </summary>
+    public Task<HorseMessage> Request(string target, ushort contentType, string content,
+        CancellationToken cancellationToken)
+    {
+        return Request(target, contentType, content, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sends a raw string request and waits for a raw response.
     /// </summary>
     public async Task<HorseMessage> Request(string target, ushort contentType, string content,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
-        CancellationToken cancellationToken = default)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage(MessageType.DirectMessage, target, contentType);
         message.SetStringContent(content);
@@ -261,11 +343,18 @@ public class DirectOperator
     }
 
     /// <summary>
-    /// Sends an empty request (no content) to a <paramref name="target"/> and waits for a raw response.
+    /// Sends an empty request (no content) and waits for a raw response.
+    /// </summary>
+    public Task<HorseMessage> Request(string target, ushort contentType, CancellationToken cancellationToken)
+    {
+        return Request(target, contentType, (IEnumerable<KeyValuePair<string, string>>)null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sends an empty request (no content) and waits for a raw response.
     /// </summary>
     public async Task<HorseMessage> Request(string target, ushort contentType,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
-        CancellationToken cancellationToken = default)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage(MessageType.DirectMessage, target, contentType);
 
@@ -278,3 +367,4 @@ public class DirectOperator
 
     #endregion
 }
+

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Order;
@@ -51,8 +52,7 @@ public class BroadcastWithinPartitionBenchmark : BenchmarkBase
             for (int f = 0; f < FanOut; f++)
             {
                 var c = ConnectAsync($"broad-c{p}-{f}").GetAwaiter().GetResult();
-                c.Queue.SubscribePartitioned(Queue, _labels[p], verifyResponse: true,
-                    maxPartitions: Partitions, subscribersPerPartition: FanOut)
+                c.Queue.SubscribePartitioned(Queue, _labels[p], true, Partitions, FanOut, CancellationToken.None)
                  .GetAwaiter().GetResult();
                 _consumers[p * FanOut + f] = c;
             }
@@ -85,7 +85,7 @@ public class BroadcastWithinPartitionBenchmark : BenchmarkBase
             tasks[p] = Task.Run(async () =>
             {
                 for (int j = 0; j < perPartition; j++)
-                    await _producer.Queue.Push(Queue, NewPayloadStream(), waitForCommit: false, headers);
+                    await _producer.Queue.Push(Queue, NewPayloadStream(), waitForCommit: false, headers, CancellationToken.None);
             });
         }
 

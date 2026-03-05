@@ -198,7 +198,7 @@ public class PartitionAckRoutingTest : IDisposable
         // Subscribe with label
         HorseClient consumer = new HorseClient { AutoAcknowledge = true };
         await consumer.ConnectAsync("horse://localhost:" + port);
-        await consumer.Queue.SubscribePartitioned(queueName, label, true);
+        await consumer.Queue.SubscribePartitioned(queueName, label, true, CancellationToken.None);
         await Task.Delay(300);
 
         // Push a labeled message
@@ -208,7 +208,7 @@ public class PartitionAckRoutingTest : IDisposable
         consumer.MessageReceived += (_, _) => Interlocked.Increment(ref received[0]);
 
         await producer.Queue.Push(queueName, Encoding.UTF8.GetBytes("ack-test-payload"), false,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) }, CancellationToken.None);
 
         // Wait for consume + ack round-trip
         await Task.Delay(1500);
@@ -242,7 +242,7 @@ public class PartitionAckRoutingTest : IDisposable
 
         HorseClient consumer = new HorseClient { AutoAcknowledge = true };
         await consumer.ConnectAsync("horse://localhost:" + port);
-        await consumer.Queue.SubscribePartitioned(queueName, label, true);
+        await consumer.Queue.SubscribePartitioned(queueName, label, true, CancellationToken.None);
         await Task.Delay(300);
 
         HorseClient producer = new HorseClient();
@@ -251,7 +251,7 @@ public class PartitionAckRoutingTest : IDisposable
         consumer.MessageReceived += (_, _) => Interlocked.Increment(ref received[0]);
 
         await producer.Queue.Push(queueName, Encoding.UTF8.GetBytes("wfa-payload"), false,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) }, CancellationToken.None);
 
         await Task.Delay(1500);
 
@@ -284,12 +284,12 @@ public class PartitionAckRoutingTest : IDisposable
         HorseClient consumerA = new HorseClient { AutoAcknowledge = true };
         consumerA.MessageReceived += (_, _) => Interlocked.Increment(ref countA[0]);
         await consumerA.ConnectAsync("horse://localhost:" + port);
-        await consumerA.Queue.SubscribePartitioned(queueName, labelA, true);
+        await consumerA.Queue.SubscribePartitioned(queueName, labelA, true, CancellationToken.None);
 
         HorseClient consumerB = new HorseClient { AutoAcknowledge = true };
         consumerB.MessageReceived += (_, _) => Interlocked.Increment(ref countB[0]);
         await consumerB.ConnectAsync("horse://localhost:" + port);
-        await consumerB.Queue.SubscribePartitioned(queueName, labelB, true);
+        await consumerB.Queue.SubscribePartitioned(queueName, labelB, true, CancellationToken.None);
 
         await Task.Delay(300);
 
@@ -300,9 +300,9 @@ public class PartitionAckRoutingTest : IDisposable
         for (int i = 0; i < 3; i++)
         {
             await producer.Queue.Push(queueName, Encoding.UTF8.GetBytes($"a-{i}"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, labelA) });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, labelA) }, CancellationToken.None);
             await producer.Queue.Push(queueName, Encoding.UTF8.GetBytes($"b-{i}"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, labelB) });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, labelB) }, CancellationToken.None);
         }
 
         await Task.Delay(2000);
@@ -341,13 +341,13 @@ public class PartitionAckRoutingTest : IDisposable
         HorseClient consumer = new HorseClient { AutoAcknowledge = true };
         consumer.MessageReceived += (_, msg) => receivedTarget[0] = msg.Target;
         await consumer.ConnectAsync("horse://localhost:" + port);
-        await consumer.Queue.SubscribePartitioned(queueName, label, true);
+        await consumer.Queue.SubscribePartitioned(queueName, label, true, CancellationToken.None);
         await Task.Delay(300);
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync("horse://localhost:" + port);
         await producer.Queue.Push(queueName, Encoding.UTF8.GetBytes("target-test"), false,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) }, CancellationToken.None);
 
         await Task.Delay(1000);
 
@@ -376,13 +376,13 @@ public class PartitionAckRoutingTest : IDisposable
         HorseClient consumer = new HorseClient();
         consumer.MessageReceived += (_, _) => Interlocked.Increment(ref received[0]);
         await consumer.ConnectAsync("horse://localhost:" + port);
-        await consumer.Queue.SubscribePartitioned(queueName, label, true);
+        await consumer.Queue.SubscribePartitioned(queueName, label, true, CancellationToken.None);
         await Task.Delay(300);
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync("horse://localhost:" + port);
         await producer.Queue.Push(queueName, Encoding.UTF8.GetBytes("no-ack-payload"), false,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) }, CancellationToken.None);
 
         await Task.Delay(1000);
         Assert.Equal(1, received[0]);
@@ -413,13 +413,13 @@ public class PartitionAckRoutingTest : IDisposable
         HorseClient consumer = new HorseClient { AutoAcknowledge = false };
         consumer.MessageReceived += (_, _) => Interlocked.Increment(ref received[0]);
         await consumer.ConnectAsync("horse://localhost:" + port);
-        await consumer.Queue.SubscribePartitioned(queueName, label, true);
+        await consumer.Queue.SubscribePartitioned(queueName, label, true, CancellationToken.None);
         await Task.Delay(300);
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync("horse://localhost:" + port);
         await producer.Queue.Push(queueName, Encoding.UTF8.GetBytes("pending-payload"), false,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) }, CancellationToken.None);
 
         await Task.Delay(1500);
         Assert.Equal(1, received[0]);
@@ -453,13 +453,13 @@ public class PartitionAckRoutingTest : IDisposable
             HorseClient consumer1 = new HorseClient { AutoAcknowledge = true };
             consumer1.MessageReceived += (_, _) => Interlocked.Increment(ref received1[0]);
             await consumer1.ConnectAsync("horse://localhost:" + port1);
-            await consumer1.Queue.SubscribePartitioned(queueName, label, true);
+            await consumer1.Queue.SubscribePartitioned(queueName, label, true, CancellationToken.None);
             await Task.Delay(300);
 
             HorseClient producer1 = new HorseClient();
             await producer1.ConnectAsync("horse://localhost:" + port1);
             await producer1.Queue.Push(queueName, Encoding.UTF8.GetBytes("phase1-msg"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) });
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) }, CancellationToken.None);
 
             await Task.Delay(1500);
             Assert.Equal(1, received1[0]);
@@ -500,7 +500,7 @@ public class PartitionAckRoutingTest : IDisposable
             HorseClient consumer2 = new HorseClient { AutoAcknowledge = true };
             consumer2.MessageReceived += (_, _) => Interlocked.Increment(ref received2[0]);
             await consumer2.ConnectAsync("horse://localhost:" + port2);
-            await consumer2.Queue.SubscribePartitioned(queueName, label, true);
+            await consumer2.Queue.SubscribePartitioned(queueName, label, true, CancellationToken.None);
 
             // Wait long enough — if stale messages exist they'd be delivered quickly
             await Task.Delay(2000);
@@ -529,7 +529,7 @@ public class PartitionAckRoutingTest : IDisposable
         HorseClient consumer = new HorseClient { AutoAcknowledge = true };
         consumer.MessageReceived += (_, _) => Interlocked.Increment(ref received[0]);
         await consumer.ConnectAsync("horse://localhost:" + port);
-        await consumer.Queue.SubscribePartitioned(queueName, null, true);
+        await consumer.Queue.SubscribePartitioned(queueName, null, true, CancellationToken.None);
         await Task.Delay(300);
 
         // Push with label → partition created, worker assigned from pool
@@ -537,7 +537,7 @@ public class PartitionAckRoutingTest : IDisposable
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync("horse://localhost:" + port);
         await producer.Queue.Push(queueName, Encoding.UTF8.GetBytes("ll-payload"), false,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) }, CancellationToken.None);
 
         await Task.Delay(1500);
         Assert.Equal(1, received[0]);

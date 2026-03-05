@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
+using System.Threading;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Queues;
@@ -66,13 +67,13 @@ public class PartitionAutoAssignTest
 
     private static async Task SubscribeNoLabel(HorseClient client, string queue = "aa-q")
     {
-        await client.Queue.Subscribe(queue, true);
+        await client.Queue.Subscribe(queue, true, CancellationToken.None);
     }
 
     private static async Task PushLabeled(HorseClient producer, string label, string queue = "aa-q")
     {
         await producer.Queue.Push(queue, Encoding.UTF8.GetBytes($"msg-{label}"), false,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) }, CancellationToken.None);
     }
 
     /// <summary>
@@ -102,7 +103,7 @@ public class PartitionAutoAssignTest
         await using var __ = ctx;
 
         HorseClient worker = await ConnectWorker(ctx.Port);
-        HorseResult result = await worker.Queue.Subscribe("aa-q", true);
+        HorseResult result = await worker.Queue.Subscribe("aa-q", true, CancellationToken.None);
 
         Assert.Equal(HorseResultCode.Ok, result.Code);
 
@@ -683,7 +684,7 @@ public class PartitionAutoAssignTest
         await using var __ = ctx;
 
         HorseClient worker = await ConnectWorker(ctx.Port);
-        HorseResult result = await worker.Queue.Subscribe("aa-q", true);
+        HorseResult result = await worker.Queue.Subscribe("aa-q", true, CancellationToken.None);
 
         // Should succeed with Ok (pooled)
         Assert.Equal(HorseResultCode.Ok, result.Code);
@@ -714,7 +715,7 @@ public class PartitionAutoAssignTest
         HorseQueue queue = rider.Queue.Find("normal-q");
         HorseClient client = await ConnectWorker(port);
 
-        await client.Queue.Subscribe("normal-q", true);
+        await client.Queue.Subscribe("normal-q", true, CancellationToken.None);
         await Task.Delay(200);
 
         // Standard behavior: label-less subscribe creates its own partition
@@ -744,7 +745,7 @@ public class PartitionAutoAssignTest
 
         // labeledWorker subscribes with explicit label
         await labeledWorker.Queue.Subscribe("aa-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "vip") });
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "vip") }, CancellationToken.None);
 
         // autoWorker subscribes without label → enters pool
         await SubscribeNoLabel(autoWorker);
@@ -841,13 +842,13 @@ public class PartitionAutoAssignTest
         HorseClient c2 = await ConnectWorker(port);
         HorseClient c3 = await ConnectWorker(port);
 
-        HorseResult r1 = await c1.Queue.Subscribe("limit-q", true);
-        HorseResult r2 = await c2.Queue.Subscribe("limit-q", true);
+        HorseResult r1 = await c1.Queue.Subscribe("limit-q", true, CancellationToken.None);
+        HorseResult r2 = await c2.Queue.Subscribe("limit-q", true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, r1.Code);
         Assert.Equal(HorseResultCode.Ok, r2.Code);
 
         // 3rd label-less subscribe → max reached → LimitExceeded
-        HorseResult r3 = await c3.Queue.Subscribe("limit-q", true);
+        HorseResult r3 = await c3.Queue.Subscribe("limit-q", true, CancellationToken.None);
         Assert.Equal(HorseResultCode.LimitExceeded, r3.Code);
 
         Assert.Equal(2, queue.PartitionManager.Partitions.Count());
