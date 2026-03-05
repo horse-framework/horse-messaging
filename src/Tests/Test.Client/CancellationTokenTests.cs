@@ -14,7 +14,7 @@ using Horse.Messaging.Protocol;
 using Test.Common;
 using Xunit;
 
-namespace Test.Client.CancellationTokenTests;
+namespace Test.Client;
 
 // ---------------------------------------------------------------------------
 // Shared mutable state — reset between tests via TestState.Reset()

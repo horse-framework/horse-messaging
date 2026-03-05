@@ -303,9 +303,10 @@ public class HorseClient : IDisposable
     private CancellationTokenSource _consumeCts = new();
 
     /// <summary>
-    /// Indicates if graceful shutdown has already been executed
+    /// Indicates if graceful shutdown has already been executed.
+    /// Once set to <c>true</c>, reconnect attempts and duplicate shutdown calls are suppressed.
     /// </summary>
-    internal volatile bool GracefulShutdownExecuted;
+    private volatile bool _gracefulShutdownExecuted;
 
     static HorseClient()
     {
@@ -348,43 +349,85 @@ public class HorseClient : IDisposable
         }
     }
 
+    /// <summary>
+    /// Sync wrapper used by POSIX / Console signal handlers where async is not available.
+    /// </summary>
     private void ExecuteGracefulShutdown()
     {
-        if (GracefulShutdownOptions == null) return;
-        if (GracefulShutdownExecuted) return;
-        GracefulShutdownExecuted = true;
+        GracefulShutdownAsync(CancellationToken.None).GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// Performs a graceful shutdown: cancels active consumers, unsubscribes from all queues
+    /// and channels, invokes the configured shutdown callback, waits for in-flight operations
+    /// to complete (bounded by MinWait / MaxWait) and finally disconnects.
+    /// Called internally by <see cref="Disconnect"/> when <c>UseGracefulShutdown</c> is configured,
+    /// and by the hosted <c>GracefulShutdownService</c> in hosted scenarios.
+    /// </summary>
+    internal async Task GracefulShutdownAsync(CancellationToken cancellationToken = default)
+    {
+        if (GracefulShutdownOptions == null)
+        {
+            RawDisconnect();
+            return;
+        }
+
+        if (_gracefulShutdownExecuted) return;
+        _gracefulShutdownExecuted = true;
 
         // Signal all active consumers to cancel their work
-        _consumeCts.Cancel();
+        await _consumeCts.CancelAsync();
 
-        using var shutdownCts = new CancellationTokenSource(GracefulShutdownOptions.MaxWait);
+        using var shutdownCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        shutdownCts.CancelAfter(GracefulShutdownOptions.MaxWait);
         var shutdownToken = shutdownCts.Token;
 
-        Channel.UnsubscribeFromAllChannels(shutdownToken).GetAwaiter().GetResult();
-        Queue.UnsubscribeFromAllQueues(shutdownToken).GetAwaiter().GetResult();
+        try { await Channel.UnsubscribeFromAllChannels(shutdownToken); } catch (OperationCanceledException) { }
+        try { await Queue.UnsubscribeFromAllQueues(shutdownToken); } catch (OperationCanceledException) { }
+
         int minWait = Convert.ToInt32(GracefulShutdownOptions.MinWait.TotalMilliseconds);
         int maxWait = Convert.ToInt32(GracefulShutdownOptions.MaxWait.TotalMilliseconds);
 
         try
         {
-            GracefulShutdownOptions.ShuttingDownAction?.Invoke().GetAwaiter().GetResult();
-            GracefulShutdownOptions.ShuttingDownActionWithProvider?.Invoke(Provider).GetAwaiter().GetResult();
+            Task callbackTask = Task.CompletedTask;
+
+            if (GracefulShutdownOptions.ShuttingDownAction != null)
+                callbackTask = GracefulShutdownOptions.ShuttingDownAction.Invoke();
+            else if (GracefulShutdownOptions.ShuttingDownActionWithProvider != null)
+                callbackTask = GracefulShutdownOptions.ShuttingDownActionWithProvider.Invoke(Provider);
+
+            // If the callback doesn't finish before MaxWait, abandon it and proceed
+            if (callbackTask != Task.CompletedTask)
+            {
+                var timeoutTask = Task.Delay(Timeout.Infinite, shutdownToken);
+                await Task.WhenAny(callbackTask, timeoutTask);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // MaxWait reached while callback was still running — proceed to disconnect
         }
         catch
         {
             // ignored
         }
 
+        try { await Task.Delay(minWait, shutdownToken); } catch (OperationCanceledException) { }
+
         while (minWait < maxWait)
         {
+            if (shutdownToken.IsCancellationRequested)
+                break;
+
             if (Queue.ActiveConsumeOperations == 0 && Channel.ActiveChannelOperations == 0)
                 break;
 
-            Thread.Sleep(250);
+            try { await Task.Delay(250, shutdownToken); } catch (OperationCanceledException) { break; }
             minWait += 250;
         }
-        
-        Disconnect();
+
+        RawDisconnect();
     }
 
     /// <summary>
@@ -408,7 +451,7 @@ public class HorseClient : IDisposable
             int ms = Convert.ToInt32(_reconnectWait.TotalMilliseconds);
             _reconnectTimer = new Timer(_ =>
             {
-                if (GracefulShutdownExecuted)
+                if (_gracefulShutdownExecuted)
                     return;
 
                 if (!_autoConnect || IsConnected)
@@ -782,9 +825,27 @@ public class HorseClient : IDisposable
     }
 
     /// <summary>
-    /// Disconnected from the server
+    /// Disconnects from the server.
+    /// If <see cref="HorseClientBuilder.UseGracefulShutdown(TimeSpan, TimeSpan, Func{Task})"/>
+    /// was configured and has not yet been executed, this method performs a graceful shutdown
+    /// (drain + wait) before closing the connection. Otherwise it disconnects immediately.
     /// </summary>
     public void Disconnect()
+    {
+        if (GracefulShutdownOptions != null && !_gracefulShutdownExecuted)
+        {
+            ExecuteGracefulShutdown();
+            return;
+        }
+
+        RawDisconnect();
+    }
+
+    /// <summary>
+    /// Performs an immediate disconnect without graceful shutdown logic.
+    /// Cancels active consumers, disables auto-reconnect and closes the underlying socket.
+    /// </summary>
+    private void RawDisconnect()
     {
         // Cancel any in-flight consumer operations and prepare a fresh token for reconnect
         _consumeCts.Cancel();
