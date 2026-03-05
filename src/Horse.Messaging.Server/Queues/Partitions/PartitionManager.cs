@@ -412,31 +412,60 @@ public class PartitionManager
 
     /// <summary>
     /// Attempts to find a connected worker from the available pool and assign it to the given partition.
+    /// Uses least-loaded-first strategy: drains the pool, sorts candidates by current assignment count,
+    /// and picks the worker with the fewest partitions. This prevents a single worker from being
+    /// repeatedly selected while others sit idle.
     /// Respects <see cref="PartitionOptions.MaxPartitionsPerWorker"/>: if the limit is not yet reached
     /// after assignment, the worker stays in the pool for future assignments.
     /// Skips disconnected workers (lazy pool cleanup).
     /// </summary>
     private async Task TryAssignPooledWorker(PartitionEntry entry)
     {
+        // Drain pool into a temporary list so we can sort by assignment count
+        List<MessagingClient> candidates = new();
         int poolSize = _availableWorkers.Count;
         for (int i = 0; i < poolSize; i++)
         {
-            if (!_availableWorkers.TryDequeue(out MessagingClient worker))
+            if (!_availableWorkers.TryDequeue(out MessagingClient w))
                 break;
 
             // Lazy cleanup: skip disconnected workers
-            if (!worker.IsConnected)
+            if (!w.IsConnected)
             {
-                _workerAssignmentCount.TryRemove(worker.UniqueId, out _);
+                _workerAssignmentCount.TryRemove(w.UniqueId, out _);
+                continue;
+            }
+
+            candidates.Add(w);
+        }
+
+        if (candidates.Count == 0)
+            return;
+
+        // Sort by assignment count ascending — least-loaded worker first
+        candidates.Sort((a, b) =>
+        {
+            int countA = _workerAssignmentCount.GetValueOrDefault(a.UniqueId, 0);
+            int countB = _workerAssignmentCount.GetValueOrDefault(b.UniqueId, 0);
+            return countA.CompareTo(countB);
+        });
+
+        int max = _options.MaxPartitionsPerWorker;
+        bool assigned = false;
+
+        foreach (MessagingClient worker in candidates)
+        {
+            if (assigned)
+            {
+                // Already assigned one worker — put remaining back
+                _availableWorkers.Enqueue(worker);
                 continue;
             }
 
             // Check if this worker has capacity for more partitions
             int currentCount = _workerAssignmentCount.GetValueOrDefault(worker.UniqueId, 0);
-            int max = _options.MaxPartitionsPerWorker;
             if (max > 0 && currentCount >= max)
             {
-                // Worker is at capacity — put back and try next
                 _availableWorkers.Enqueue(worker);
                 continue;
             }
@@ -451,14 +480,16 @@ public class PartitionManager
                     _availableWorkers.Enqueue(worker);
 
                 _ = entry.Queue.Trigger();
-                return;
+                assigned = true;
+                continue;
             }
 
-            // Partition already full — put the worker back and stop trying
+            // Partition already full — put the worker back and stop trying others
             if (result == SubscriptionResult.Full)
             {
                 _availableWorkers.Enqueue(worker);
-                return;
+                // Put remaining candidates back too
+                break;
             }
 
             // Other failure — put worker back
@@ -469,7 +500,11 @@ public class PartitionManager
     /// <summary>
     /// When a new worker arrives with AutoAssignWorkers, try to place it into an existing
     /// partition that has room (fewer subscribers than SubscribersPerPartition).
-    /// May assign to multiple partitions up to <see cref="PartitionOptions.MaxPartitionsPerWorker"/>.
+    /// Uses least-loaded-first strategy: partitions are sorted by consumer count ascending
+    /// so that the most starved partition gets a worker first. This also implements a
+    /// fair-share cap: even when MaxPartitionsPerWorker is 0 (unlimited), this method
+    /// assigns at most ceil(starvedPartitions / totalPoolSize) partitions to avoid one
+    /// worker greedily consuming all available slots while other workers sit idle.
     /// Returns the first assigned entry, or null if no partition needs a consumer.
     /// </summary>
     private async Task<PartitionEntry> TryAssignToExistingPartition(MessagingClient client)
@@ -478,20 +513,42 @@ public class PartitionManager
         int assignedCount = 0;
         int max = _options.MaxPartitionsPerWorker;
 
-        foreach (PartitionEntry entry in _partitions.Values)
+        // Collect partitions that need consumers, sorted by consumer count ascending (least-loaded first)
+        List<PartitionEntry> starved = _partitions.Values
+            .Where(e => e.Queue.Clients.Count() < _options.SubscribersPerPartition)
+            .OrderBy(e => e.Queue.Clients.Count())
+            .ToList();
+
+        if (starved.Count == 0)
+            return null;
+
+        // Fair-share: when MaxPartitionsPerWorker is unlimited, cap the assignment count
+        // so that other workers in the pool get a chance. The cap is ceil(starved / pool+1).
+        // +1 accounts for the current worker who hasn't been enqueued yet.
+        int fairShareCap;
+        if (max == 0)
         {
-            if (max > 0 && assignedCount >= max)
+            int poolSize = _availableWorkers.Count + 1; // +1 = this worker
+            fairShareCap = Math.Max(1, (int)Math.Ceiling((double)starved.Count / poolSize));
+        }
+        else
+        {
+            fairShareCap = max;
+        }
+
+        int effectiveMax = max > 0 ? Math.Min(max, fairShareCap) : fairShareCap;
+
+        foreach (PartitionEntry entry in starved)
+        {
+            if (assignedCount >= effectiveMax)
                 break;
 
-            if (entry.Queue.Clients.Count() < _options.SubscribersPerPartition)
+            SubscriptionResult result = await entry.Queue.AddClient(client);
+            if (result == SubscriptionResult.Success)
             {
-                SubscriptionResult result = await entry.Queue.AddClient(client);
-                if (result == SubscriptionResult.Success)
-                {
-                    _ = entry.Queue.Trigger();
-                    firstAssigned ??= entry;
-                    assignedCount++;
-                }
+                _ = entry.Queue.Trigger();
+                firstAssigned ??= entry;
+                assignedCount++;
             }
         }
 

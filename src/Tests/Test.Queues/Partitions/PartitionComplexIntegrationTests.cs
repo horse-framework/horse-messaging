@@ -8,6 +8,7 @@ using Horse.Messaging.Client;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Partitions;
 using Microsoft.Extensions.DependencyInjection;
@@ -205,6 +206,295 @@ public class UnlimitedPartitionConsumer(TrackerAccessor accessor) : IQueueConsum
 /// </summary>
 public class PartitionComplexIntegrationTests
 {
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // 1. Original Multi-Queue / Multi-Tier Tests
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #region Multi-Queue Multi-Tier Tests
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task QueueABC_ThreeTiers_MessagesConsumedByCorrectLabel(string mode)
+    {
+        ConsumeTracker tracker = new();
+        TrackerAccessor accessor = new(tracker);
+        await using PartitionTestContext ctx = await CreateServer(mode);
+
+        HorseClient w1 = BuildFullWorker(ctx.Port, "w-free", accessor, "free");
+        HorseClient w2 = BuildFullWorker(ctx.Port, "w-standard", accessor, "standard");
+        HorseClient w3 = BuildFullWorker(ctx.Port, "w-premium", accessor, "premium");
+        await w1.ConnectAsync();
+        await w2.ConnectAsync();
+        await w3.ConnectAsync();
+        await Task.Delay(500);
+
+        HorseClient producer = await CreateProducer(ctx.Port);
+        IHorseQueueBus bus = new HorseQueueBus(producer);
+
+        string[] labels = { "free", "standard", "premium" };
+        string[] queues = { "QueueA", "QueueB", "QueueC" };
+
+        foreach (string qName in queues)
+        foreach (string label in labels)
+            for (int i = 0; i < 5; i++)
+                switch (qName)
+                {
+                    case "QueueA": await bus.Push(qName, new QueueAModel { TenantId = label, Sequence = i }, false, null, label, CancellationToken.None); break;
+                    case "QueueB": await bus.Push(qName, new QueueBModel { TenantId = label, Sequence = i }, false, null, label, CancellationToken.None); break;
+                    case "QueueC": await bus.Push(qName, new QueueCModel { TenantId = label, Sequence = i }, false, null, label, CancellationToken.None); break;
+                }
+
+        await WaitForConsume(tracker, 45, 15_000);
+
+        foreach (string qName in queues)
+        foreach (string label in labels)
+            Assert.Equal(5, tracker.Get(qName, label).Count);
+
+        producer.Disconnect();
+        w1.Disconnect();
+        w2.Disconnect();
+        w3.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task QueueD_WithNameTransform_100Tenants_FIFOOrdering(string mode)
+    {
+        ConsumeTracker tracker = new();
+        TrackerAccessor accessor = new(tracker);
+        await using PartitionTestContext ctx = await CreateServer(mode);
+
+        foreach (string tier in new[] { "free", "standard", "premium" })
+            await ctx.Rider.Queue.Create($"QueueD-{tier}", o =>
+            {
+                o.Type = QueueType.RoundRobin;
+                o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                o.Partition = new PartitionOptions
+                {
+                    Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 10, AutoAssignWorkers = true, MaxPartitionsPerWorker = 200,
+                    AutoDestroy = PartitionAutoDestroy.Disabled
+                };
+            });
+
+        HorseClient w1 = BuildFullWorker(ctx.Port, "w-free", accessor, "free");
+        HorseClient w2 = BuildFullWorker(ctx.Port, "w-standard", accessor, "standard");
+        HorseClient w3 = BuildFullWorker(ctx.Port, "w-premium", accessor, "premium");
+        await w1.ConnectAsync();
+        await w2.ConnectAsync();
+        await w3.ConnectAsync();
+        await Task.Delay(500);
+
+        HorseClient producer = await CreateProducer(ctx.Port);
+        IHorseQueueBus bus = new HorseQueueBus(producer);
+
+        string[] tiers = { "free", "standard", "premium" };
+        int tenantCount = 10, msgsPerTenant = 5;
+        string[] tenantIds = Enumerable.Range(0, tenantCount).Select(_ => Guid.NewGuid().ToString("N")).ToArray();
+        int expectedTotal = tenantCount * msgsPerTenant * tiers.Length;
+
+        foreach (string tier in tiers)
+        {
+            string targetQueue = $"QueueD-{tier}";
+            for (int t = 0; t < tenantCount; t++)
+            for (int seq = 0; seq < msgsPerTenant; seq++)
+                await bus.Push(targetQueue, new QueueDModel { TenantId = tenantIds[t], Sequence = seq }, false, null, tenantIds[t], CancellationToken.None);
+        }
+
+        await WaitForConsume(tracker, expectedTotal, 120_000);
+
+        foreach (string tenantId in tenantIds)
+        {
+            List<int> records = tracker.Get("QueueD", tenantId);
+            Assert.Equal(msgsPerTenant * tiers.Length, records.Count);
+            List<List<int>> chunks = SplitIntoOrderedChunks(records);
+            Assert.Equal(tiers.Length, chunks.Count);
+            foreach (List<int> chunk in chunks)
+            {
+                Assert.Equal(msgsPerTenant, chunk.Count);
+                for (int i = 0; i < chunk.Count; i++) Assert.Equal(i, chunk[i]);
+            }
+        }
+
+        producer.Disconnect();
+        w1.Disconnect();
+        w2.Disconnect();
+        w3.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task AllQueues_CombinedScenario_FullEnd2End(string mode)
+    {
+        ConsumeTracker tracker = new();
+        TrackerAccessor accessor = new(tracker);
+        await using PartitionTestContext ctx = await CreateServer(mode);
+
+        foreach (string tier in new[] { "free", "standard", "premium" })
+            await ctx.Rider.Queue.Create($"QueueD-{tier}", o =>
+            {
+                o.Type = QueueType.RoundRobin;
+                o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                o.Partition = new PartitionOptions
+                {
+                    Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 10, AutoAssignWorkers = true, MaxPartitionsPerWorker = 50,
+                    AutoDestroy = PartitionAutoDestroy.Disabled
+                };
+            });
+
+        HorseClient w1 = BuildFullWorker(ctx.Port, "w-free", accessor, "free");
+        HorseClient w2 = BuildFullWorker(ctx.Port, "w-standard", accessor, "standard");
+        HorseClient w3 = BuildFullWorker(ctx.Port, "w-premium", accessor, "premium");
+        await w1.ConnectAsync();
+        await w2.ConnectAsync();
+        await w3.ConnectAsync();
+        await Task.Delay(500);
+
+        HorseClient producer = await CreateProducer(ctx.Port);
+        IHorseQueueBus bus = new HorseQueueBus(producer);
+
+        string[] labels = { "free", "standard", "premium" };
+        int tenantCount = 10, msgsPerTenant = 5;
+        string[] tenantIds = Enumerable.Range(0, tenantCount).Select(_ => Guid.NewGuid().ToString("N")).ToArray();
+
+        int abcExpected = 0;
+        foreach (string qName in new[] { "QueueA", "QueueB", "QueueC" })
+        foreach (string label in labels)
+            for (int seq = 0; seq < 3; seq++)
+            {
+                switch (qName)
+                {
+                    case "QueueA": await bus.Push(qName, new QueueAModel { TenantId = label, Sequence = seq }, false, null, label, CancellationToken.None); break;
+                    case "QueueB": await bus.Push(qName, new QueueBModel { TenantId = label, Sequence = seq }, false, null, label, CancellationToken.None); break;
+                    case "QueueC": await bus.Push(qName, new QueueCModel { TenantId = label, Sequence = seq }, false, null, label, CancellationToken.None); break;
+                }
+                abcExpected++;
+            }
+
+        int dExpected = 0;
+        foreach (string tier in labels)
+        {
+            string targetQueue = $"QueueD-{tier}";
+            for (int t = 0; t < tenantCount; t++)
+            for (int seq = 0; seq < msgsPerTenant; seq++)
+            {
+                await bus.Push(targetQueue, new QueueDModel { TenantId = tenantIds[t], Sequence = seq }, false, null, tenantIds[t], CancellationToken.None);
+                dExpected++;
+            }
+        }
+
+        await WaitForConsume(tracker, abcExpected + dExpected, 30_000);
+
+        foreach (string qName in new[] { "QueueA", "QueueB", "QueueC" })
+        foreach (string label in labels)
+            Assert.Equal(3, tracker.Get(qName, label).Count);
+
+        foreach (string tenantId in tenantIds)
+        {
+            List<int> records = tracker.Get("QueueD", tenantId);
+            Assert.Equal(msgsPerTenant * labels.Length, records.Count);
+            List<List<int>> chunks = SplitIntoOrderedChunks(records);
+            Assert.Equal(labels.Length, chunks.Count);
+            foreach (List<int> chunk in chunks)
+            {
+                Assert.Equal(msgsPerTenant, chunk.Count);
+                for (int i = 0; i < chunk.Count; i++) Assert.Equal(i, chunk[i]);
+            }
+        }
+
+        producer.Disconnect();
+        w1.Disconnect();
+        w2.Disconnect();
+        w3.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Workers_SubscribeToPartitions_PartitionManagerShowsCorrectCounts(string mode)
+    {
+        ConsumeTracker tracker = new();
+        TrackerAccessor accessor = new(tracker);
+        await using PartitionTestContext ctx = await CreateServer(mode);
+
+        HorseClient w1 = BuildFullWorker(ctx.Port, "w-free", accessor, "free");
+        HorseClient w2 = BuildFullWorker(ctx.Port, "w-standard", accessor, "standard");
+        HorseClient w3 = BuildFullWorker(ctx.Port, "w-premium", accessor, "premium");
+        await w1.ConnectAsync();
+        await w2.ConnectAsync();
+        await w3.ConnectAsync();
+        await Task.Delay(500);
+
+        HorseClient producer = await CreateProducer(ctx.Port);
+        IHorseQueueBus bus = new HorseQueueBus(producer);
+
+        foreach (string label in new[] { "free", "standard", "premium" })
+            await bus.Push("QueueA", new QueueAModel { TenantId = label, Sequence = 0 }, false, null, label, CancellationToken.None);
+
+        await Task.Delay(1000);
+
+        HorseQueue qa = ctx.Rider.Queue.Find("QueueA");
+        Assert.NotNull(qa?.PartitionManager);
+        List<PartitionMetricSnapshot> metrics = qa.PartitionManager.GetMetrics().ToList();
+        Assert.Equal(3, metrics.Count);
+        Assert.All(metrics, m => Assert.True(m.ConsumerCount >= 1));
+
+        producer.Disconnect();
+        w1.Disconnect();
+        w2.Disconnect();
+        w3.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task QueueD_NameTransform_QueuesAutoCreated_WorkersAssigned(string mode)
+    {
+        ConsumeTracker tracker = new();
+        TrackerAccessor accessor = new(tracker);
+        await using PartitionTestContext ctx = await CreateServer(mode);
+
+        foreach (string tier in new[] { "free", "standard", "premium" })
+            await ctx.Rider.Queue.Create($"QueueD-{tier}", o =>
+            {
+                o.Type = QueueType.RoundRobin;
+                o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                o.Partition = new PartitionOptions
+                {
+                    Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 10, AutoAssignWorkers = true, MaxPartitionsPerWorker = 50,
+                    AutoDestroy = PartitionAutoDestroy.Disabled
+                };
+            });
+
+        HorseClient w1 = BuildFullWorker(ctx.Port, "w-free", accessor, "free");
+        HorseClient w2 = BuildFullWorker(ctx.Port, "w-standard", accessor, "standard");
+        HorseClient w3 = BuildFullWorker(ctx.Port, "w-premium", accessor, "premium");
+        await w1.ConnectAsync();
+        await w2.ConnectAsync();
+        await w3.ConnectAsync();
+        await Task.Delay(500);
+
+        HorseClient producer = await CreateProducer(ctx.Port);
+        IHorseQueueBus bus = new HorseQueueBus(producer);
+
+        string tenantId = Guid.NewGuid().ToString("N");
+        foreach (string tier in new[] { "free", "standard", "premium" })
+            await bus.Push($"QueueD-{tier}", new QueueDModel { TenantId = tenantId, Sequence = 1 }, false, null, tenantId, CancellationToken.None);
+
+        await WaitForConsume(tracker, 3, 10_000);
+        Assert.Equal(3, tracker.Get("QueueD", tenantId).Count);
+
+        producer.Disconnect();
+        w1.Disconnect();
+        w2.Disconnect();
+        w3.Disconnect();
+    }
+
+    #endregion
+    
     // ═══════════════════════════════════════════════════════════════════════
     // 2. Worker Reassignment After Partition Destroyed
     // ═══════════════════════════════════════════════════════════════════════
@@ -245,6 +535,350 @@ public class PartitionComplexIntegrationTests
         // After auto-destroy fires, freed worker is reassigned to label-c
         await WaitUntil(() => tracker.TotalCount() >= 7, 15_000);
         Assert.True(tracker.TotalCount() >= 7, $"Expected ≥7, got {tracker.TotalCount()}");
+
+        producer.Disconnect();
+        w1.Disconnect();
+        w2.Disconnect();
+    }
+
+    #endregion
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // 3. AutoDestroy = NoMessages
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #region AutoDestroy NoMessages
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task AutoDestroyNoMessages_PartitionDestroyedAfterAllConsumed(string mode)
+    {
+        (PartitionTestContext ctx, HorseQueue queue) = await CreateSingleQueueServer(mode, "ad-q", new PartitionOptions
+        {
+            Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 1,
+            AutoAssignWorkers = true, MaxPartitionsPerWorker = 5,
+            AutoDestroy = PartitionAutoDestroy.NoMessages, AutoDestroyIdleSeconds = 2
+        });
+        await using PartitionTestContext _ = ctx;
+
+        ConsumeTracker tracker = new();
+        TrackerAccessor accessor = new(tracker);
+        HorseClient w = await BuildPoolWorker(ctx.Port, "w1", accessor, "ad-q");
+        await Task.Delay(300);
+
+        HorseClient producer = await CreateProducer(ctx.Port);
+        await PushLabeled(producer, "ad-q", "tenant-1");
+        await PushLabeled(producer, "ad-q", "tenant-1");
+
+        await WaitUntil(() => tracker.TotalCount() >= 2, 5_000);
+        await WaitUntil(() => !queue.PartitionManager.Partitions.Any());
+        Assert.Empty(queue.PartitionManager.Partitions);
+
+        producer.Disconnect();
+        w.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task AutoDestroyNoMessages_OnlyEmptyPartitionsDestroyed(string mode)
+    {
+        (PartitionTestContext ctx, HorseQueue queue) = await CreateSingleQueueServer(mode, "ad-multi-q", new PartitionOptions
+        {
+            Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 1,
+            AutoAssignWorkers = true, MaxPartitionsPerWorker = 5,
+            AutoDestroy = PartitionAutoDestroy.NoMessages, AutoDestroyIdleSeconds = 2
+        }, ack: QueueAckDecision.WaitForAcknowledge);
+        await using PartitionTestContext _ = ctx;
+
+        ConsumeTracker tracker = new();
+        TrackerAccessor accessor = new(tracker);
+        HorseClient w = await BuildPoolWorker(ctx.Port, "w1", accessor, "ad-multi-q");
+        await Task.Delay(300);
+
+        HorseClient producer = await CreateProducer(ctx.Port);
+
+        // tenant-2: start pushing continuously BEFORE tenant-1 so it's always non-empty
+        bool keepPushing = true;
+        Task pushTask = Task.Run(async () =>
+        {
+            while (keepPushing)
+            {
+                try { await PushLabeled(producer, "ad-multi-q", "tenant-2"); }
+                catch { /* producer may disconnect at end */ }
+                await Task.Delay(5);
+            }
+        });
+
+        // Small delay to let tenant-2 partition be created and start receiving
+        await Task.Delay(500);
+
+        // tenant-1 gets just 1 message (will be consumed fast → partition becomes empty)
+        await PushLabeled(producer, "ad-multi-q", "tenant-1");
+
+        // Wait until tenant-1 is consumed
+        await WaitUntil(() => tracker.TotalCount() >= 2, 10_000);
+
+        // Wait for auto-destroy to remove tenant-1.
+        // Condition: tenant-1 partition no longer exists. tenant-2 should survive.
+        await WaitUntil(() =>
+        {
+            List<PartitionEntry> parts = queue.PartitionManager.Partitions.ToList();
+            // tenant-1 must be gone
+            return parts.All(p => p.Label != "tenant-1") && parts.Any(p => p.Label == "tenant-2");
+        }, 30_000);
+
+        keepPushing = false;
+        await pushTask;
+
+        List<PartitionEntry> remaining = queue.PartitionManager.Partitions.ToList();
+        Assert.DoesNotContain(remaining, p => p.Label == "tenant-1");
+        Assert.Contains(remaining, p => p.Label == "tenant-2");
+
+        producer.Disconnect();
+        w.Disconnect();
+    }
+
+    #endregion
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // 4. MaxPartitionsPerWorker Scenarios
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #region MaxPartitionsPerWorker
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task MaxPartitionsPerWorker1_WorkerOnlyServesOnePartition(string mode)
+    {
+        (PartitionTestContext ctx, HorseQueue queue) = await CreateSingleQueueServer(mode, "mpw1-q", new PartitionOptions
+        {
+            Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 1,
+            AutoAssignWorkers = true, MaxPartitionsPerWorker = 1, AutoDestroy = PartitionAutoDestroy.Disabled
+        });
+        await using PartitionTestContext _ = ctx;
+
+        ConsumeTracker tracker = new();
+        TrackerAccessor accessor = new(tracker);
+        HorseClient w = await BuildPoolWorker(ctx.Port, "w1", accessor, "mpw1-q");
+        await Task.Delay(300);
+
+        HorseClient producer = await CreateProducer(ctx.Port);
+        await PushLabeled(producer, "mpw1-q", "label-a");
+        await PushLabeled(producer, "mpw1-q", "label-b");
+        await Task.Delay(1000);
+
+        List<PartitionEntry> partitions = queue.PartitionManager.Partitions.ToList();
+        Assert.Equal(2, partitions.Count);
+        Assert.Equal(1, partitions.Count(p => p.Queue.HasAnyClient()));
+        Assert.Equal(1, tracker.TotalCount());
+
+        producer.Disconnect();
+        w.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task MaxPartitionsPerWorker2_WorkerServesTwoPartitions(string mode)
+    {
+        (PartitionTestContext ctx, HorseQueue queue) = await CreateSingleQueueServer(mode, "mpw2-q", new PartitionOptions
+        {
+            Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 1,
+            AutoAssignWorkers = true, MaxPartitionsPerWorker = 2, AutoDestroy = PartitionAutoDestroy.Disabled
+        });
+        await using PartitionTestContext _ = ctx;
+
+        ConsumeTracker tracker = new();
+        TrackerAccessor accessor = new(tracker);
+        HorseClient w = await BuildPoolWorker(ctx.Port, "w1", accessor, "mpw2-q");
+        await Task.Delay(300);
+
+        HorseClient producer = await CreateProducer(ctx.Port);
+        await PushLabeled(producer, "mpw2-q", "label-a");
+        await PushLabeled(producer, "mpw2-q", "label-b");
+        await PushLabeled(producer, "mpw2-q", "label-c");
+        await Task.Delay(1000);
+
+        List<PartitionEntry> partitions = queue.PartitionManager.Partitions.ToList();
+        Assert.Equal(3, partitions.Count);
+        Assert.Equal(2, partitions.Count(p => p.Queue.HasAnyClient()));
+        Assert.Equal(2, tracker.TotalCount());
+
+        producer.Disconnect();
+        w.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task MaxPartitionsPerWorker0_Unlimited_WorkerServesAll(string mode)
+    {
+        (PartitionTestContext ctx, HorseQueue queue) = await CreateSingleQueueServer(mode, "mpw0-q", new PartitionOptions
+        {
+            Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 1,
+            AutoAssignWorkers = true, MaxPartitionsPerWorker = 0, AutoDestroy = PartitionAutoDestroy.Disabled
+        });
+        await using PartitionTestContext _ = ctx;
+
+        ConsumeTracker tracker = new();
+        TrackerAccessor accessor = new(tracker);
+        HorseClient w = await BuildPoolWorker(ctx.Port, "w1", accessor, "mpw0-q");
+        await Task.Delay(300);
+
+        HorseClient producer = await CreateProducer(ctx.Port);
+        for (int i = 0; i < 5; i++)
+            await PushLabeled(producer, "mpw0-q", $"label-{i}");
+
+        await WaitUntil(() => tracker.TotalCount() >= 5, 5_000);
+        Assert.Equal(5, queue.PartitionManager.Partitions.Count());
+        Assert.All(queue.PartitionManager.Partitions, p => Assert.True(p.Queue.HasAnyClient()));
+
+        producer.Disconnect();
+        w.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task WorkerAtCapacity_SkippedDuringAssignment(string mode)
+    {
+        (PartitionTestContext ctx, HorseQueue queue) = await CreateSingleQueueServer(mode, "cap-q", new PartitionOptions
+        {
+            Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 1,
+            AutoAssignWorkers = true, MaxPartitionsPerWorker = 1, AutoDestroy = PartitionAutoDestroy.Disabled
+        });
+        await using PartitionTestContext _ = ctx;
+
+        ConsumeTracker tracker = new();
+        TrackerAccessor accessor = new(tracker);
+        HorseClient w1 = await BuildPoolWorker(ctx.Port, "w1", accessor, "cap-q");
+        HorseClient w2 = await BuildPoolWorker(ctx.Port, "w2", accessor, "cap-q");
+        await Task.Delay(300);
+
+        HorseClient producer = await CreateProducer(ctx.Port);
+        await PushLabeled(producer, "cap-q", "a");
+        await PushLabeled(producer, "cap-q", "b");
+        await PushLabeled(producer, "cap-q", "c");
+        await Task.Delay(1000);
+
+        Assert.Equal(3, queue.PartitionManager.Partitions.Count());
+        Assert.Equal(2, queue.PartitionManager.Partitions.Count(p => p.Queue.HasAnyClient()));
+        Assert.Equal(2, tracker.TotalCount());
+
+        producer.Disconnect();
+        w1.Disconnect();
+        w2.Disconnect();
+    }
+
+    /// <summary>
+    /// Two separate parent queues each with their own worker pool.
+    /// Worker 1 subscribes (pool) to IsolatedQ-A only.
+    /// Worker 2 subscribes (pool) to IsolatedQ-B only.
+    /// Messages pushed to IsolatedQ-A must ONLY be consumed by Worker 1.
+    /// Messages pushed to IsolatedQ-B must ONLY be consumed by Worker 2.
+    /// Worker pools are per-PartitionManager (per-queue) — no cross-queue assignment should occur.
+    /// </summary>
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task WorkerPool_Isolation_AcrossParentQueues_NoCrossAssignment(string mode)
+    {
+        // Create server with 2 separate partitioned queues
+        PartitionTestContext ctx = await PartitionTestServer.Create(mode, opts =>
+        {
+            opts.Type = QueueType.RoundRobin;
+            opts.Acknowledge = QueueAckDecision.JustRequest;
+            opts.AutoQueueCreation = false;
+        });
+        await using var _ = ctx;
+
+        PartitionOptions partOpts = new()
+        {
+            Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 1,
+            AutoAssignWorkers = true, MaxPartitionsPerWorker = 5, AutoDestroy = PartitionAutoDestroy.Disabled
+        };
+
+        await ctx.Rider.Queue.Create("IsolatedQ-A", o =>
+        {
+            o.Type = QueueType.RoundRobin;
+            o.Acknowledge = QueueAckDecision.JustRequest;
+            o.Partition = partOpts;
+        });
+
+        await ctx.Rider.Queue.Create("IsolatedQ-B", o =>
+        {
+            o.Type = QueueType.RoundRobin;
+            o.Acknowledge = QueueAckDecision.JustRequest;
+            o.Partition = partOpts;
+        });
+
+        HorseQueue queueA = ctx.Rider.Queue.Find("IsolatedQ-A");
+        HorseQueue queueB = ctx.Rider.Queue.Find("IsolatedQ-B");
+        Assert.NotNull(queueA);
+        Assert.NotNull(queueB);
+
+        // Track which clientType received messages from which queue
+        ConcurrentBag<string> receivedByW1 = new();
+        ConcurrentBag<string> receivedByW2 = new();
+
+        // Worker 1: subscribes to IsolatedQ-A pool only
+        HorseClient w1 = new();
+        w1.SetClientType("w1");
+        w1.AutoAcknowledge = true;
+        w1.MessageReceived += (_, msg) =>
+        {
+            receivedByW1.Add(msg.Target); // partition queue name contains parent info
+        };
+        await w1.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await w1.Queue.Subscribe("IsolatedQ-A", true, CancellationToken.None);
+        await Task.Delay(200);
+
+        // Worker 2: subscribes to IsolatedQ-B pool only
+        HorseClient w2 = new();
+        w2.SetClientType("w2");
+        w2.AutoAcknowledge = true;
+        w2.MessageReceived += (_, msg) =>
+        {
+            receivedByW2.Add(msg.Target);
+        };
+        await w2.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await w2.Queue.Subscribe("IsolatedQ-B", true, CancellationToken.None);
+        await Task.Delay(200);
+
+        // Push labeled messages to each queue
+        HorseClient producer = await CreateProducer(ctx.Port);
+
+        for (int i = 0; i < 5; i++)
+        {
+            await producer.Queue.Push("IsolatedQ-A",
+                System.Text.Encoding.UTF8.GetBytes($"a-msg-{i}"), false,
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"tenant-a-{i}") }, CancellationToken.None);
+
+            await producer.Queue.Push("IsolatedQ-B",
+                System.Text.Encoding.UTF8.GetBytes($"b-msg-{i}"), false,
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"tenant-b-{i}") }, CancellationToken.None);
+        }
+
+        await WaitUntil(() => receivedByW1.Count >= 5 && receivedByW2.Count >= 5, 10_000);
+
+        // W1 should only have received messages from IsolatedQ-A partitions
+        Assert.True(receivedByW1.Count >= 5, $"W1 expected ≥5, got {receivedByW1.Count}");
+        Assert.All(receivedByW1, target => Assert.Contains("IsolatedQ-A", target));
+
+        // W2 should only have received messages from IsolatedQ-B partitions
+        Assert.True(receivedByW2.Count >= 5, $"W2 expected ≥5, got {receivedByW2.Count}");
+        Assert.All(receivedByW2, target => Assert.Contains("IsolatedQ-B", target));
+
+        // Cross check: no IsolatedQ-B in W1, no IsolatedQ-A in W2
+        Assert.DoesNotContain(receivedByW1, t => t.Contains("IsolatedQ-B"));
+        Assert.DoesNotContain(receivedByW2, t => t.Contains("IsolatedQ-A"));
+
+        // Verify partition counts
+        Assert.Equal(5, queueA.PartitionManager.Partitions.Count());
+        Assert.Equal(5, queueB.PartitionManager.Partitions.Count());
 
         producer.Disconnect();
         w1.Disconnect();
@@ -942,462 +1576,24 @@ public class PartitionComplexIntegrationTests
     }
 
     #endregion
-
+    
     // ═══════════════════════════════════════════════════════════════════════
-    // 1. Original Multi-Queue / Multi-Tier Tests
-    // ═══════════════════════════════════════════════════════════════════════
-
-    #region Multi-Queue Multi-Tier Tests
-
-    [Theory]
-    [InlineData("memory")]
-    [InlineData("persistent")]
-    public async Task QueueABC_ThreeTiers_MessagesConsumedByCorrectLabel(string mode)
-    {
-        ConsumeTracker tracker = new();
-        TrackerAccessor accessor = new(tracker);
-        await using PartitionTestContext ctx = await CreateServer(mode);
-
-        HorseClient w1 = BuildFullWorker(ctx.Port, "w-free", accessor, "free");
-        HorseClient w2 = BuildFullWorker(ctx.Port, "w-standard", accessor, "standard");
-        HorseClient w3 = BuildFullWorker(ctx.Port, "w-premium", accessor, "premium");
-        await w1.ConnectAsync();
-        await w2.ConnectAsync();
-        await w3.ConnectAsync();
-        await Task.Delay(500);
-
-        HorseClient producer = await CreateProducer(ctx.Port);
-        IHorseQueueBus bus = new HorseQueueBus(producer);
-
-        string[] labels = { "free", "standard", "premium" };
-        string[] queues = { "QueueA", "QueueB", "QueueC" };
-
-        foreach (string qName in queues)
-        foreach (string label in labels)
-            for (int i = 0; i < 5; i++)
-                switch (qName)
-                {
-                    case "QueueA": await bus.Push(qName, new QueueAModel { TenantId = label, Sequence = i }, false, null, label, CancellationToken.None); break;
-                    case "QueueB": await bus.Push(qName, new QueueBModel { TenantId = label, Sequence = i }, false, null, label, CancellationToken.None); break;
-                    case "QueueC": await bus.Push(qName, new QueueCModel { TenantId = label, Sequence = i }, false, null, label, CancellationToken.None); break;
-                }
-
-        await WaitForConsume(tracker, 45, 15_000);
-
-        foreach (string qName in queues)
-        foreach (string label in labels)
-            Assert.Equal(5, tracker.Get(qName, label).Count);
-
-        producer.Disconnect();
-        w1.Disconnect();
-        w2.Disconnect();
-        w3.Disconnect();
-    }
-
-    [Theory]
-    [InlineData("memory")]
-    [InlineData("persistent")]
-    public async Task QueueD_WithNameTransform_100Tenants_FIFOOrdering(string mode)
-    {
-        ConsumeTracker tracker = new();
-        TrackerAccessor accessor = new(tracker);
-        await using PartitionTestContext ctx = await CreateServer(mode);
-
-        foreach (string tier in new[] { "free", "standard", "premium" })
-            await ctx.Rider.Queue.Create($"QueueD-{tier}", o =>
-            {
-                o.Type = QueueType.RoundRobin;
-                o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
-                o.Partition = new PartitionOptions
-                {
-                    Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 10, AutoAssignWorkers = true, MaxPartitionsPerWorker = 200,
-                    AutoDestroy = PartitionAutoDestroy.Disabled
-                };
-            });
-
-        HorseClient w1 = BuildFullWorker(ctx.Port, "w-free", accessor, "free");
-        HorseClient w2 = BuildFullWorker(ctx.Port, "w-standard", accessor, "standard");
-        HorseClient w3 = BuildFullWorker(ctx.Port, "w-premium", accessor, "premium");
-        await w1.ConnectAsync();
-        await w2.ConnectAsync();
-        await w3.ConnectAsync();
-        await Task.Delay(500);
-
-        HorseClient producer = await CreateProducer(ctx.Port);
-        IHorseQueueBus bus = new HorseQueueBus(producer);
-
-        string[] tiers = { "free", "standard", "premium" };
-        int tenantCount = 10, msgsPerTenant = 5;
-        string[] tenantIds = Enumerable.Range(0, tenantCount).Select(_ => Guid.NewGuid().ToString("N")).ToArray();
-        int expectedTotal = tenantCount * msgsPerTenant * tiers.Length;
-
-        foreach (string tier in tiers)
-        {
-            string targetQueue = $"QueueD-{tier}";
-            for (int t = 0; t < tenantCount; t++)
-            for (int seq = 0; seq < msgsPerTenant; seq++)
-                await bus.Push(targetQueue, new QueueDModel { TenantId = tenantIds[t], Sequence = seq }, false, null, tenantIds[t], CancellationToken.None);
-        }
-
-        await WaitForConsume(tracker, expectedTotal, 120_000);
-
-        foreach (string tenantId in tenantIds)
-        {
-            List<int> records = tracker.Get("QueueD", tenantId);
-            Assert.Equal(msgsPerTenant * tiers.Length, records.Count);
-            List<List<int>> chunks = SplitIntoOrderedChunks(records);
-            Assert.Equal(tiers.Length, chunks.Count);
-            foreach (List<int> chunk in chunks)
-            {
-                Assert.Equal(msgsPerTenant, chunk.Count);
-                for (int i = 0; i < chunk.Count; i++) Assert.Equal(i, chunk[i]);
-            }
-        }
-
-        producer.Disconnect();
-        w1.Disconnect();
-        w2.Disconnect();
-        w3.Disconnect();
-    }
-
-    [Theory]
-    [InlineData("memory")]
-    [InlineData("persistent")]
-    public async Task AllQueues_CombinedScenario_FullEnd2End(string mode)
-    {
-        ConsumeTracker tracker = new();
-        TrackerAccessor accessor = new(tracker);
-        await using PartitionTestContext ctx = await CreateServer(mode);
-
-        foreach (string tier in new[] { "free", "standard", "premium" })
-            await ctx.Rider.Queue.Create($"QueueD-{tier}", o =>
-            {
-                o.Type = QueueType.RoundRobin;
-                o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
-                o.Partition = new PartitionOptions
-                {
-                    Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 10, AutoAssignWorkers = true, MaxPartitionsPerWorker = 50,
-                    AutoDestroy = PartitionAutoDestroy.Disabled
-                };
-            });
-
-        HorseClient w1 = BuildFullWorker(ctx.Port, "w-free", accessor, "free");
-        HorseClient w2 = BuildFullWorker(ctx.Port, "w-standard", accessor, "standard");
-        HorseClient w3 = BuildFullWorker(ctx.Port, "w-premium", accessor, "premium");
-        await w1.ConnectAsync();
-        await w2.ConnectAsync();
-        await w3.ConnectAsync();
-        await Task.Delay(500);
-
-        HorseClient producer = await CreateProducer(ctx.Port);
-        IHorseQueueBus bus = new HorseQueueBus(producer);
-
-        string[] labels = { "free", "standard", "premium" };
-        int tenantCount = 10, msgsPerTenant = 5;
-        string[] tenantIds = Enumerable.Range(0, tenantCount).Select(_ => Guid.NewGuid().ToString("N")).ToArray();
-
-        int abcExpected = 0;
-        foreach (string qName in new[] { "QueueA", "QueueB", "QueueC" })
-        foreach (string label in labels)
-            for (int seq = 0; seq < 3; seq++)
-            {
-                switch (qName)
-                {
-                    case "QueueA": await bus.Push(qName, new QueueAModel { TenantId = label, Sequence = seq }, false, null, label, CancellationToken.None); break;
-                    case "QueueB": await bus.Push(qName, new QueueBModel { TenantId = label, Sequence = seq }, false, null, label, CancellationToken.None); break;
-                    case "QueueC": await bus.Push(qName, new QueueCModel { TenantId = label, Sequence = seq }, false, null, label, CancellationToken.None); break;
-                }
-                abcExpected++;
-            }
-
-        int dExpected = 0;
-        foreach (string tier in labels)
-        {
-            string targetQueue = $"QueueD-{tier}";
-            for (int t = 0; t < tenantCount; t++)
-            for (int seq = 0; seq < msgsPerTenant; seq++)
-            {
-                await bus.Push(targetQueue, new QueueDModel { TenantId = tenantIds[t], Sequence = seq }, false, null, tenantIds[t], CancellationToken.None);
-                dExpected++;
-            }
-        }
-
-        await WaitForConsume(tracker, abcExpected + dExpected, 30_000);
-
-        foreach (string qName in new[] { "QueueA", "QueueB", "QueueC" })
-        foreach (string label in labels)
-            Assert.Equal(3, tracker.Get(qName, label).Count);
-
-        foreach (string tenantId in tenantIds)
-        {
-            List<int> records = tracker.Get("QueueD", tenantId);
-            Assert.Equal(msgsPerTenant * labels.Length, records.Count);
-            List<List<int>> chunks = SplitIntoOrderedChunks(records);
-            Assert.Equal(labels.Length, chunks.Count);
-            foreach (List<int> chunk in chunks)
-            {
-                Assert.Equal(msgsPerTenant, chunk.Count);
-                for (int i = 0; i < chunk.Count; i++) Assert.Equal(i, chunk[i]);
-            }
-        }
-
-        producer.Disconnect();
-        w1.Disconnect();
-        w2.Disconnect();
-        w3.Disconnect();
-    }
-
-    [Theory]
-    [InlineData("memory")]
-    [InlineData("persistent")]
-    public async Task Workers_SubscribeToPartitions_PartitionManagerShowsCorrectCounts(string mode)
-    {
-        ConsumeTracker tracker = new();
-        TrackerAccessor accessor = new(tracker);
-        await using PartitionTestContext ctx = await CreateServer(mode);
-
-        HorseClient w1 = BuildFullWorker(ctx.Port, "w-free", accessor, "free");
-        HorseClient w2 = BuildFullWorker(ctx.Port, "w-standard", accessor, "standard");
-        HorseClient w3 = BuildFullWorker(ctx.Port, "w-premium", accessor, "premium");
-        await w1.ConnectAsync();
-        await w2.ConnectAsync();
-        await w3.ConnectAsync();
-        await Task.Delay(500);
-
-        HorseClient producer = await CreateProducer(ctx.Port);
-        IHorseQueueBus bus = new HorseQueueBus(producer);
-
-        foreach (string label in new[] { "free", "standard", "premium" })
-            await bus.Push("QueueA", new QueueAModel { TenantId = label, Sequence = 0 }, false, null, label, CancellationToken.None);
-
-        await Task.Delay(1000);
-
-        HorseQueue qa = ctx.Rider.Queue.Find("QueueA");
-        Assert.NotNull(qa?.PartitionManager);
-        List<PartitionMetricSnapshot> metrics = qa.PartitionManager.GetMetrics().ToList();
-        Assert.Equal(3, metrics.Count);
-        Assert.All(metrics, m => Assert.True(m.ConsumerCount >= 1));
-
-        producer.Disconnect();
-        w1.Disconnect();
-        w2.Disconnect();
-        w3.Disconnect();
-    }
-
-    [Theory]
-    [InlineData("memory")]
-    [InlineData("persistent")]
-    public async Task QueueD_NameTransform_QueuesAutoCreated_WorkersAssigned(string mode)
-    {
-        ConsumeTracker tracker = new();
-        TrackerAccessor accessor = new(tracker);
-        await using PartitionTestContext ctx = await CreateServer(mode);
-
-        foreach (string tier in new[] { "free", "standard", "premium" })
-            await ctx.Rider.Queue.Create($"QueueD-{tier}", o =>
-            {
-                o.Type = QueueType.RoundRobin;
-                o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
-                o.Partition = new PartitionOptions
-                {
-                    Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 10, AutoAssignWorkers = true, MaxPartitionsPerWorker = 50,
-                    AutoDestroy = PartitionAutoDestroy.Disabled
-                };
-            });
-
-        HorseClient w1 = BuildFullWorker(ctx.Port, "w-free", accessor, "free");
-        HorseClient w2 = BuildFullWorker(ctx.Port, "w-standard", accessor, "standard");
-        HorseClient w3 = BuildFullWorker(ctx.Port, "w-premium", accessor, "premium");
-        await w1.ConnectAsync();
-        await w2.ConnectAsync();
-        await w3.ConnectAsync();
-        await Task.Delay(500);
-
-        HorseClient producer = await CreateProducer(ctx.Port);
-        IHorseQueueBus bus = new HorseQueueBus(producer);
-
-        string tenantId = Guid.NewGuid().ToString("N");
-        foreach (string tier in new[] { "free", "standard", "premium" })
-            await bus.Push($"QueueD-{tier}", new QueueDModel { TenantId = tenantId, Sequence = 1 }, false, null, tenantId, CancellationToken.None);
-
-        await WaitForConsume(tracker, 3, 10_000);
-        Assert.Equal(3, tracker.Get("QueueD", tenantId).Count);
-
-        producer.Disconnect();
-        w1.Disconnect();
-        w2.Disconnect();
-        w3.Disconnect();
-    }
-
-    #endregion
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // 3. AutoDestroy = NoMessages
+    // 18. Worker Fair Distribution (Least-Loaded Strategy)
     // ═══════════════════════════════════════════════════════════════════════
 
-    #region AutoDestroy NoMessages
+    #region Worker Fair Distribution
 
+    /// <summary>
+    /// 10 workers, MaxPartitionsPerWorker=0 (unlimited), 10 labeled partitions, SubscribersPerPartition=1.
+    /// Each partition should get exactly 1 different worker — no single worker should hog all partitions.
+    /// Verifies TryAssignPooledWorker's least-loaded-first selection.
+    /// </summary>
     [Theory]
     [InlineData("memory")]
     [InlineData("persistent")]
-    public async Task AutoDestroyNoMessages_PartitionDestroyedAfterAllConsumed(string mode)
+    public async Task FairDistribution_10Workers_10Labels_EachWorkerGetsOnePartition(string mode)
     {
-        (PartitionTestContext ctx, HorseQueue queue) = await CreateSingleQueueServer(mode, "ad-q", new PartitionOptions
-        {
-            Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 1,
-            AutoAssignWorkers = true, MaxPartitionsPerWorker = 5,
-            AutoDestroy = PartitionAutoDestroy.NoMessages, AutoDestroyIdleSeconds = 2
-        });
-        await using PartitionTestContext _ = ctx;
-
-        ConsumeTracker tracker = new();
-        TrackerAccessor accessor = new(tracker);
-        HorseClient w = await BuildPoolWorker(ctx.Port, "w1", accessor, "ad-q");
-        await Task.Delay(300);
-
-        HorseClient producer = await CreateProducer(ctx.Port);
-        await PushLabeled(producer, "ad-q", "tenant-1");
-        await PushLabeled(producer, "ad-q", "tenant-1");
-
-        await WaitUntil(() => tracker.TotalCount() >= 2, 5_000);
-        await WaitUntil(() => !queue.PartitionManager.Partitions.Any());
-        Assert.Empty(queue.PartitionManager.Partitions);
-
-        producer.Disconnect();
-        w.Disconnect();
-    }
-
-    [Theory]
-    [InlineData("memory")]
-    [InlineData("persistent")]
-    public async Task AutoDestroyNoMessages_OnlyEmptyPartitionsDestroyed(string mode)
-    {
-        (PartitionTestContext ctx, HorseQueue queue) = await CreateSingleQueueServer(mode, "ad-multi-q", new PartitionOptions
-        {
-            Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 1,
-            AutoAssignWorkers = true, MaxPartitionsPerWorker = 5,
-            AutoDestroy = PartitionAutoDestroy.NoMessages, AutoDestroyIdleSeconds = 3
-        }, ack: QueueAckDecision.WaitForAcknowledge);
-        await using PartitionTestContext _ = ctx;
-
-        ConsumeTracker tracker = new();
-        TrackerAccessor accessor = new(tracker);
-        HorseClient w = await BuildPoolWorker(ctx.Port, "w1", accessor, "ad-multi-q");
-        await Task.Delay(300);
-
-        HorseClient producer = await CreateProducer(ctx.Port);
-        // tenant-1 gets just 1 message (will be consumed fast → partition becomes empty)
-        await PushLabeled(producer, "ad-multi-q", "tenant-1");
-
-        // tenant-2: push messages continuously so it never drains
-        bool keepPushing = true;
-        Task pushTask = Task.Run(async () =>
-        {
-            while (keepPushing)
-            {
-                await PushLabeled(producer, "ad-multi-q", "tenant-2");
-                await Task.Delay(10);
-            }
-        });
-
-        // Wait until tenant-1 is consumed
-        await WaitUntil(() => tracker.TotalCount() >= 1, 10_000);
-
-        // Wait for auto-destroy to remove tenant-1 while tenant-2 is still active
-        await WaitUntil(() =>
-        {
-            List<PartitionEntry> parts = queue.PartitionManager.Partitions.ToList();
-            return parts.Count == 1 && parts[0].Label == "tenant-2";
-        }, 30_000);
-
-        keepPushing = false;
-        await pushTask;
-
-        List<PartitionEntry> remaining = queue.PartitionManager.Partitions.ToList();
-        Assert.Single(remaining);
-        Assert.Equal("tenant-2", remaining[0].Label);
-
-        producer.Disconnect();
-        w.Disconnect();
-    }
-
-    #endregion
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // 4. MaxPartitionsPerWorker Scenarios
-    // ═══════════════════════════════════════════════════════════════════════
-
-    #region MaxPartitionsPerWorker
-
-    [Theory]
-    [InlineData("memory")]
-    [InlineData("persistent")]
-    public async Task MaxPartitionsPerWorker1_WorkerOnlyServesOnePartition(string mode)
-    {
-        (PartitionTestContext ctx, HorseQueue queue) = await CreateSingleQueueServer(mode, "mpw1-q", new PartitionOptions
-        {
-            Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 1,
-            AutoAssignWorkers = true, MaxPartitionsPerWorker = 1, AutoDestroy = PartitionAutoDestroy.Disabled
-        });
-        await using PartitionTestContext _ = ctx;
-
-        ConsumeTracker tracker = new();
-        TrackerAccessor accessor = new(tracker);
-        HorseClient w = await BuildPoolWorker(ctx.Port, "w1", accessor, "mpw1-q");
-        await Task.Delay(300);
-
-        HorseClient producer = await CreateProducer(ctx.Port);
-        await PushLabeled(producer, "mpw1-q", "label-a");
-        await PushLabeled(producer, "mpw1-q", "label-b");
-        await Task.Delay(1000);
-
-        List<PartitionEntry> partitions = queue.PartitionManager.Partitions.ToList();
-        Assert.Equal(2, partitions.Count);
-        Assert.Equal(1, partitions.Count(p => p.Queue.HasAnyClient()));
-        Assert.Equal(1, tracker.TotalCount());
-
-        producer.Disconnect();
-        w.Disconnect();
-    }
-
-    [Theory]
-    [InlineData("memory")]
-    [InlineData("persistent")]
-    public async Task MaxPartitionsPerWorker2_WorkerServesTwoPartitions(string mode)
-    {
-        (PartitionTestContext ctx, HorseQueue queue) = await CreateSingleQueueServer(mode, "mpw2-q", new PartitionOptions
-        {
-            Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 1,
-            AutoAssignWorkers = true, MaxPartitionsPerWorker = 2, AutoDestroy = PartitionAutoDestroy.Disabled
-        });
-        await using PartitionTestContext _ = ctx;
-
-        ConsumeTracker tracker = new();
-        TrackerAccessor accessor = new(tracker);
-        HorseClient w = await BuildPoolWorker(ctx.Port, "w1", accessor, "mpw2-q");
-        await Task.Delay(300);
-
-        HorseClient producer = await CreateProducer(ctx.Port);
-        await PushLabeled(producer, "mpw2-q", "label-a");
-        await PushLabeled(producer, "mpw2-q", "label-b");
-        await PushLabeled(producer, "mpw2-q", "label-c");
-        await Task.Delay(1000);
-
-        List<PartitionEntry> partitions = queue.PartitionManager.Partitions.ToList();
-        Assert.Equal(3, partitions.Count);
-        Assert.Equal(2, partitions.Count(p => p.Queue.HasAnyClient()));
-        Assert.Equal(2, tracker.TotalCount());
-
-        producer.Disconnect();
-        w.Disconnect();
-    }
-
-    [Theory]
-    [InlineData("memory")]
-    [InlineData("persistent")]
-    public async Task MaxPartitionsPerWorker0_Unlimited_WorkerServesAll(string mode)
-    {
-        (PartitionTestContext ctx, HorseQueue queue) = await CreateSingleQueueServer(mode, "mpw0-q", new PartitionOptions
+        (PartitionTestContext ctx, HorseQueue queue) = await CreateSingleQueueServer(mode, "fair10-q", new PartitionOptions
         {
             Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 1,
             AutoAssignWorkers = true, MaxPartitionsPerWorker = 0, AutoDestroy = PartitionAutoDestroy.Disabled
@@ -1406,48 +1602,179 @@ public class PartitionComplexIntegrationTests
 
         ConsumeTracker tracker = new();
         TrackerAccessor accessor = new(tracker);
-        HorseClient w = await BuildPoolWorker(ctx.Port, "w1", accessor, "mpw0-q");
-        await Task.Delay(300);
+
+        List<HorseClient> workers = new();
+        for (int i = 0; i < 10; i++)
+        {
+            HorseClient w = await BuildPoolWorker(ctx.Port, $"w{i}", accessor, "fair10-q");
+            workers.Add(w);
+        }
+        await Task.Delay(500);
 
         HorseClient producer = await CreateProducer(ctx.Port);
-        for (int i = 0; i < 5; i++)
-            await PushLabeled(producer, "mpw0-q", $"label-{i}");
+        for (int i = 0; i < 10; i++)
+            await PushLabeled(producer, "fair10-q", $"tenant-{i}");
 
-        await WaitUntil(() => tracker.TotalCount() >= 5, 5_000);
-        Assert.Equal(5, queue.PartitionManager.Partitions.Count());
+        await WaitUntil(() => tracker.TotalCount() >= 10, 10_000);
+
+        Assert.Equal(10, queue.PartitionManager.Partitions.Count());
         Assert.All(queue.PartitionManager.Partitions, p => Assert.True(p.Queue.HasAnyClient()));
 
+        HashSet<string> assignedClientIds = new();
+        foreach (PartitionEntry p in queue.PartitionManager.Partitions)
+        {
+            var clients = p.Queue.Clients.ToList();
+            Assert.Single(clients);
+            assignedClientIds.Add(clients[0].Client.UniqueId);
+        }
+
+        // All 10 unique workers should be used
+        Assert.Equal(10, assignedClientIds.Count);
+
         producer.Disconnect();
-        w.Disconnect();
+        foreach (HorseClient w in workers) w.Disconnect();
     }
 
+    /// <summary>
+    /// 3 workers, MaxPartitionsPerWorker=0, 9 labeled partitions, SubscribersPerPartition=1.
+    /// Each worker should get ~3 partitions (9 / 3 = 3).
+    /// </summary>
     [Theory]
     [InlineData("memory")]
     [InlineData("persistent")]
-    public async Task WorkerAtCapacity_SkippedDuringAssignment(string mode)
+    public async Task FairDistribution_3Workers_9Labels_EachGets3Partitions(string mode)
     {
-        (PartitionTestContext ctx, HorseQueue queue) = await CreateSingleQueueServer(mode, "cap-q", new PartitionOptions
+        (PartitionTestContext ctx, HorseQueue queue) = await CreateSingleQueueServer(mode, "fair9-q", new PartitionOptions
         {
             Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 1,
-            AutoAssignWorkers = true, MaxPartitionsPerWorker = 1, AutoDestroy = PartitionAutoDestroy.Disabled
+            AutoAssignWorkers = true, MaxPartitionsPerWorker = 0, AutoDestroy = PartitionAutoDestroy.Disabled
         });
         await using PartitionTestContext _ = ctx;
 
         ConsumeTracker tracker = new();
         TrackerAccessor accessor = new(tracker);
-        HorseClient w1 = await BuildPoolWorker(ctx.Port, "w1", accessor, "cap-q");
-        HorseClient w2 = await BuildPoolWorker(ctx.Port, "w2", accessor, "cap-q");
-        await Task.Delay(300);
+        HorseClient w1 = await BuildPoolWorker(ctx.Port, "w1", accessor, "fair9-q");
+        HorseClient w2 = await BuildPoolWorker(ctx.Port, "w2", accessor, "fair9-q");
+        HorseClient w3 = await BuildPoolWorker(ctx.Port, "w3", accessor, "fair9-q");
+        await Task.Delay(500);
 
         HorseClient producer = await CreateProducer(ctx.Port);
-        await PushLabeled(producer, "cap-q", "a");
-        await PushLabeled(producer, "cap-q", "b");
-        await PushLabeled(producer, "cap-q", "c");
-        await Task.Delay(1000);
+        for (int i = 0; i < 9; i++)
+            await PushLabeled(producer, "fair9-q", $"tenant-{i}");
 
-        Assert.Equal(3, queue.PartitionManager.Partitions.Count());
-        Assert.Equal(2, queue.PartitionManager.Partitions.Count(p => p.Queue.HasAnyClient()));
-        Assert.Equal(2, tracker.TotalCount());
+        await WaitUntil(() => tracker.TotalCount() >= 9, 10_000);
+
+        Assert.Equal(9, queue.PartitionManager.Partitions.Count());
+        Assert.All(queue.PartitionManager.Partitions, p => Assert.True(p.Queue.HasAnyClient()));
+
+        Dictionary<string, int> assignmentCounts = new();
+        foreach (PartitionEntry p in queue.PartitionManager.Partitions)
+        foreach (QueueClient qc in p.Queue.Clients)
+        {
+            string id = qc.Client.UniqueId;
+            assignmentCounts[id] = assignmentCounts.GetValueOrDefault(id, 0) + 1;
+        }
+
+        Assert.Equal(3, assignmentCounts.Count);
+        Assert.All(assignmentCounts.Values, count => Assert.InRange(count, 2, 4));
+
+        producer.Disconnect();
+        w1.Disconnect();
+        w2.Disconnect();
+        w3.Disconnect();
+    }
+
+    /// <summary>
+    /// SubscribersPerPartition=3, MaxPartitionsPerWorker=0, 5 workers, 2 partitions (6 total slots).
+    /// First worker should NOT grab all 6 slots — at least 4 of 5 workers should be assigned.
+    /// Verifies TryAssignToExistingPartition fair-share cap.
+    /// </summary>
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task FairDistribution_SubsPerPartition3_NoGreedyFirstWorker(string mode)
+    {
+        (PartitionTestContext ctx, HorseQueue queue) = await CreateSingleQueueServer(mode, "fair-spp-q", new PartitionOptions
+        {
+            Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 3,
+            AutoAssignWorkers = true, MaxPartitionsPerWorker = 0, AutoDestroy = PartitionAutoDestroy.Disabled
+        });
+        await using PartitionTestContext _ = ctx;
+
+        ConsumeTracker tracker = new();
+        TrackerAccessor accessor = new(tracker);
+
+        HorseClient producer = await CreateProducer(ctx.Port);
+        await PushLabeled(producer, "fair-spp-q", "part-1");
+        await PushLabeled(producer, "fair-spp-q", "part-2");
+        await Task.Delay(300);
+
+        Assert.Equal(2, queue.PartitionManager.Partitions.Count());
+
+        List<HorseClient> workers = new();
+        for (int i = 0; i < 5; i++)
+        {
+            HorseClient w = await BuildPoolWorker(ctx.Port, $"w{i}", accessor, "fair-spp-q");
+            workers.Add(w);
+            await Task.Delay(200);
+        }
+        await Task.Delay(500);
+
+        HashSet<string> assignedWorkerIds = new();
+        foreach (PartitionEntry p in queue.PartitionManager.Partitions)
+        foreach (QueueClient qc in p.Queue.Clients)
+            assignedWorkerIds.Add(qc.Client.UniqueId);
+
+        Assert.True(assignedWorkerIds.Count >= 4,
+            $"Expected ≥4 unique workers assigned, got {assignedWorkerIds.Count}. First worker should not hog all slots.");
+
+        Assert.All(queue.PartitionManager.Partitions, p =>
+            Assert.True(p.Queue.Clients.Count() <= 3, $"Partition {p.PartitionId} has {p.Queue.Clients.Count()} consumers, max is 3"));
+
+        producer.Disconnect();
+        foreach (HorseClient w in workers) w.Disconnect();
+    }
+
+    /// <summary>
+    /// 2 workers, MaxPartitionsPerWorker=0, 20 labeled partitions, SubscribersPerPartition=1.
+    /// Each worker should get ~10 partitions. Neither should get all 20.
+    /// </summary>
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task FairDistribution_2Workers_20Labels_BalancedAssignment(string mode)
+    {
+        (PartitionTestContext ctx, HorseQueue queue) = await CreateSingleQueueServer(mode, "fair20-q", new PartitionOptions
+        {
+            Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 1,
+            AutoAssignWorkers = true, MaxPartitionsPerWorker = 0, AutoDestroy = PartitionAutoDestroy.Disabled
+        });
+        await using PartitionTestContext _ = ctx;
+
+        ConsumeTracker tracker = new();
+        TrackerAccessor accessor = new(tracker);
+        HorseClient w1 = await BuildPoolWorker(ctx.Port, "w1", accessor, "fair20-q");
+        HorseClient w2 = await BuildPoolWorker(ctx.Port, "w2", accessor, "fair20-q");
+        await Task.Delay(500);
+
+        HorseClient producer = await CreateProducer(ctx.Port);
+        for (int i = 0; i < 20; i++)
+            await PushLabeled(producer, "fair20-q", $"t-{i}");
+
+        await WaitUntil(() => tracker.TotalCount() >= 20, 15_000);
+
+        Assert.Equal(20, queue.PartitionManager.Partitions.Count());
+
+        Dictionary<string, int> assignmentCounts = new();
+        foreach (PartitionEntry p in queue.PartitionManager.Partitions)
+        foreach (QueueClient qc in p.Queue.Clients)
+        {
+            string id = qc.Client.UniqueId;
+            assignmentCounts[id] = assignmentCounts.GetValueOrDefault(id, 0) + 1;
+        }
+
+        Assert.Equal(2, assignmentCounts.Count);
+        Assert.All(assignmentCounts.Values, count => Assert.InRange(count, 7, 13));
 
         producer.Disconnect();
         w1.Disconnect();
@@ -1455,111 +1782,54 @@ public class PartitionComplexIntegrationTests
     }
 
     /// <summary>
-    /// Two separate parent queues each with their own worker pool.
-    /// Worker 1 subscribes (pool) to IsolatedQ-A only.
-    /// Worker 2 subscribes (pool) to IsolatedQ-B only.
-    /// Messages pushed to IsolatedQ-A must ONLY be consumed by Worker 1.
-    /// Messages pushed to IsolatedQ-B must ONLY be consumed by Worker 2.
-    /// Worker pools are per-PartitionManager (per-queue) — no cross-queue assignment should occur.
+    /// Workers arrive staggered. Worker 1 gets first 4 partitions.
+    /// Worker 2 arrives late and should get assigned to new partitions via least-loaded strategy.
     /// </summary>
     [Theory]
     [InlineData("memory")]
     [InlineData("persistent")]
-    public async Task WorkerPool_Isolation_AcrossParentQueues_NoCrossAssignment(string mode)
+    public async Task FairDistribution_StaggeredWorkerArrival_LateWorkersGetAssigned(string mode)
     {
-        // Create server with 2 separate partitioned queues
-        PartitionTestContext ctx = await PartitionTestServer.Create(mode, opts =>
-        {
-            opts.Type = QueueType.RoundRobin;
-            opts.Acknowledge = QueueAckDecision.JustRequest;
-            opts.AutoQueueCreation = false;
-        });
-        await using var _ = ctx;
-
-        PartitionOptions partOpts = new()
+        (PartitionTestContext ctx, HorseQueue queue) = await CreateSingleQueueServer(mode, "stagger-q", new PartitionOptions
         {
             Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 1,
-            AutoAssignWorkers = true, MaxPartitionsPerWorker = 5, AutoDestroy = PartitionAutoDestroy.Disabled
-        };
-
-        await ctx.Rider.Queue.Create("IsolatedQ-A", o =>
-        {
-            o.Type = QueueType.RoundRobin;
-            o.Acknowledge = QueueAckDecision.JustRequest;
-            o.Partition = partOpts;
+            AutoAssignWorkers = true, MaxPartitionsPerWorker = 0, AutoDestroy = PartitionAutoDestroy.Disabled
         });
+        await using PartitionTestContext _ = ctx;
 
-        await ctx.Rider.Queue.Create("IsolatedQ-B", o =>
-        {
-            o.Type = QueueType.RoundRobin;
-            o.Acknowledge = QueueAckDecision.JustRequest;
-            o.Partition = partOpts;
-        });
+        ConsumeTracker tracker = new();
+        TrackerAccessor accessor = new(tracker);
 
-        HorseQueue queueA = ctx.Rider.Queue.Find("IsolatedQ-A");
-        HorseQueue queueB = ctx.Rider.Queue.Find("IsolatedQ-B");
-        Assert.NotNull(queueA);
-        Assert.NotNull(queueB);
+        HorseClient w1 = await BuildPoolWorker(ctx.Port, "w1", accessor, "stagger-q");
+        await Task.Delay(300);
 
-        // Track which clientType received messages from which queue
-        ConcurrentBag<string> receivedByW1 = new();
-        ConcurrentBag<string> receivedByW2 = new();
-
-        // Worker 1: subscribes to IsolatedQ-A pool only
-        HorseClient w1 = new();
-        w1.SetClientType("w1");
-        w1.AutoAcknowledge = true;
-        w1.MessageReceived += (_, msg) =>
-        {
-            receivedByW1.Add(msg.Target); // partition queue name contains parent info
-        };
-        await w1.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await w1.Queue.Subscribe("IsolatedQ-A", true, CancellationToken.None);
-        await Task.Delay(200);
-
-        // Worker 2: subscribes to IsolatedQ-B pool only
-        HorseClient w2 = new();
-        w2.SetClientType("w2");
-        w2.AutoAcknowledge = true;
-        w2.MessageReceived += (_, msg) =>
-        {
-            receivedByW2.Add(msg.Target);
-        };
-        await w2.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await w2.Queue.Subscribe("IsolatedQ-B", true, CancellationToken.None);
-        await Task.Delay(200);
-
-        // Push labeled messages to each queue
         HorseClient producer = await CreateProducer(ctx.Port);
+        for (int i = 0; i < 4; i++)
+            await PushLabeled(producer, "stagger-q", $"early-{i}");
 
-        for (int i = 0; i < 5; i++)
+        await WaitUntil(() => tracker.TotalCount() >= 4, 5_000);
+
+        HorseClient w2 = await BuildPoolWorker(ctx.Port, "w2", accessor, "stagger-q");
+        await Task.Delay(300);
+
+        for (int i = 0; i < 4; i++)
+            await PushLabeled(producer, "stagger-q", $"late-{i}");
+
+        await WaitUntil(() => tracker.TotalCount() >= 8, 10_000);
+
+        Assert.Equal(8, queue.PartitionManager.Partitions.Count());
+
+        Dictionary<string, int> assignmentCounts = new();
+        foreach (PartitionEntry p in queue.PartitionManager.Partitions)
+        foreach (QueueClient qc in p.Queue.Clients)
         {
-            await producer.Queue.Push("IsolatedQ-A",
-                System.Text.Encoding.UTF8.GetBytes($"a-msg-{i}"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"tenant-a-{i}") }, CancellationToken.None);
-
-            await producer.Queue.Push("IsolatedQ-B",
-                System.Text.Encoding.UTF8.GetBytes($"b-msg-{i}"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"tenant-b-{i}") }, CancellationToken.None);
+            string id = qc.Client.UniqueId;
+            assignmentCounts[id] = assignmentCounts.GetValueOrDefault(id, 0) + 1;
         }
 
-        await WaitUntil(() => receivedByW1.Count >= 5 && receivedByW2.Count >= 5, 10_000);
-
-        // W1 should only have received messages from IsolatedQ-A partitions
-        Assert.True(receivedByW1.Count >= 5, $"W1 expected ≥5, got {receivedByW1.Count}");
-        Assert.All(receivedByW1, target => Assert.Contains("IsolatedQ-A", target));
-
-        // W2 should only have received messages from IsolatedQ-B partitions
-        Assert.True(receivedByW2.Count >= 5, $"W2 expected ≥5, got {receivedByW2.Count}");
-        Assert.All(receivedByW2, target => Assert.Contains("IsolatedQ-B", target));
-
-        // Cross check: no IsolatedQ-B in W1, no IsolatedQ-A in W2
-        Assert.DoesNotContain(receivedByW1, t => t.Contains("IsolatedQ-B"));
-        Assert.DoesNotContain(receivedByW2, t => t.Contains("IsolatedQ-A"));
-
-        // Verify partition counts
-        Assert.Equal(5, queueA.PartitionManager.Partitions.Count());
-        Assert.Equal(5, queueB.PartitionManager.Partitions.Count());
+        Assert.Equal(2, assignmentCounts.Count);
+        int w2Count = assignmentCounts.Values.Min();
+        Assert.True(w2Count >= 2, $"Late worker should have ≥2 partitions, got {w2Count}");
 
         producer.Disconnect();
         w1.Disconnect();
@@ -1567,9 +1837,10 @@ public class PartitionComplexIntegrationTests
     }
 
     #endregion
+   
 
     // ═══════════════════════════════════════════════════════════════════════
-    // 20. MaxPartitionCount Override via Attribute
+    // 19. MaxPartitionCount Override via Attribute
     // ═══════════════════════════════════════════════════════════════════════
 
     #region MaxPartitionCount Attribute Override
