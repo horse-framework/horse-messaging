@@ -441,7 +441,7 @@ public class PartitionAutoAssignTest
         var (ctx, queue) = await CreateAutoAssignQueue(
             maxPartitionsPerWorker: 2,
             autoDestroy: PartitionAutoDestroy.NoMessages,
-            autoDestroyIdleSeconds: 5);
+            autoDestroyIdleSeconds: 2);
         await using var __ = ctx;
 
         HorseClient worker = await ConnectWorker(ctx.Port);
@@ -453,25 +453,25 @@ public class PartitionAutoAssignTest
         worker.MessageReceived += (_, _) => Interlocked.Increment(ref received);
 
         await SubscribeNoLabel(worker);
-        await Task.Delay(500);
+        await Task.Delay(300);
 
         // Fill both capacity slots
         await PushLabeled(producer, "t1");
-        await Task.Delay(500);
+        await WaitUntil(() => received >= 1);
         await PushLabeled(producer, "t2");
-        await Task.Delay(500);
+        await WaitUntil(() => received >= 2);
         Assert.Equal(2, received);
         Assert.Equal(2, queue.PartitionManager.Partitions.Count());
 
-        // Wait for NoMessages to destroy both (idle=5s, check every 5s → ~10s max)
-        await Task.Delay(12000);
+        // Wait for NoMessages to destroy both (idle=2s, timer checks every 2s)
+        await WaitUntil(() => !queue.PartitionManager.Partitions.Any(), 15000);
         Assert.Empty(queue.PartitionManager.Partitions);
 
         // Worker should have capacity again — push 2 new labels
         await PushLabeled(producer, "t3");
-        await Task.Delay(500);
+        await WaitUntil(() => received >= 3);
         await PushLabeled(producer, "t4");
-        await Task.Delay(500);
+        await WaitUntil(() => received >= 4);
 
         Assert.Equal(4, received);
         Assert.Equal(2, queue.PartitionManager.Partitions.Count());
