@@ -24,7 +24,7 @@ public class ConnectionOperator
     /// <summary>
     ///     Gets all instances connected to server
     /// </summary>
-    public Task<HorseModelResult<List<NodeInformation>>> GetInstances(CancellationToken cancellationToken)
+    public Task<HorseModelResult<List<NodeInformation>>> GetInstances(CancellationToken cancellationToken = default)
     {
         HorseMessage message = new()
         {
@@ -38,7 +38,7 @@ public class ConnectionOperator
     /// <summary>
     ///     Gets all consumers of queue
     /// </summary>
-    public Task<HorseModelResult<List<ClientInformation>>> GetConnectedClients(CancellationToken cancellationToken)
+    public Task<HorseModelResult<List<ClientInformation>>> GetConnectedClients(CancellationToken cancellationToken = default)
     {
         return GetConnectedClients(null, cancellationToken);
     }
@@ -46,7 +46,7 @@ public class ConnectionOperator
     /// <summary>
     ///     Gets all consumers of queue
     /// </summary>
-    public Task<HorseModelResult<List<ClientInformation>>> GetConnectedClients(string typeFilter, CancellationToken cancellationToken)
+    public Task<HorseModelResult<List<ClientInformation>>> GetConnectedClients(string typeFilter, CancellationToken cancellationToken = default)
     {
         HorseMessage message = new()
         {

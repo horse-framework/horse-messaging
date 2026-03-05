@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -77,7 +77,7 @@ public class ChannelOperator
     /// </summary>
     /// <param name="channel">Channel name to create.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> Create(string channel, CancellationToken cancellationToken)
+    public Task<HorseResult> Create(string channel, CancellationToken cancellationToken = default)
     {
         return Create(channel, null, false, cancellationToken);
     }
@@ -88,7 +88,7 @@ public class ChannelOperator
     /// <param name="channel">Channel name to create.</param>
     /// <param name="verifyResponse">If true, waits for the server to confirm creation.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> Create(string channel, bool verifyResponse, CancellationToken cancellationToken)
+    public Task<HorseResult> Create(string channel, bool verifyResponse, CancellationToken cancellationToken = default)
     {
         return Create(channel, null, verifyResponse, cancellationToken);
     }
@@ -100,7 +100,7 @@ public class ChannelOperator
     /// <param name="options">Action to configure channel options.</param>
     /// <param name="verifyResponse">If true, waits for the server to confirm creation.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> Create(string channel, Action<ChannelOptions> options, bool verifyResponse, CancellationToken cancellationToken)
+    public Task<HorseResult> Create(string channel, Action<ChannelOptions> options, bool verifyResponse, CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Channel;
@@ -140,7 +140,7 @@ public class ChannelOperator
     /// </summary>
     /// <param name="channel">Channel name to delete.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> Delete(string channel, CancellationToken cancellationToken)
+    public Task<HorseResult> Delete(string channel, CancellationToken cancellationToken = default)
     {
         return Delete(channel, false, cancellationToken);
     }
@@ -151,7 +151,7 @@ public class ChannelOperator
     /// <param name="channel">Channel name to delete.</param>
     /// <param name="verifyResponse">If true, waits for the server to confirm deletion.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> Delete(string channel, bool verifyResponse, CancellationToken cancellationToken)
+    public Task<HorseResult> Delete(string channel, bool verifyResponse, CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Channel;
@@ -171,7 +171,7 @@ public class ChannelOperator
     /// <param name="channel">Channel name to subscribe to.</param>
     /// <param name="verifyResponse">If true, waits for the server to confirm the subscription.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> Subscribe(string channel, bool verifyResponse, CancellationToken cancellationToken)
+    public Task<HorseResult> Subscribe(string channel, bool verifyResponse, CancellationToken cancellationToken = default)
     {
         return Subscribe(channel, verifyResponse, null, cancellationToken);
     }
@@ -184,7 +184,7 @@ public class ChannelOperator
     /// <param name="headers">Additional headers to include in the subscription request.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public async Task<HorseResult> Subscribe(string channel, bool verifyResponse,
-        IEnumerable<KeyValuePair<string, string>> headers, CancellationToken cancellationToken)
+        IEnumerable<KeyValuePair<string, string>> headers, CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Channel;
@@ -208,7 +208,7 @@ public class ChannelOperator
     /// <param name="channel">Channel name to unsubscribe from.</param>
     /// <param name="verifyResponse">If true, waits for the server to confirm the unsubscription.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public async Task<HorseResult> Unsubscribe(string channel, bool verifyResponse, CancellationToken cancellationToken)
+    public async Task<HorseResult> Unsubscribe(string channel, bool verifyResponse, CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Channel;
@@ -225,7 +225,7 @@ public class ChannelOperator
     /// <summary>
     /// Finds in all channels in server
     /// </summary>
-    public Task<HorseModelResult<List<ChannelInformation>>> List(CancellationToken cancellationToken)
+    public Task<HorseModelResult<List<ChannelInformation>>> List(CancellationToken cancellationToken = default)
     {
         return List(null, cancellationToken);
     }
@@ -233,7 +233,7 @@ public class ChannelOperator
     /// <summary>
     /// Finds in all channels in server
     /// </summary>
-    public async Task<HorseModelResult<List<ChannelInformation>>> List(string filter, CancellationToken cancellationToken)
+    public async Task<HorseModelResult<List<ChannelInformation>>> List(string filter, CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Channel;
@@ -251,7 +251,7 @@ public class ChannelOperator
     /// </summary>
     /// <param name="channelName">Channel name.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public async Task<HorseModelResult<List<ClientInformation>>> GetSubscribers(string channelName, CancellationToken cancellationToken)
+    public async Task<HorseModelResult<List<ClientInformation>>> GetSubscribers(string channelName, CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Channel;
@@ -271,7 +271,7 @@ public class ChannelOperator
     /// </summary>
     /// <param name="jsonObject">The model object to publish.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> Publish(object jsonObject, CancellationToken cancellationToken)
+    public Task<HorseResult> Publish(object jsonObject, CancellationToken cancellationToken = default)
     {
         return Publish(null, jsonObject, false, null, cancellationToken);
     }
@@ -282,7 +282,7 @@ public class ChannelOperator
     /// <param name="jsonObject">The model object to publish.</param>
     /// <param name="waitForAcknowledge">If true, waits for server acknowledgement.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> Publish(object jsonObject, bool waitForAcknowledge, CancellationToken cancellationToken)
+    public Task<HorseResult> Publish(object jsonObject, bool waitForAcknowledge, CancellationToken cancellationToken = default)
     {
         return Publish(null, jsonObject, waitForAcknowledge, null, cancellationToken);
     }
@@ -294,7 +294,7 @@ public class ChannelOperator
     /// <param name="jsonObject">The model object to publish.</param>
     /// <param name="waitForAcknowledge">If true, waits for server acknowledgement.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> Publish(string channel, object jsonObject, bool waitForAcknowledge, CancellationToken cancellationToken)
+    public Task<HorseResult> Publish(string channel, object jsonObject, bool waitForAcknowledge, CancellationToken cancellationToken = default)
     {
         return Publish(channel, jsonObject, waitForAcknowledge, null, cancellationToken);
     }
@@ -308,7 +308,7 @@ public class ChannelOperator
     /// <param name="messageHeaders">Additional message headers.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public async Task<HorseResult> Publish(string channel, object jsonObject, bool waitForAcknowledge,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken = default)
     {
         ChannelTypeDescriptor descriptor = _descriptorContainer.GetDescriptor(jsonObject.GetType());
 
@@ -336,7 +336,7 @@ public class ChannelOperator
     /// <param name="channel">Target channel name.</param>
     /// <param name="content">String content to publish.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> PublishString(string channel, string content, CancellationToken cancellationToken)
+    public Task<HorseResult> PublishString(string channel, string content, CancellationToken cancellationToken = default)
     {
         return PublishData(channel, new MemoryStream(Encoding.UTF8.GetBytes(content)), false, null, cancellationToken);
     }
@@ -348,7 +348,7 @@ public class ChannelOperator
     /// <param name="content">String content to publish.</param>
     /// <param name="waitForAcknowledge">If true, waits for server acknowledgement.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> PublishString(string channel, string content, bool waitForAcknowledge, CancellationToken cancellationToken)
+    public Task<HorseResult> PublishString(string channel, string content, bool waitForAcknowledge, CancellationToken cancellationToken = default)
     {
         return PublishData(channel, new MemoryStream(Encoding.UTF8.GetBytes(content)), waitForAcknowledge, null, cancellationToken);
     }
@@ -362,7 +362,7 @@ public class ChannelOperator
     /// <param name="messageHeaders">Additional message headers.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> PublishString(string channel, string content, bool waitForAcknowledge,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken = default)
     {
         return PublishData(channel, new MemoryStream(Encoding.UTF8.GetBytes(content)), waitForAcknowledge, messageHeaders, cancellationToken);
     }
@@ -373,7 +373,7 @@ public class ChannelOperator
     /// <param name="channel">Target channel name.</param>
     /// <param name="content">Binary content to publish.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> PublishData(string channel, MemoryStream content, CancellationToken cancellationToken)
+    public Task<HorseResult> PublishData(string channel, MemoryStream content, CancellationToken cancellationToken = default)
     {
         return PublishData(channel, content, false, null, cancellationToken);
     }
@@ -385,7 +385,7 @@ public class ChannelOperator
     /// <param name="content">Binary content to publish.</param>
     /// <param name="waitForAcknowledge">If true, waits for server acknowledgement.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> PublishData(string channel, MemoryStream content, bool waitForAcknowledge, CancellationToken cancellationToken)
+    public Task<HorseResult> PublishData(string channel, MemoryStream content, bool waitForAcknowledge, CancellationToken cancellationToken = default)
     {
         return PublishData(channel, content, waitForAcknowledge, null, cancellationToken);
     }
@@ -399,7 +399,7 @@ public class ChannelOperator
     /// <param name="messageHeaders">Additional message headers.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> PublishData(string channel, MemoryStream content, bool waitForAcknowledge,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage(MessageType.Channel, channel, KnownContentTypes.ChannelPush);
         message.Content = content;
@@ -417,7 +417,7 @@ public class ChannelOperator
     /// Unsubscribes from all channels on the server.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> UnsubscribeFromAllChannels(CancellationToken cancellationToken)
+    public Task<HorseResult> UnsubscribeFromAllChannels(CancellationToken cancellationToken = default)
     {
         return Unsubscribe("*", true, cancellationToken);
     }

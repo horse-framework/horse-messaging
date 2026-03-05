@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -175,7 +175,7 @@ public class QueueOperator : IDisposable
     /// </summary>
     /// <param name="queue">Queue name to create.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> Create(string queue, CancellationToken cancellationToken)
+    public Task<HorseResult> Create(string queue, CancellationToken cancellationToken = default)
     {
         return Create(queue, null, null, null, cancellationToken);
     }
@@ -188,7 +188,7 @@ public class QueueOperator : IDisposable
     /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> Create(string queue,
         IEnumerable<KeyValuePair<string, string>> additionalHeaders,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         return Create(queue, null, null, additionalHeaders, cancellationToken);
     }
@@ -203,7 +203,7 @@ public class QueueOperator : IDisposable
     public Task<HorseResult> Create(string queue,
         string deliveryHandlerHeader,
         IEnumerable<KeyValuePair<string, string>> additionalHeaders,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         return Create(queue, null, deliveryHandlerHeader, additionalHeaders, cancellationToken);
     }
@@ -220,7 +220,7 @@ public class QueueOperator : IDisposable
         Action<QueueOptions> optionsAction,
         string queueManagerName,
         IEnumerable<KeyValuePair<string, string>> additionalHeaders,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Server;
@@ -254,7 +254,7 @@ public class QueueOperator : IDisposable
     /// Lists all queues on the server.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseModelResult<List<QueueInformation>>> List(CancellationToken cancellationToken)
+    public Task<HorseModelResult<List<QueueInformation>>> List(CancellationToken cancellationToken = default)
     {
         return List(null, cancellationToken);
     }
@@ -264,7 +264,7 @@ public class QueueOperator : IDisposable
     /// </summary>
     /// <param name="filter">Filter pattern (supports wildcards). Null returns all queues.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public async Task<HorseModelResult<List<QueueInformation>>> List(string filter, CancellationToken cancellationToken)
+    public async Task<HorseModelResult<List<QueueInformation>>> List(string filter, CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Server;
@@ -282,7 +282,7 @@ public class QueueOperator : IDisposable
     /// </summary>
     /// <param name="queue">Queue name to remove.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public async Task<HorseResult> Remove(string queue, CancellationToken cancellationToken)
+    public async Task<HorseResult> Remove(string queue, CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Server;
@@ -300,7 +300,7 @@ public class QueueOperator : IDisposable
     /// <param name="queue">Target queue name.</param>
     /// <param name="optionsAction">Action to configure the new queue options.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public async Task<HorseResult> SetOptions(string queue, Action<QueueOptions> optionsAction, CancellationToken cancellationToken)
+    public async Task<HorseResult> SetOptions(string queue, Action<QueueOptions> optionsAction, CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Server;
@@ -326,7 +326,7 @@ public class QueueOperator : IDisposable
     /// <param name="clearPriorityMessages">If true, clears high-priority messages.</param>
     /// <param name="clearMessages">If true, clears default-priority messages.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> ClearMessages(string queue, bool clearPriorityMessages, bool clearMessages, CancellationToken cancellationToken)
+    public Task<HorseResult> ClearMessages(string queue, bool clearPriorityMessages, bool clearMessages, CancellationToken cancellationToken = default)
     {
         if (!clearPriorityMessages && !clearMessages)
             return Task.FromResult(HorseResult.Failed());
@@ -353,7 +353,7 @@ public class QueueOperator : IDisposable
     /// </summary>
     /// <param name="queue">Target queue name.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public async Task<HorseModelResult<List<ClientInformation>>> GetConsumers(string queue, CancellationToken cancellationToken)
+    public async Task<HorseModelResult<List<ClientInformation>>> GetConsumers(string queue, CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Server;
@@ -376,7 +376,7 @@ public class QueueOperator : IDisposable
     /// </summary>
     /// <param name="model">The message model to push.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> Push<T>(T model, CancellationToken cancellationToken) where T : class
+    public Task<HorseResult> Push<T>(T model, CancellationToken cancellationToken = default) where T : class
     {
         return Push<T>(null, model, null, false, null, cancellationToken);
     }
@@ -388,7 +388,7 @@ public class QueueOperator : IDisposable
     /// <param name="model">The message model to push.</param>
     /// <param name="waitForCommit">If true, waits for a commit response from the server.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> Push<T>(T model, bool waitForCommit, CancellationToken cancellationToken) where T : class
+    public Task<HorseResult> Push<T>(T model, bool waitForCommit, CancellationToken cancellationToken = default) where T : class
     {
         return Push<T>(null, model, null, waitForCommit, null, cancellationToken);
     }
@@ -402,7 +402,7 @@ public class QueueOperator : IDisposable
     /// <param name="messageHeaders">Additional message headers.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> Push<T>(T model, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken) where T : class
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken = default) where T : class
     {
         return Push<T>(null, model, null, waitForCommit, messageHeaders, cancellationToken);
     }
@@ -415,7 +415,7 @@ public class QueueOperator : IDisposable
     /// <param name="messageId">Explicit unique message id.</param>
     /// <param name="waitForCommit">If true, waits for a commit response from the server.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> Push<T>(T model, string messageId, bool waitForCommit, CancellationToken cancellationToken) where T : class
+    public Task<HorseResult> Push<T>(T model, string messageId, bool waitForCommit, CancellationToken cancellationToken = default) where T : class
     {
         return Push<T>(null, model, messageId, waitForCommit, null, cancellationToken);
     }
@@ -430,7 +430,7 @@ public class QueueOperator : IDisposable
     /// <param name="messageHeaders">Additional message headers.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> Push<T>(T model, string messageId, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken) where T : class
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken = default) where T : class
     {
         return Push<T>(null, model, messageId, waitForCommit, messageHeaders, cancellationToken);
     }
@@ -442,7 +442,7 @@ public class QueueOperator : IDisposable
     /// <param name="model">The message model to push.</param>
     /// <param name="waitForCommit">If true, waits for a commit response from the server.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> Push<T>(string queue, T model, bool waitForCommit, CancellationToken cancellationToken) where T : class
+    public Task<HorseResult> Push<T>(string queue, T model, bool waitForCommit, CancellationToken cancellationToken = default) where T : class
     {
         return Push<T>(queue, model, null, waitForCommit, null, cancellationToken);
     }
@@ -456,7 +456,7 @@ public class QueueOperator : IDisposable
     /// <param name="messageHeaders">Additional message headers.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> Push<T>(string queue, T model, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken) where T : class
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken = default) where T : class
     {
         return Push<T>(queue, model, null, waitForCommit, messageHeaders, cancellationToken);
     }
@@ -466,7 +466,7 @@ public class QueueOperator : IDisposable
     /// This is the canonical overload; all other model Push variants delegate to this method.
     /// </summary>
     public async Task<HorseResult> Push<T>(string queue, T model, string messageId, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken) where T : class
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken = default) where T : class
     {
         QueueTypeDescriptor descriptor = DescriptorContainer.GetDescriptor(typeof(T));
 
@@ -504,7 +504,7 @@ public class QueueOperator : IDisposable
     /// Pushes an object model to a queue. Used internally when the compile-time type is not available.
     /// </summary>
     internal Task<HorseResult> PushObject(object model, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken = default)
     {
         return PushObject(null, model, null, waitForCommit, messageHeaders, cancellationToken);
     }
@@ -513,7 +513,7 @@ public class QueueOperator : IDisposable
     /// Pushes an object model to a queue. Used internally when the compile-time type is not available.
     /// </summary>
     internal async Task<HorseResult> PushObject(string queue, object model, string messageId, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken = default)
     {
         QueueTypeDescriptor descriptor = DescriptorContainer.GetDescriptor(model.GetType());
 
@@ -561,7 +561,7 @@ public class QueueOperator : IDisposable
     /// <param name="partitionLabel">Partition label for partition-aware routing.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> Push<T>(T model, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders, string partitionLabel, CancellationToken cancellationToken) where T : class
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, string partitionLabel, CancellationToken cancellationToken = default) where T : class
     {
         return Push<T>(null, model, null, waitForCommit, MergePartitionHeader(partitionLabel, messageHeaders), cancellationToken);
     }
@@ -576,7 +576,7 @@ public class QueueOperator : IDisposable
     /// <param name="partitionLabel">Partition label for partition-aware routing.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> Push<T>(string queue, T model, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders, string partitionLabel, CancellationToken cancellationToken) where T : class
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, string partitionLabel, CancellationToken cancellationToken = default) where T : class
     {
         return Push<T>(queue, model, null, waitForCommit, MergePartitionHeader(partitionLabel, messageHeaders), cancellationToken);
     }
@@ -592,7 +592,7 @@ public class QueueOperator : IDisposable
     /// <param name="partitionLabel">Partition label for partition-aware routing.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> Push<T>(T model, string messageId, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders, string partitionLabel, CancellationToken cancellationToken) where T : class
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, string partitionLabel, CancellationToken cancellationToken = default) where T : class
     {
         return Push<T>(null, model, messageId, waitForCommit, MergePartitionHeader(partitionLabel, messageHeaders), cancellationToken);
     }
@@ -608,7 +608,7 @@ public class QueueOperator : IDisposable
     /// <param name="partitionLabel">Partition label for partition-aware routing.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> Push<T>(string queue, T model, string messageId, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders, string partitionLabel, CancellationToken cancellationToken) where T : class
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, string partitionLabel, CancellationToken cancellationToken = default) where T : class
     {
         return Push<T>(queue, model, messageId, waitForCommit, MergePartitionHeader(partitionLabel, messageHeaders), cancellationToken);
     }
@@ -623,7 +623,7 @@ public class QueueOperator : IDisposable
     /// <param name="partitionLabel">Partition label for partition-aware routing.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> Push(string queue, MemoryStream content, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders, string partitionLabel, CancellationToken cancellationToken)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, string partitionLabel, CancellationToken cancellationToken = default)
     {
         return Push(queue, content, null, waitForCommit, MergePartitionHeader(partitionLabel, messageHeaders), cancellationToken);
     }
@@ -639,7 +639,7 @@ public class QueueOperator : IDisposable
     /// <param name="partitionLabel">Partition label for partition-aware routing.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> Push(string queue, MemoryStream content, string messageId, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders, string partitionLabel, CancellationToken cancellationToken)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, string partitionLabel, CancellationToken cancellationToken = default)
     {
         return Push(queue, content, messageId, waitForCommit, MergePartitionHeader(partitionLabel, messageHeaders), cancellationToken);
     }
@@ -654,7 +654,7 @@ public class QueueOperator : IDisposable
     /// <param name="partitionLabel">Partition label for partition-aware routing.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> Push(string queue, byte[] data, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders, string partitionLabel, CancellationToken cancellationToken)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, string partitionLabel, CancellationToken cancellationToken = default)
     {
         return Push(queue, new MemoryStream(data), null, waitForCommit, MergePartitionHeader(partitionLabel, messageHeaders), cancellationToken);
     }
@@ -670,7 +670,7 @@ public class QueueOperator : IDisposable
     /// <param name="partitionLabel">Partition label for partition-aware routing.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> Push(string queue, byte[] data, string messageId, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders, string partitionLabel, CancellationToken cancellationToken)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, string partitionLabel, CancellationToken cancellationToken = default)
     {
         return Push(queue, new MemoryStream(data), messageId, waitForCommit, MergePartitionHeader(partitionLabel, messageHeaders), cancellationToken);
     }
@@ -765,7 +765,7 @@ public class QueueOperator : IDisposable
     /// <param name="queue">Target queue name.</param>
     /// <param name="data">Raw byte array content to push.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> Push(string queue, byte[] data, CancellationToken cancellationToken)
+    public Task<HorseResult> Push(string queue, byte[] data, CancellationToken cancellationToken = default)
     {
         return Push(queue, new MemoryStream(data), null, false, null, cancellationToken);
     }
@@ -777,7 +777,7 @@ public class QueueOperator : IDisposable
     /// <param name="data">Raw byte array content to push.</param>
     /// <param name="waitForCommit">If true, waits for a commit response from the server.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> Push(string queue, byte[] data, bool waitForCommit, CancellationToken cancellationToken)
+    public Task<HorseResult> Push(string queue, byte[] data, bool waitForCommit, CancellationToken cancellationToken = default)
     {
         return Push(queue, new MemoryStream(data), null, waitForCommit, null, cancellationToken);
     }
@@ -791,7 +791,7 @@ public class QueueOperator : IDisposable
     /// <param name="messageHeaders">Additional message headers.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> Push(string queue, byte[] data, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken = default)
     {
         return Push(queue, new MemoryStream(data), null, waitForCommit, messageHeaders, cancellationToken);
     }
@@ -804,7 +804,7 @@ public class QueueOperator : IDisposable
     /// <param name="messageId">Explicit unique message id.</param>
     /// <param name="waitForCommit">If true, waits for a commit response from the server.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> Push(string queue, byte[] data, string messageId, bool waitForCommit, CancellationToken cancellationToken)
+    public Task<HorseResult> Push(string queue, byte[] data, string messageId, bool waitForCommit, CancellationToken cancellationToken = default)
     {
         return Push(queue, new MemoryStream(data), messageId, waitForCommit, null, cancellationToken);
     }
@@ -819,7 +819,7 @@ public class QueueOperator : IDisposable
     /// <param name="messageHeaders">Additional message headers.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> Push(string queue, byte[] data, string messageId, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken = default)
     {
         return Push(queue, new MemoryStream(data), messageId, waitForCommit, messageHeaders, cancellationToken);
     }
@@ -830,7 +830,7 @@ public class QueueOperator : IDisposable
     /// <param name="queue">Target queue name.</param>
     /// <param name="content">Raw binary content to push.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> Push(string queue, MemoryStream content, CancellationToken cancellationToken)
+    public Task<HorseResult> Push(string queue, MemoryStream content, CancellationToken cancellationToken = default)
     {
         return Push(queue, content, null, false, null, cancellationToken);
     }
@@ -842,7 +842,7 @@ public class QueueOperator : IDisposable
     /// <param name="content">Raw binary content to push.</param>
     /// <param name="waitForCommit">If true, waits for a commit response from the server.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> Push(string queue, MemoryStream content, bool waitForCommit, CancellationToken cancellationToken)
+    public Task<HorseResult> Push(string queue, MemoryStream content, bool waitForCommit, CancellationToken cancellationToken = default)
     {
         return Push(queue, content, null, waitForCommit, null, cancellationToken);
     }
@@ -856,7 +856,7 @@ public class QueueOperator : IDisposable
     /// <param name="messageHeaders">Additional message headers.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> Push(string queue, MemoryStream content, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken = default)
     {
         return Push(queue, content, null, waitForCommit, messageHeaders, cancellationToken);
     }
@@ -869,7 +869,7 @@ public class QueueOperator : IDisposable
     /// <param name="messageId">Explicit unique message id.</param>
     /// <param name="waitForCommit">If true, waits for a commit response from the server.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> Push(string queue, MemoryStream content, string messageId, bool waitForCommit, CancellationToken cancellationToken)
+    public Task<HorseResult> Push(string queue, MemoryStream content, string messageId, bool waitForCommit, CancellationToken cancellationToken = default)
     {
         return Push(queue, content, messageId, waitForCommit, null, cancellationToken);
     }
@@ -885,7 +885,7 @@ public class QueueOperator : IDisposable
     /// <param name="messageHeaders">Additional message headers.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public async Task<HorseResult> Push(string queue, MemoryStream content, string messageId, bool waitForCommit,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage(MessageType.QueueMessage, queue, 0);
         message.Content = content;
@@ -964,7 +964,7 @@ public class QueueOperator : IDisposable
     /// </summary>
     /// <param name="request">Pull request parameters (queue name, count, order, etc.).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<PullContainer> Pull(PullRequest request, CancellationToken cancellationToken)
+    public Task<PullContainer> Pull(PullRequest request, CancellationToken cancellationToken = default)
     {
         return Pull(request, null, cancellationToken);
     }
@@ -976,7 +976,7 @@ public class QueueOperator : IDisposable
     /// <param name="actionForEachMessage">Action invoked for each message. The int parameter is the 1-based index.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public async Task<PullContainer> Pull(PullRequest request, Func<int, HorseMessage, Task> actionForEachMessage,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage(MessageType.QueuePullRequest, request.Queue);
         message.SetMessageId(Client.UniqueIdGenerator.Create());
@@ -1024,7 +1024,7 @@ public class QueueOperator : IDisposable
     /// <param name="queue">Target queue name.</param>
     /// <param name="verifyResponse">If true, waits for the server to confirm the subscription.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> Subscribe(string queue, bool verifyResponse, CancellationToken cancellationToken)
+    public Task<HorseResult> Subscribe(string queue, bool verifyResponse, CancellationToken cancellationToken = default)
     {
         return Subscribe(queue, verifyResponse, null, cancellationToken);
     }
@@ -1037,7 +1037,7 @@ public class QueueOperator : IDisposable
     /// <param name="headers">Additional headers to include in the subscription request.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public async Task<HorseResult> Subscribe(string queue, bool verifyResponse,
-        IEnumerable<KeyValuePair<string, string>> headers, CancellationToken cancellationToken)
+        IEnumerable<KeyValuePair<string, string>> headers, CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Server;
@@ -1062,7 +1062,7 @@ public class QueueOperator : IDisposable
         string queue,
         string partitionLabel,
         bool verifyResponse,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         return SubscribePartitioned(queue, partitionLabel, verifyResponse, null, null, null, cancellationToken);
     }
@@ -1076,7 +1076,7 @@ public class QueueOperator : IDisposable
         bool verifyResponse,
         int? maxPartitions,
         int? subscribersPerPartition,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         return SubscribePartitioned(queue, partitionLabel, verifyResponse, maxPartitions, subscribersPerPartition, null, cancellationToken);
     }
@@ -1091,7 +1091,7 @@ public class QueueOperator : IDisposable
         int? maxPartitions,
         int? subscribersPerPartition,
         IEnumerable<KeyValuePair<string, string>> additionalHeaders,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         var headers = new List<KeyValuePair<string, string>>();
 
@@ -1116,7 +1116,7 @@ public class QueueOperator : IDisposable
     /// <param name="queue">Target queue name.</param>
     /// <param name="verifyResponse">If true, waits for the server to confirm the subscription.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> Subscribe<TConsumer, TModel>(string queue, bool verifyResponse, CancellationToken cancellationToken)
+    public Task<HorseResult> Subscribe<TConsumer, TModel>(string queue, bool verifyResponse, CancellationToken cancellationToken = default)
         where TConsumer : IQueueConsumer<TModel>
     {
         return Subscribe<TConsumer, TModel>(queue, verifyResponse, null, cancellationToken);
@@ -1130,7 +1130,7 @@ public class QueueOperator : IDisposable
     /// <param name="headers">Additional headers to include in the subscription request.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> Subscribe<TConsumer, TModel>(string queue, bool verifyResponse,
-        IEnumerable<KeyValuePair<string, string>> headers, CancellationToken cancellationToken)
+        IEnumerable<KeyValuePair<string, string>> headers, CancellationToken cancellationToken = default)
         where TConsumer : IQueueConsumer<TModel>
     {
         List<QueueConsumerRegistration> list = Registrations.ToList();
@@ -1165,7 +1165,7 @@ public class QueueOperator : IDisposable
     /// <param name="queue">Target queue name.</param>
     /// <param name="verifyResponse">If true, waits for the server to confirm the unsubscription.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public async Task<HorseResult> Unsubscribe(string queue, bool verifyResponse, CancellationToken cancellationToken)
+    public async Task<HorseResult> Unsubscribe(string queue, bool verifyResponse, CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Server;
@@ -1183,7 +1183,7 @@ public class QueueOperator : IDisposable
     /// Unsubscribes from all queues on the server.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> UnsubscribeFromAllQueues(CancellationToken cancellationToken)
+    public Task<HorseResult> UnsubscribeFromAllQueues(CancellationToken cancellationToken = default)
     {
         return Unsubscribe("*", true, cancellationToken);
     }

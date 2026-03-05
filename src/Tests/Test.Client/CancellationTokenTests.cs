@@ -31,11 +31,11 @@ internal static class TestState
 
     public static void Reset()
     {
-        LastQueueToken = default;
+        LastQueueToken = CancellationToken.None;
         QueueConsumeCount = 0;
-        LastDirectToken = default;
+        LastDirectToken = CancellationToken.None;
         DirectHandled = false;
-        LastChannelToken = default;
+        LastChannelToken = CancellationToken.None;
         ChannelHandleCount = 0;
         MultiTokens.Clear();
     }

@@ -135,7 +135,7 @@ internal class MessageTracker : IDisposable
     public async Task<HorseMessage> Track(HorseMessage message)
     {
         if (!message.WaitResponse || string.IsNullOrEmpty(message.MessageId))
-            return default;
+            return null;
 
         DateTime expiration = DateTime.UtcNow + _client.ResponseTimeout;
         ResponseMessageDescriptor descriptor = new ResponseMessageDescriptor(message, expiration);
