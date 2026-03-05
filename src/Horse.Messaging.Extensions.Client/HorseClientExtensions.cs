@@ -22,8 +22,15 @@ public static class HorseClientExtensions
     {
         /// <summary>Registers a <see cref="HorseClient"/> and its bus abstractions.</summary>
         /// <param name="configure">Delegate to configure the <see cref="HorseClientBuilder"/>.</param>
-        /// <param name="autoConnect">When <c>true</c> (default) the client connects on host start.</param>
-        public IServiceCollection AddHorse(Action<HorseClientBuilder> configure, bool autoConnect = true)
+        /// <param name="autoConnect">
+        /// When <c>true</c>, registers a hosted service that connects the client when the host starts.
+        /// Defaults to <c>false</c> because <see cref="IServiceCollection"/> alone does not guarantee
+        /// a Generic Host pipeline. If you are <b>not</b> using a Generic Host, leave this <c>false</c>
+        /// and call <c>provider.UseHorse()</c> after building the service provider.
+        /// When using <see cref="IHostBuilder"/> or <see cref="IHostApplicationBuilder"/> overloads
+        /// the default is <c>true</c>.
+        /// </param>
+        public IServiceCollection AddHorse(Action<HorseClientBuilder> configure, bool autoConnect = false)
         {
             HorseRegistrar.Add(services, configure, autoConnect);
             return services;
@@ -33,7 +40,7 @@ public static class HorseClientExtensions
         public IServiceCollection AddHorse(
             Action<HorseClientBuilder, IConfiguration> configure,
             IConfiguration configuration = null,
-            bool autoConnect = true)
+            bool autoConnect = false)
         {
             HorseRegistrar.Add(services, b => configure(b, configuration), autoConnect);
             return services;
@@ -43,7 +50,7 @@ public static class HorseClientExtensions
         public IServiceCollection AddHorse(
             Action<HorseClientBuilder, IHostEnvironment> configure,
             IHostEnvironment environment = null,
-            bool autoConnect = true)
+            bool autoConnect = false)
         {
             HorseRegistrar.Add(services, b => configure(b, environment), autoConnect);
             return services;
@@ -52,7 +59,7 @@ public static class HorseClientExtensions
         /// <summary>Registers a <see cref="HorseClient"/> with access to <see cref="IServiceCollection"/>.</summary>
         public IServiceCollection AddHorse(
             Action<HorseClientBuilder, IServiceCollection> configure,
-            bool autoConnect = true)
+            bool autoConnect = false)
         {
             HorseRegistrar.Add(services, b => configure(b, services), autoConnect);
             return services;
@@ -63,7 +70,7 @@ public static class HorseClientExtensions
             Action<HorseClientBuilder, IConfiguration, IHostEnvironment> configure,
             IConfiguration configuration = null,
             IHostEnvironment environment = null,
-            bool autoConnect = true)
+            bool autoConnect = false)
         {
             HorseRegistrar.Add(services, b => configure(b, configuration, environment), autoConnect);
             return services;
@@ -73,7 +80,7 @@ public static class HorseClientExtensions
         public IServiceCollection AddHorse(
             Action<HorseClientBuilder, IConfiguration, IServiceCollection> configure,
             IConfiguration configuration = null,
-            bool autoConnect = true)
+            bool autoConnect = false)
         {
             HorseRegistrar.Add(services, b => configure(b, configuration, services), autoConnect);
             return services;
@@ -83,7 +90,7 @@ public static class HorseClientExtensions
         public IServiceCollection AddHorse(
             Action<HorseClientBuilder, IHostEnvironment, IServiceCollection> configure,
             IHostEnvironment environment = null,
-            bool autoConnect = true)
+            bool autoConnect = false)
         {
             HorseRegistrar.Add(services, b => configure(b, environment, services), autoConnect);
             return services;
@@ -96,12 +103,15 @@ public static class HorseClientExtensions
         /// <param name="configure">Delegate that receives all host configuration objects.</param>
         /// <param name="configuration">Optional <see cref="IConfiguration"/> instance.</param>
         /// <param name="environment">Optional <see cref="IHostEnvironment"/> instance.</param>
-        /// <param name="autoConnect">When <c>true</c> (default) the client connects on host start.</param>
+        /// <param name="autoConnect">
+        /// When <c>true</c>, registers a hosted service that connects the client when the host starts.
+        /// Defaults to <c>false</c> on <see cref="IServiceCollection"/>. See <c>AddHorse</c> overload remarks.
+        /// </param>
         public IServiceCollection AddHorse(
             Action<HorseClientBuilder, IConfiguration, IHostEnvironment, IServiceCollection> configure,
             IConfiguration configuration = null,
             IHostEnvironment environment = null,
-            bool autoConnect = true)
+            bool autoConnect = false)
         {
             HorseRegistrar.Add(services, b => configure(b, configuration, environment, services), autoConnect);
             return services;
@@ -113,8 +123,11 @@ public static class HorseClientExtensions
         /// </summary>
         /// <typeparam name="TIdentifier">Marker type used to distinguish this connection.</typeparam>
         /// <param name="configure">Delegate to configure the builder.</param>
-        /// <param name="autoConnect">When <c>true</c> (default) the client connects on host start.</param>
-        public IServiceCollection AddHorse<TIdentifier>(Action<HorseClientBuilder> configure, bool autoConnect = true)
+        /// <param name="autoConnect">
+        /// When <c>true</c>, registers a hosted service that connects the client when the host starts.
+        /// Defaults to <c>false</c> on <see cref="IServiceCollection"/>. See <c>AddHorse</c> overload remarks.
+        /// </param>
+        public IServiceCollection AddHorse<TIdentifier>(Action<HorseClientBuilder> configure, bool autoConnect = false)
         {
             HorseRegistrar.Add<TIdentifier>(services, configure, autoConnect);
             return services;
@@ -126,8 +139,11 @@ public static class HorseClientExtensions
         /// </summary>
         /// <param name="key">The DI service key.</param>
         /// <param name="configure">Delegate to configure the builder.</param>
-        /// <param name="autoConnect">When <c>true</c> (default) the client connects on host start.</param>
-        public IServiceCollection AddKeyedHorse(string key, Action<HorseClientBuilder> configure, bool autoConnect = true)
+        /// <param name="autoConnect">
+        /// When <c>true</c>, registers a hosted service that connects the client when the host starts.
+        /// Defaults to <c>false</c> on <see cref="IServiceCollection"/>. See <c>AddHorse</c> overload remarks.
+        /// </param>
+        public IServiceCollection AddKeyedHorse(string key, Action<HorseClientBuilder> configure, bool autoConnect = false)
         {
             HorseRegistrar.AddKeyed(services, key, configure, autoConnect);
             return services;
@@ -139,8 +155,11 @@ public static class HorseClientExtensions
         /// <typeparam name="TIdentifier">Marker type used to distinguish this connection.</typeparam>
         /// <param name="key">The DI service key.</param>
         /// <param name="configure">Delegate to configure the builder.</param>
-        /// <param name="autoConnect">When <c>true</c> (default) the client connects on host start.</param>
-        public IServiceCollection AddKeyedHorse<TIdentifier>(string key, Action<HorseClientBuilder> configure, bool autoConnect = true)
+        /// <param name="autoConnect">
+        /// When <c>true</c>, registers a hosted service that connects the client when the host starts.
+        /// Defaults to <c>false</c> on <see cref="IServiceCollection"/>. See <c>AddHorse</c> overload remarks.
+        /// </param>
+        public IServiceCollection AddKeyedHorse<TIdentifier>(string key, Action<HorseClientBuilder> configure, bool autoConnect = false)
         {
             HorseRegistrar.AddKeyed<TIdentifier>(services, key, configure, autoConnect);
             return services;
