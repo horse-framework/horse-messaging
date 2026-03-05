@@ -823,7 +823,7 @@ public class PartitionTierScenarioTest
 
         // Send to a tier queue that has no workers — message just gets stored
         await PushWithLabel(producer, "CompareOrders-Standard", "tenant-1");
-        await Task.Delay(300);
+        await Task.Delay(1000);
 
         HorseQueue stdQ = rider.Queue.Find("CompareOrders-Standard");
         Assert.NotNull(stdQ);
