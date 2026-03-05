@@ -943,7 +943,7 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends a Horse message without waiting for a response.
     /// </summary>
-    public Task<HorseResult> SendAsync(HorseMessage message, CancellationToken cancellationToken)
+    public Task<HorseResult> SendAsync(HorseMessage message, CancellationToken cancellationToken = default)
     {
         return SendAsyncCore(message, null, cancellationToken);
     }
@@ -951,7 +951,7 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends a Horse message with additional headers without waiting for a response.
     /// </summary>
-    public Task<HorseResult> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders, CancellationToken cancellationToken)
+    public Task<HorseResult> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders, CancellationToken cancellationToken = default)
     {
         return SendAsyncCore(message, additionalHeaders, cancellationToken);
     }
@@ -959,7 +959,7 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends a Horse message and optionally waits for an acknowledge/commit response from the server.
     /// </summary>
-    public Task<HorseResult> SendAsync(HorseMessage message, bool waitForAcknowledge, CancellationToken cancellationToken)
+    public Task<HorseResult> SendAsync(HorseMessage message, bool waitForAcknowledge, CancellationToken cancellationToken = default)
     {
         if (!waitForAcknowledge)
             return SendAsyncCore(message, null, cancellationToken);
@@ -982,7 +982,7 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends a Horse message with additional headers and optionally waits for an acknowledge/commit response from the server.
     /// </summary>
-    public Task<HorseResult> SendAsync(HorseMessage message, bool waitForAcknowledge, IList<KeyValuePair<string, string>> additionalHeaders, CancellationToken cancellationToken)
+    public Task<HorseResult> SendAsync(HorseMessage message, bool waitForAcknowledge, IList<KeyValuePair<string, string>> additionalHeaders, CancellationToken cancellationToken = default)
     {
         if (additionalHeaders != null)
             foreach (KeyValuePair<string, string> pair in additionalHeaders)
@@ -1009,7 +1009,7 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends a Horse message, waits for a response and deserializes the response to <typeparamref name="T"/>.
     /// </summary>
-    public async Task<HorseModelResult<T>> SendAsync<T>(HorseMessage message, CancellationToken cancellationToken)
+    public async Task<HorseModelResult<T>> SendAsync<T>(HorseMessage message, CancellationToken cancellationToken = default)
     {
         message.WaitResponse = true;
 
@@ -1138,7 +1138,7 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends multiple Horse messages in a single envelope and waits for acknowledge.
     /// </summary>
-    public Task<HorseResult> SendEnvelopedAsync(IEnumerable<HorseMessage> messages, CancellationToken cancellationToken)
+    public Task<HorseResult> SendEnvelopedAsync(IEnumerable<HorseMessage> messages, CancellationToken cancellationToken = default)
     {
         return SendEnvelopedAsync(messages, null, null, cancellationToken);
     }
@@ -1146,7 +1146,7 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends multiple Horse messages in a single envelope to a specific target and waits for acknowledge.
     /// </summary>
-    public Task<HorseResult> SendEnvelopedAsync(IEnumerable<HorseMessage> messages, string envelopeTarget, CancellationToken cancellationToken)
+    public Task<HorseResult> SendEnvelopedAsync(IEnumerable<HorseMessage> messages, string envelopeTarget, CancellationToken cancellationToken = default)
     {
         return SendEnvelopedAsync(messages, envelopeTarget, null, cancellationToken);
     }
@@ -1155,7 +1155,7 @@ public class HorseClient : IDisposable
     /// Sends multiple Horse messages in a single envelope to a specific target with additional headers and waits for acknowledge.
     /// </summary>
     public Task<HorseResult> SendEnvelopedAsync(IEnumerable<HorseMessage> messages, string envelopeTarget,
-        IList<KeyValuePair<string, string>> additionalHeaders, CancellationToken cancellationToken)
+        IList<KeyValuePair<string, string>> additionalHeaders, CancellationToken cancellationToken = default)
     {
         HorseMessage envelope = new HorseMessage(MessageType.Envelope, string.IsNullOrEmpty(envelopeTarget) ? "*" : envelopeTarget, 0);
         envelope.SetSource(_clientId);
@@ -1188,7 +1188,7 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends a request to a plugin and receives the typed response.
     /// </summary>
-    public Task<HorseModelResult<T>> SendPluginAsync<T>(string pluginName, object requestModel, CancellationToken cancellationToken)
+    public Task<HorseModelResult<T>> SendPluginAsync<T>(string pluginName, object requestModel, CancellationToken cancellationToken = default)
     {
         return SendPluginAsync<T>(pluginName, requestModel, 0, cancellationToken);
     }
@@ -1196,7 +1196,7 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends a request to a plugin with a specific content type and receives the typed response.
     /// </summary>
-    public async Task<HorseModelResult<T>> SendPluginAsync<T>(string pluginName, object requestModel, ushort contentType, CancellationToken cancellationToken)
+    public async Task<HorseModelResult<T>> SendPluginAsync<T>(string pluginName, object requestModel, ushort contentType, CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage(MessageType.Plugin, pluginName, contentType);
         MessageSerializer.Serialize(message, requestModel);
@@ -1207,7 +1207,7 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends a response message to the request
     /// </summary>
-    public async Task<HorseResult> SendResponseAsync<TModel>(HorseMessage requestMessage, TModel responseModel, CancellationToken cancellationToken)
+    public async Task<HorseResult> SendResponseAsync<TModel>(HorseMessage requestMessage, TModel responseModel, CancellationToken cancellationToken = default)
     {
         HorseMessage response = requestMessage.CreateResponse(HorseResultCode.Ok);
         response.Serialize(responseModel, MessageSerializer);
@@ -1217,7 +1217,7 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends a response message to the request
     /// </summary>
-    public async Task<HorseResult> SendResponseAsync(HorseMessage requestMessage, string responseContent, CancellationToken cancellationToken)
+    public async Task<HorseResult> SendResponseAsync(HorseMessage requestMessage, string responseContent, CancellationToken cancellationToken = default)
     {
         HorseMessage response = requestMessage.CreateResponse(HorseResultCode.Ok);
         response.SetStringContent(responseContent);
@@ -1227,7 +1227,7 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends a response message to the request
     /// </summary>
-    public async Task<HorseResult> SendResponseAsync(HorseMessage requestMessage, Stream content, CancellationToken cancellationToken)
+    public async Task<HorseResult> SendResponseAsync(HorseMessage requestMessage, Stream content, CancellationToken cancellationToken = default)
     {
         HorseMessage response = requestMessage.CreateResponse(HorseResultCode.Ok);
         response.Content = new MemoryStream();
@@ -1238,7 +1238,7 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends the message and waits for response
     /// </summary>
-    public Task<HorseMessage> Request(HorseMessage message, CancellationToken cancellationToken)
+    public Task<HorseMessage> Request(HorseMessage message, CancellationToken cancellationToken = default)
     {
         message.WaitResponse = true;
 
@@ -1286,7 +1286,7 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends negative acknowledge message for the message.
     /// </summary>
-    public Task<HorseResult> SendNegativeAck(HorseMessage message, CancellationToken cancellationToken)
+    public Task<HorseResult> SendNegativeAck(HorseMessage message, CancellationToken cancellationToken = default)
     {
         return SendNegativeAck(message, HorseHeaders.NACK_REASON_NONE, cancellationToken);
     }
@@ -1294,7 +1294,7 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends negative acknowledge message for the message with a reason.
     /// </summary>
-    public async Task<HorseResult> SendNegativeAck(HorseMessage message, string reason, CancellationToken cancellationToken)
+    public async Task<HorseResult> SendNegativeAck(HorseMessage message, string reason, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(reason))
             reason = HorseHeaders.NACK_REASON_NONE;
@@ -1306,7 +1306,7 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends acknowledge message for the message.
     /// </summary>
-    public Task<HorseResult> SendAck(HorseMessage message, CancellationToken cancellationToken)
+    public Task<HorseResult> SendAck(HorseMessage message, CancellationToken cancellationToken = default)
     {
         HorseMessage ack = message.CreateAcknowledge();
         return SendAsync(ack, cancellationToken);
@@ -1315,7 +1315,7 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends success response for the message
     /// </summary>
-    public Task<HorseResult> SendResponse(HorseMessage message, CancellationToken cancellationToken)
+    public Task<HorseResult> SendResponse(HorseMessage message, CancellationToken cancellationToken = default)
     {
         return SendAck(message, cancellationToken);
     }
@@ -1323,7 +1323,7 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends negative response for the message
     /// </summary>
-    public Task<HorseResult> SendNegativeResponse(HorseMessage message, CancellationToken cancellationToken)
+    public Task<HorseResult> SendNegativeResponse(HorseMessage message, CancellationToken cancellationToken = default)
     {
         return SendNegativeAck(message, cancellationToken);
     }
@@ -1331,7 +1331,7 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends negative response for the message with a reason
     /// </summary>
-    public Task<HorseResult> SendNegativeResponse(HorseMessage message, string reason, CancellationToken cancellationToken)
+    public Task<HorseResult> SendNegativeResponse(HorseMessage message, string reason, CancellationToken cancellationToken = default)
     {
         return SendNegativeAck(message, reason, cancellationToken);
     }
