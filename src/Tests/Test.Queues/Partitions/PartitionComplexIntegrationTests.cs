@@ -906,7 +906,8 @@ public class PartitionComplexIntegrationTests
         await bus.Push("QueueA", new QueueAModel { TenantId = tenantId, Sequence = sequence }, false, null, label, CancellationToken.None);
     }
 
-    /// <summary>Backward-compatible overload — ignores queue name, delegates to PushModel.</summary>
+    /// <summary>Push a QueueAModel with partition label. Queue parameter is the server-side queue name
+    /// but messages always target "QueueA" (matching the QueueAModel attribute and worker subscription).</summary>
     private static Task PushLabeled(HorseClient producer, string queue, string label, string body = null)
         => PushModel(producer, label);
 

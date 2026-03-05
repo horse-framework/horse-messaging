@@ -153,14 +153,20 @@ public class HorseMessageTest
     }
 
     [Fact]
-    public void SetStringContent_NullOrEmpty_DoesNothing()
+    public void SetStringContent_Null_DoesNothing()
     {
         HorseMessage msg = new HorseMessage(MessageType.QueueMessage, "queue");
         msg.SetStringContent(null);
         Assert.Null(msg.Content);
+    }
 
+    [Fact]
+    public void SetStringContent_EmptyString_CreatesEmptyStream()
+    {
+        HorseMessage msg = new HorseMessage(MessageType.QueueMessage, "queue");
         msg.SetStringContent("");
-        Assert.Null(msg.Content);
+        Assert.NotNull(msg.Content);
+        Assert.Equal(0ul, msg.Length);
     }
 
     [Fact]
@@ -195,6 +201,17 @@ public class HorseMessageTest
         HorseMessage msg = new HorseMessage(MessageType.QueueMessage, "queue");
 
         Assert.Null(msg.GetStringContent());
+    }
+
+    [Fact]
+    public void GetStringContent_ReturnsEmpty_WhenLengthZero()
+    {
+        HorseMessage msg = new HorseMessage(MessageType.QueueMessage, "queue");
+        msg.SetStringContent("");
+
+        Assert.NotNull(msg.Content);
+        Assert.Equal(0ul, msg.Length);
+        Assert.Equal(string.Empty, msg.GetStringContent());
     }
 
     [Fact]

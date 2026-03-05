@@ -329,13 +329,13 @@ public class HorseMessageEdgeCaseTest
     }
 
     [Fact]
-    public void GetStringContent_ReturnsNull_WhenLengthZero()
+    public void GetStringContent_ReturnsEmpty_WhenContentExistsButLengthZero()
     {
         HorseMessage msg = new HorseMessage();
         msg.Content = new MemoryStream([]);
 
-        // Length is 0
-        Assert.Null(msg.GetStringContent());
+        // Content exists but is empty — returns empty string, not null
+        Assert.Equal(string.Empty, msg.GetStringContent());
     }
 
     [Fact]
