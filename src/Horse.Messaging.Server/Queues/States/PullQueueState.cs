@@ -115,8 +115,8 @@ internal class PullQueueState : IQueueState
         bool sendInfo = FindInfoRequest(request);
         bool lifo = FindLifoOrder(request);
 
-        if (_queue.Options.Acknowledge == QueueAckDecision.waitAcknowledge)
-            await _queue.waitAcknowledge();
+        if (_queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
+            await _queue.waitForAcknowledge();
 
         if (_queue.Rider.Cluster.Options.Mode == ClusterMode.Reliable)
             try

@@ -227,7 +227,7 @@ public class PartitionAckRoutingTest : IDisposable
     }
 
     /// <summary>
-    /// ACK routing with waitAcknowledge: the stricter mode where the queue
+    /// ACK routing with WaitForAcknowledge: the stricter mode where the queue
     /// blocks until ACK arrives.  Same expectation — HDB must be clean after ACK.
     /// </summary>
     [Fact]
@@ -237,7 +237,7 @@ public class PartitionAckRoutingTest : IDisposable
         string queueName = $"ack-wfa-{guid}";
         const string label = "tenant-ack-wfa";
 
-        var (rider, port, dataPath) = await CreatePersistentServer(queueName, QueueAckDecision.waitAcknowledge);
+        var (rider, port, dataPath) = await CreatePersistentServer(queueName, QueueAckDecision.WaitForAcknowledge);
         _dataPaths.Add(dataPath);
 
         HorseClient consumer = new HorseClient { AutoAcknowledge = true };

@@ -12,7 +12,7 @@ HorseRider rider = HorseRiderBuilder.Create()
     {
         // Set default options for all queues
         cfg.Options.Type = QueueType.RoundRobin;
-        cfg.Options.Acknowledge = QueueAckDecision.waitAcknowledge;
+        cfg.Options.Acknowledge = QueueAckDecision.waitForAcknowledge;
         cfg.Options.AutoQueueCreation = true;
 
         // Register a storage backend

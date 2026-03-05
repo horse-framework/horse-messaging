@@ -50,7 +50,7 @@ HorseRider rider = HorseRiderBuilder.Create()
     .ConfigureQueues(cfg =>
     {
         cfg.Options.Type = QueueType.RoundRobin;
-        cfg.Options.Acknowledge = QueueAckDecision.waitAcknowledge;
+        cfg.Options.Acknowledge = QueueAckDecision.waitForAcknowledge;
         cfg.UseMemoryQueues();
     })
     .Build();

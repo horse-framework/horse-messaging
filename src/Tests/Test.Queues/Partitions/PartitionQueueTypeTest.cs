@@ -23,7 +23,7 @@ namespace Test.Queues.Partitions;
 /// Also covers:
 ///   - SubscribersPerPartition = 1  vs > 1
 ///   - Push vs RoundRobin equivalence when SubscribersPerPartition = 1
-///   - Tenant isolation under waitAcknowledge
+///   - Tenant isolation under WaitForAcknowledge
 /// </summary>
 public class PartitionQueueTypeTest
 {
@@ -265,7 +265,7 @@ public class PartitionQueueTypeTest
     // ─────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// RoundRobin queue'da waitAcknowledge ile meşgul worker atlanır,
+    /// RoundRobin queue'da WaitForAcknowledge ile meşgul worker atlanır,
     /// mesaj başka worker'a gider. Partition'da ise mesaj aynı partition'da bekler.
     /// </summary>
     [Fact]
@@ -276,7 +276,7 @@ public class PartitionQueueTypeTest
         await riderRR.Queue.Create("cmp-rr-q", opts =>
         {
             opts.Type = QueueType.RoundRobin;
-            opts.Acknowledge = QueueAckDecision.waitAcknowledge;
+            opts.Acknowledge = QueueAckDecision.WaitForAcknowledge;
             opts.AcknowledgeTimeout = TimeSpan.FromSeconds(5);
         });
 
@@ -304,7 +304,7 @@ public class PartitionQueueTypeTest
         await riderPT.Queue.Create("cmp-pt-q", opts =>
         {
             opts.Type = QueueType.Push;
-            opts.Acknowledge = QueueAckDecision.waitAcknowledge;
+            opts.Acknowledge = QueueAckDecision.WaitForAcknowledge;
             opts.AcknowledgeTimeout = TimeSpan.FromSeconds(5);
             opts.Partition = new PartitionOptions
             {
@@ -506,12 +506,12 @@ public class PartitionQueueTypeTest
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // Tenant isolation under waitAcknowledge
+    // Tenant isolation under WaitForAcknowledge
     // ─────────────────────────────────────────────────────────────────
 
     /// <summary>
     /// Tenant izolasyonu: tenant-A'nın yavaş worker'ı tenant-B'yi etkilememeli.
-    /// waitAcknowledge ile tenant-A'nın partition beklerken tenant-B devam eder.
+    /// WaitForAcknowledge ile tenant-A'nın partition beklerken tenant-B devam eder.
     /// </summary>
     [Fact]
     public async Task TenantIsolation_SlowTenantA_DoesNotBlockTenantB()
@@ -520,7 +520,7 @@ public class PartitionQueueTypeTest
         await rider.Queue.Create("iso-q", opts =>
         {
             opts.Type = QueueType.Push;
-            opts.Acknowledge = QueueAckDecision.waitAcknowledge;
+            opts.Acknowledge = QueueAckDecision.WaitForAcknowledge;
             opts.AcknowledgeTimeout = TimeSpan.FromSeconds(10);
             opts.Partition = new PartitionOptions
             {

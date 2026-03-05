@@ -848,9 +848,9 @@ public class HorseQueue
             if (!(Status == QueueStatus.Running || Status == QueueStatus.OnlyConsume))
                 return;
 
-            bool waitForAck = Options.Type != QueueType.RoundRobin && Options.Acknowledge == QueueAckDecision.waitAcknowledge;
+            bool waitForAck = Options.Type != QueueType.RoundRobin && Options.Acknowledge == QueueAckDecision.WaitForAcknowledge;
             if (waitForAck)
-                await waitAcknowledge();
+                await waitForAcknowledge();
 
             QueueMessage message = null;
 
@@ -870,7 +870,7 @@ public class HorseQueue
                     return;
                 }
 
-                if (Options.Acknowledge == QueueAckDecision.waitAcknowledge && !message.Message.WaitResponse)
+                if (Options.Acknowledge == QueueAckDecision.WaitForAcknowledge && !message.Message.WaitResponse)
                     message.Message.WaitResponse = true;
 
                 PushResult pr = await State.Push(message);
@@ -1219,7 +1219,7 @@ public class HorseQueue
     /// <summary>
     /// When wait for acknowledge is active, this method locks the queue until acknowledge is received
     /// </summary>
-    internal async Task waitAcknowledge()
+    internal async Task waitForAcknowledge()
     {
         TaskCompletionSource<bool> source = _acknowledgeCallback;
         if (source != null && !source.Task.IsCompleted)

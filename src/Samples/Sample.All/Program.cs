@@ -115,7 +115,7 @@ internal class Test2Event
     public string Foo { get; set; } = "Foo2";
 }
 
-[Acknowledge(QueueAckDecision.waitAcknowledge)]
+[Acknowledge(QueueAckDecision.waitForAcknowledge)]
 internal class Test3Event
 {
     public string Foo { get; set; } = "Foo3";

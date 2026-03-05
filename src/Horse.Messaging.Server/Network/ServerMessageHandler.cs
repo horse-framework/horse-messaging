@@ -498,7 +498,7 @@ internal class ServerMessageHandler : INetworkMessageHandler
             string ack = "none";
             if (queue.Options.Acknowledge == QueueAckDecision.JustRequest)
                 ack = "just";
-            else if (queue.Options.Acknowledge == QueueAckDecision.waitAcknowledge)
+            else if (queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
                 ack = "wait";
 
             list.Add(new QueueInformation

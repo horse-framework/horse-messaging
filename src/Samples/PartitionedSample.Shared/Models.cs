@@ -20,7 +20,7 @@ public class Test2Event
     public string Foo { get; set; } = "Foo2";
 }
 
-[Acknowledge(QueueAckDecision.waitAcknowledge)]
+[Acknowledge(QueueAckDecision.WaitForAcknowledge)]
 public class Test3Event
 {
     public string Foo { get; set; } = "Foo3";

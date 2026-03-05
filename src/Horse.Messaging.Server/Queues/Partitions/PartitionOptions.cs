@@ -48,7 +48,7 @@ public class PartitionOptions
     /// <para>
     /// Each partition has its own message processing loop, so a worker assigned to
     /// multiple partitions processes messages from each partition independently and concurrently.
-    /// With <c>waitAcknowledge</c>, per-partition FIFO ordering is still guaranteed.
+    /// With <c>WaitForAcknowledge</c>, per-partition FIFO ordering is still guaranteed.
     /// </para>
     /// </summary>
     public int MaxPartitionsPerWorker { get; set; } = 1;

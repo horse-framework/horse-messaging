@@ -77,7 +77,7 @@ public class OrderConsumer : IQueueConsumer<OrderModel>
    }
    ```
 3. The clone's target is set to the error queue name.
-4. The clone is sent to the server via `SendAsync` with `waitAcknowledge: true`.
+4. The clone is sent to the server via `SendAsync` with `waitForAcknowledge: true`.
 5. **If the send succeeds:** An ACK is sent for the original message (removing it from the source queue).
 6. **If the send fails:** A NACK is sent for the original message (if `[AutoNack]` is configured), so the server can put it back for retry.
 
@@ -420,7 +420,7 @@ q.UsePersistentQueues(db => db.UseInstantFlush(), useRedelivery: true);
 await rider.Queue.Create("orders", o =>
 {
     o.PutBack = PutBackDecision.Regular;
-    o.Acknowledge = QueueAckDecision.waitAcknowledge;
+    o.Acknowledge = QueueAckDecision.waitForAcknowledge;
 });
 ```
 

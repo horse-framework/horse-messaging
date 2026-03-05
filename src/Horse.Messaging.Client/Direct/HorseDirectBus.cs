@@ -36,75 +36,75 @@ public class HorseDirectBus : IHorseDirectBus
     // ──────────────────────────────────────────────────────────────────
 
     /// <inheritdoc />
-    public Task<HorseResult> SendAsync(string target, ushort contentType, MemoryStream content, bool waitAcknowledge, CancellationToken cancellationToken)
-        => _client.Direct.SendAsync(target, contentType, content, waitAcknowledge, cancellationToken);
+    public Task<HorseResult> SendAsync(string target, ushort contentType, MemoryStream content, bool waitForAcknowledge, CancellationToken cancellationToken)
+        => _client.Direct.SendAsync(target, contentType, content, waitForAcknowledge, cancellationToken);
 
     /// <inheritdoc />
-    public Task<HorseResult> SendAsync(string target, ushort contentType, MemoryStream content, bool waitAcknowledge,
+    public Task<HorseResult> SendAsync(string target, ushort contentType, MemoryStream content, bool waitForAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
-        => _client.Direct.SendAsync(target, contentType, content, waitAcknowledge, messageHeaders, cancellationToken);
+        => _client.Direct.SendAsync(target, contentType, content, waitForAcknowledge, messageHeaders, cancellationToken);
 
     /// <inheritdoc />
-    public Task<HorseResult> SendByName(string name, ushort contentType, MemoryStream content, bool waitAcknowledge, CancellationToken cancellationToken)
-        => _client.Direct.SendByName(name, contentType, content, waitAcknowledge, cancellationToken);
+    public Task<HorseResult> SendByName(string name, ushort contentType, MemoryStream content, bool waitForAcknowledge, CancellationToken cancellationToken)
+        => _client.Direct.SendByName(name, contentType, content, waitForAcknowledge, cancellationToken);
 
     /// <inheritdoc />
-    public Task<HorseResult> SendByName(string name, ushort contentType, MemoryStream content, bool waitAcknowledge,
+    public Task<HorseResult> SendByName(string name, ushort contentType, MemoryStream content, bool waitForAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
-        => _client.Direct.SendByName(name, contentType, content, waitAcknowledge, messageHeaders, cancellationToken);
+        => _client.Direct.SendByName(name, contentType, content, waitForAcknowledge, messageHeaders, cancellationToken);
 
     /// <inheritdoc />
-    public Task<HorseResult> SendByType(string type, ushort contentType, MemoryStream content, bool waitAcknowledge, CancellationToken cancellationToken)
-        => _client.Direct.SendByType(type, contentType, content, waitAcknowledge, cancellationToken);
+    public Task<HorseResult> SendByType(string type, ushort contentType, MemoryStream content, bool waitForAcknowledge, CancellationToken cancellationToken)
+        => _client.Direct.SendByType(type, contentType, content, waitForAcknowledge, cancellationToken);
 
     /// <inheritdoc />
-    public Task<HorseResult> SendByType(string type, ushort contentType, MemoryStream content, bool waitAcknowledge,
+    public Task<HorseResult> SendByType(string type, ushort contentType, MemoryStream content, bool waitForAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
-        => _client.Direct.SendByType(type, contentType, content, waitAcknowledge, messageHeaders, cancellationToken);
+        => _client.Direct.SendByType(type, contentType, content, waitForAcknowledge, messageHeaders, cancellationToken);
 
     // ──────────────────────────────────────────────────────────────────
     // Send — model
     // ──────────────────────────────────────────────────────────────────
 
     /// <inheritdoc />
-    public Task<HorseResult> SendByName<T>(string name, ushort contentType, T model, bool waitAcknowledge, CancellationToken cancellationToken)
-        => _client.Direct.SendByName(name, contentType, model, waitAcknowledge, cancellationToken);
+    public Task<HorseResult> SendByName<T>(string name, ushort contentType, T model, bool waitForAcknowledge, CancellationToken cancellationToken)
+        => _client.Direct.SendByName(name, contentType, model, waitForAcknowledge, cancellationToken);
 
     /// <inheritdoc />
-    public Task<HorseResult> SendByName<T>(string name, ushort contentType, T model, bool waitAcknowledge,
+    public Task<HorseResult> SendByName<T>(string name, ushort contentType, T model, bool waitForAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
-        => _client.Direct.SendByName(name, contentType, model, waitAcknowledge, messageHeaders, cancellationToken);
+        => _client.Direct.SendByName(name, contentType, model, waitForAcknowledge, messageHeaders, cancellationToken);
 
     /// <inheritdoc />
-    public Task<HorseResult> SendByType<T>(string type, ushort contentType, T model, bool waitAcknowledge, CancellationToken cancellationToken)
-        => _client.Direct.SendByType(type, contentType, model, waitAcknowledge, cancellationToken);
+    public Task<HorseResult> SendByType<T>(string type, ushort contentType, T model, bool waitForAcknowledge, CancellationToken cancellationToken)
+        => _client.Direct.SendByType(type, contentType, model, waitForAcknowledge, cancellationToken);
 
     /// <inheritdoc />
-    public Task<HorseResult> SendByType<T>(string type, ushort contentType, T model, bool waitAcknowledge,
+    public Task<HorseResult> SendByType<T>(string type, ushort contentType, T model, bool waitForAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
-        => _client.Direct.SendByType(type, contentType, model, waitAcknowledge, messageHeaders, cancellationToken);
+        => _client.Direct.SendByType(type, contentType, model, waitForAcknowledge, messageHeaders, cancellationToken);
 
     /// <inheritdoc />
-    public Task<HorseResult> SendById<T>(string id, ushort contentType, T model, bool waitAcknowledge, CancellationToken cancellationToken)
-        => _client.Direct.SendById(id, contentType, model, waitAcknowledge, cancellationToken);
+    public Task<HorseResult> SendById<T>(string id, ushort contentType, T model, bool waitForAcknowledge, CancellationToken cancellationToken)
+        => _client.Direct.SendById(id, contentType, model, waitForAcknowledge, cancellationToken);
 
     /// <inheritdoc />
-    public Task<HorseResult> SendById<T>(string id, ushort contentType, T model, bool waitAcknowledge,
+    public Task<HorseResult> SendById<T>(string id, ushort contentType, T model, bool waitForAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
-        => _client.Direct.SendById(id, contentType, model, waitAcknowledge, messageHeaders, cancellationToken);
+        => _client.Direct.SendById(id, contentType, model, waitForAcknowledge, messageHeaders, cancellationToken);
 
     /// <inheritdoc />
     public Task<HorseResult> Send<T>(T model, CancellationToken cancellationToken)
         => _client.Direct.Send(model, cancellationToken);
 
     /// <inheritdoc />
-    public Task<HorseResult> Send<T>(T model, bool waitAcknowledge, CancellationToken cancellationToken)
-        => _client.Direct.Send(model, waitAcknowledge, cancellationToken);
+    public Task<HorseResult> Send<T>(T model, bool waitForAcknowledge, CancellationToken cancellationToken)
+        => _client.Direct.Send(model, waitForAcknowledge, cancellationToken);
 
     /// <inheritdoc />
-    public Task<HorseResult> Send<T>(T model, bool waitAcknowledge,
+    public Task<HorseResult> Send<T>(T model, bool waitForAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
-        => _client.Direct.Send(model, waitAcknowledge, messageHeaders, cancellationToken);
+        => _client.Direct.Send(model, waitForAcknowledge, messageHeaders, cancellationToken);
 
     // ──────────────────────────────────────────────────────────────────
     // Request — raw content

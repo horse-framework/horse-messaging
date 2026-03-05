@@ -227,7 +227,7 @@ q.UsePersistentQueues(db => db.UseInstantFlush(), useRedelivery: true);
 await rider.Queue.Create("orders", o =>
 {
     o.PutBack = PutBackDecision.Regular;
-    o.Acknowledge = QueueAckDecision.waitAcknowledge;
+    o.Acknowledge = QueueAckDecision.waitForAcknowledge;
 });
 ```
 

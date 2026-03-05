@@ -13,7 +13,7 @@ public class QueueOptions
     /// <summary>
     /// Acknowledge decision. Default is just request.
     /// </summary>
-    public QueueAckDecision Acknowledge { get; set; } = QueueAckDecision.waitAcknowledge;
+    public QueueAckDecision Acknowledge { get; set; } = QueueAckDecision.WaitForAcknowledge;
 
     /// <summary>
     /// Option for when the commit message is sent to producer

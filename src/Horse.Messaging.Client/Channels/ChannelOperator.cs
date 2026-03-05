@@ -280,11 +280,11 @@ public class ChannelOperator
     /// Publishes a model message to a channel. Channel name is resolved from the model's attribute.
     /// </summary>
     /// <param name="jsonObject">The model object to publish.</param>
-    /// <param name="waitAcknowledge">If true, waits for server acknowledgement.</param>
+    /// <param name="waitForAcknowledge">If true, waits for server acknowledgement.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> Publish(object jsonObject, bool waitAcknowledge, CancellationToken cancellationToken)
+    public Task<HorseResult> Publish(object jsonObject, bool waitForAcknowledge, CancellationToken cancellationToken)
     {
-        return Publish(null, jsonObject, waitAcknowledge, null, cancellationToken);
+        return Publish(null, jsonObject, waitForAcknowledge, null, cancellationToken);
     }
 
     /// <summary>
@@ -292,11 +292,11 @@ public class ChannelOperator
     /// </summary>
     /// <param name="channel">Target channel name.</param>
     /// <param name="jsonObject">The model object to publish.</param>
-    /// <param name="waitAcknowledge">If true, waits for server acknowledgement.</param>
+    /// <param name="waitForAcknowledge">If true, waits for server acknowledgement.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> Publish(string channel, object jsonObject, bool waitAcknowledge, CancellationToken cancellationToken)
+    public Task<HorseResult> Publish(string channel, object jsonObject, bool waitForAcknowledge, CancellationToken cancellationToken)
     {
-        return Publish(channel, jsonObject, waitAcknowledge, null, cancellationToken);
+        return Publish(channel, jsonObject, waitForAcknowledge, null, cancellationToken);
     }
 
     /// <summary>
@@ -304,10 +304,10 @@ public class ChannelOperator
     /// </summary>
     /// <param name="channel">Target channel name.</param>
     /// <param name="jsonObject">The model object to publish.</param>
-    /// <param name="waitAcknowledge">If true, waits for server acknowledgement.</param>
+    /// <param name="waitForAcknowledge">If true, waits for server acknowledgement.</param>
     /// <param name="messageHeaders">Additional message headers.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public async Task<HorseResult> Publish(string channel, object jsonObject, bool waitAcknowledge,
+    public async Task<HorseResult> Publish(string channel, object jsonObject, bool waitForAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
     {
         ChannelTypeDescriptor descriptor = _descriptorContainer.GetDescriptor(jsonObject.GetType());
@@ -316,7 +316,7 @@ public class ChannelOperator
             descriptor.Name = channel;
 
         HorseMessage message = descriptor.CreateMessage();
-        message.WaitResponse = waitAcknowledge;
+        message.WaitResponse = waitForAcknowledge;
 
         if (messageHeaders != null)
             foreach (KeyValuePair<string, string> pair in messageHeaders)
@@ -324,10 +324,10 @@ public class ChannelOperator
 
         message.Serialize(jsonObject, Client.MessageSerializer);
 
-        if (string.IsNullOrEmpty(message.MessageId) && waitAcknowledge)
+        if (string.IsNullOrEmpty(message.MessageId) && waitForAcknowledge)
             message.SetMessageId(Client.UniqueIdGenerator.Create());
 
-        return await Client.WaitResponse(message, waitAcknowledge, cancellationToken);
+        return await Client.WaitResponse(message, waitForAcknowledge, cancellationToken);
     }
 
     /// <summary>
@@ -346,11 +346,11 @@ public class ChannelOperator
     /// </summary>
     /// <param name="channel">Target channel name.</param>
     /// <param name="content">String content to publish.</param>
-    /// <param name="waitAcknowledge">If true, waits for server acknowledgement.</param>
+    /// <param name="waitForAcknowledge">If true, waits for server acknowledgement.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> PublishString(string channel, string content, bool waitAcknowledge, CancellationToken cancellationToken)
+    public Task<HorseResult> PublishString(string channel, string content, bool waitForAcknowledge, CancellationToken cancellationToken)
     {
-        return PublishData(channel, new MemoryStream(Encoding.UTF8.GetBytes(content)), waitAcknowledge, null, cancellationToken);
+        return PublishData(channel, new MemoryStream(Encoding.UTF8.GetBytes(content)), waitForAcknowledge, null, cancellationToken);
     }
 
     /// <summary>
@@ -358,13 +358,13 @@ public class ChannelOperator
     /// </summary>
     /// <param name="channel">Target channel name.</param>
     /// <param name="content">String content to publish.</param>
-    /// <param name="waitAcknowledge">If true, waits for server acknowledgement.</param>
+    /// <param name="waitForAcknowledge">If true, waits for server acknowledgement.</param>
     /// <param name="messageHeaders">Additional message headers.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> PublishString(string channel, string content, bool waitAcknowledge,
+    public Task<HorseResult> PublishString(string channel, string content, bool waitForAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
     {
-        return PublishData(channel, new MemoryStream(Encoding.UTF8.GetBytes(content)), waitAcknowledge, messageHeaders, cancellationToken);
+        return PublishData(channel, new MemoryStream(Encoding.UTF8.GetBytes(content)), waitForAcknowledge, messageHeaders, cancellationToken);
     }
 
     /// <summary>
@@ -383,11 +383,11 @@ public class ChannelOperator
     /// </summary>
     /// <param name="channel">Target channel name.</param>
     /// <param name="content">Binary content to publish.</param>
-    /// <param name="waitAcknowledge">If true, waits for server acknowledgement.</param>
+    /// <param name="waitForAcknowledge">If true, waits for server acknowledgement.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> PublishData(string channel, MemoryStream content, bool waitAcknowledge, CancellationToken cancellationToken)
+    public Task<HorseResult> PublishData(string channel, MemoryStream content, bool waitForAcknowledge, CancellationToken cancellationToken)
     {
-        return PublishData(channel, content, waitAcknowledge, null, cancellationToken);
+        return PublishData(channel, content, waitForAcknowledge, null, cancellationToken);
     }
 
     /// <summary>
@@ -395,10 +395,10 @@ public class ChannelOperator
     /// </summary>
     /// <param name="channel">Target channel name.</param>
     /// <param name="content">Binary content to publish.</param>
-    /// <param name="waitAcknowledge">If true, waits for server acknowledgement.</param>
+    /// <param name="waitForAcknowledge">If true, waits for server acknowledgement.</param>
     /// <param name="messageHeaders">Additional message headers.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public Task<HorseResult> PublishData(string channel, MemoryStream content, bool waitAcknowledge,
+    public Task<HorseResult> PublishData(string channel, MemoryStream content, bool waitForAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
     {
         HorseMessage message = new HorseMessage(MessageType.Channel, channel, KnownContentTypes.ChannelPush);
@@ -408,7 +408,7 @@ public class ChannelOperator
             foreach (KeyValuePair<string, string> pair in messageHeaders)
                 message.AddHeader(pair.Key, pair.Value);
 
-        return Client.WaitResponse(message, waitAcknowledge, cancellationToken);
+        return Client.WaitResponse(message, waitForAcknowledge, cancellationToken);
     }
 
     #endregion

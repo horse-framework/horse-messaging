@@ -42,7 +42,7 @@ public class RetryTrackerAccessor(RetryTracker tracker)
 
 [QueueName("retry-q")]
 [QueueType(MessagingQueueType.RoundRobin)]
-[Acknowledge(QueueAckDecision.waitAcknowledge)]
+[Acknowledge(QueueAckDecision.WaitForAcknowledge)]
 public class RetryModel
 {
     public string Data { get; set; }
@@ -248,7 +248,7 @@ public class RetryTest
         return await QueueTestServer.Create(mode, o =>
         {
             o.Type = QueueType.RoundRobin;
-            o.Acknowledge = QueueAckDecision.waitAcknowledge;
+            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
             o.CommitWhen = CommitWhen.AfterReceived;
             o.AutoQueueCreation = true;
             o.AcknowledgeTimeout = TimeSpan.FromSeconds(10);

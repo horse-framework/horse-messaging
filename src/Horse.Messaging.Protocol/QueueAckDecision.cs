@@ -23,5 +23,5 @@ public enum QueueAckDecision
     /// Queue waits for acknowledge before send next message to next consumer
     /// </summary>
     [Description("wait-for-ack")]
-    waitAcknowledge
+    WaitForAcknowledge
 }

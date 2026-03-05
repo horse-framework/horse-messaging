@@ -24,9 +24,9 @@ public interface IHorseDirectBus : IHorseConnection
     /// <param name="target">Target client id, name, or type depending on resolution.</param>
     /// <param name="contentType">Application-defined content type code.</param>
     /// <param name="content">Raw binary content.</param>
-    /// <param name="waitAcknowledge">If true, waits for the target to acknowledge receipt.</param>
+    /// <param name="waitForAcknowledge">If true, waits for the target to acknowledge receipt.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task<HorseResult> SendAsync(string target, ushort contentType, MemoryStream content, bool waitAcknowledge, CancellationToken cancellationToken);
+    Task<HorseResult> SendAsync(string target, ushort contentType, MemoryStream content, bool waitForAcknowledge, CancellationToken cancellationToken);
 
     /// <summary>
     /// Sends raw binary content directly to a target client with custom headers.
@@ -34,10 +34,10 @@ public interface IHorseDirectBus : IHorseConnection
     /// <param name="target">Target client id, name, or type depending on resolution.</param>
     /// <param name="contentType">Application-defined content type code.</param>
     /// <param name="content">Raw binary content.</param>
-    /// <param name="waitAcknowledge">If true, waits for the target to acknowledge receipt.</param>
+    /// <param name="waitForAcknowledge">If true, waits for the target to acknowledge receipt.</param>
     /// <param name="messageHeaders">Additional message headers.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task<HorseResult> SendAsync(string target, ushort contentType, MemoryStream content, bool waitAcknowledge,
+    Task<HorseResult> SendAsync(string target, ushort contentType, MemoryStream content, bool waitForAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken);
 
     /// <summary>
@@ -46,9 +46,9 @@ public interface IHorseDirectBus : IHorseConnection
     /// <param name="name">Target client name.</param>
     /// <param name="contentType">Application-defined content type code.</param>
     /// <param name="content">Raw binary content.</param>
-    /// <param name="waitAcknowledge">If true, waits for the target to acknowledge receipt.</param>
+    /// <param name="waitForAcknowledge">If true, waits for the target to acknowledge receipt.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task<HorseResult> SendByName(string name, ushort contentType, MemoryStream content, bool waitAcknowledge, CancellationToken cancellationToken);
+    Task<HorseResult> SendByName(string name, ushort contentType, MemoryStream content, bool waitForAcknowledge, CancellationToken cancellationToken);
 
     /// <summary>
     /// Sends raw binary content to a client resolved by name, with custom headers.
@@ -56,10 +56,10 @@ public interface IHorseDirectBus : IHorseConnection
     /// <param name="name">Target client name.</param>
     /// <param name="contentType">Application-defined content type code.</param>
     /// <param name="content">Raw binary content.</param>
-    /// <param name="waitAcknowledge">If true, waits for the target to acknowledge receipt.</param>
+    /// <param name="waitForAcknowledge">If true, waits for the target to acknowledge receipt.</param>
     /// <param name="messageHeaders">Additional message headers.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task<HorseResult> SendByName(string name, ushort contentType, MemoryStream content, bool waitAcknowledge,
+    Task<HorseResult> SendByName(string name, ushort contentType, MemoryStream content, bool waitForAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken);
 
     /// <summary>
@@ -68,9 +68,9 @@ public interface IHorseDirectBus : IHorseConnection
     /// <param name="type">Target client type.</param>
     /// <param name="contentType">Application-defined content type code.</param>
     /// <param name="content">Raw binary content.</param>
-    /// <param name="waitAcknowledge">If true, waits for the target to acknowledge receipt.</param>
+    /// <param name="waitForAcknowledge">If true, waits for the target to acknowledge receipt.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task<HorseResult> SendByType(string type, ushort contentType, MemoryStream content, bool waitAcknowledge, CancellationToken cancellationToken);
+    Task<HorseResult> SendByType(string type, ushort contentType, MemoryStream content, bool waitForAcknowledge, CancellationToken cancellationToken);
 
     /// <summary>
     /// Sends raw binary content to a client resolved by type, with custom headers.
@@ -78,10 +78,10 @@ public interface IHorseDirectBus : IHorseConnection
     /// <param name="type">Target client type.</param>
     /// <param name="contentType">Application-defined content type code.</param>
     /// <param name="content">Raw binary content.</param>
-    /// <param name="waitAcknowledge">If true, waits for the target to acknowledge receipt.</param>
+    /// <param name="waitForAcknowledge">If true, waits for the target to acknowledge receipt.</param>
     /// <param name="messageHeaders">Additional message headers.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task<HorseResult> SendByType(string type, ushort contentType, MemoryStream content, bool waitAcknowledge,
+    Task<HorseResult> SendByType(string type, ushort contentType, MemoryStream content, bool waitForAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken);
 
     #endregion
@@ -94,9 +94,9 @@ public interface IHorseDirectBus : IHorseConnection
     /// <param name="name">Target client name.</param>
     /// <param name="contentType">Application-defined content type code.</param>
     /// <param name="model">The message model.</param>
-    /// <param name="waitAcknowledge">If true, waits for the target to acknowledge receipt.</param>
+    /// <param name="waitForAcknowledge">If true, waits for the target to acknowledge receipt.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task<HorseResult> SendByName<T>(string name, ushort contentType, T model, bool waitAcknowledge, CancellationToken cancellationToken);
+    Task<HorseResult> SendByName<T>(string name, ushort contentType, T model, bool waitForAcknowledge, CancellationToken cancellationToken);
 
     /// <summary>
     /// Sends a model to a client resolved by name, with custom headers.
@@ -104,10 +104,10 @@ public interface IHorseDirectBus : IHorseConnection
     /// <param name="name">Target client name.</param>
     /// <param name="contentType">Application-defined content type code.</param>
     /// <param name="model">The message model.</param>
-    /// <param name="waitAcknowledge">If true, waits for the target to acknowledge receipt.</param>
+    /// <param name="waitForAcknowledge">If true, waits for the target to acknowledge receipt.</param>
     /// <param name="messageHeaders">Additional message headers.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task<HorseResult> SendByName<T>(string name, ushort contentType, T model, bool waitAcknowledge,
+    Task<HorseResult> SendByName<T>(string name, ushort contentType, T model, bool waitForAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken);
 
     /// <summary>
@@ -116,9 +116,9 @@ public interface IHorseDirectBus : IHorseConnection
     /// <param name="type">Target client type.</param>
     /// <param name="contentType">Application-defined content type code.</param>
     /// <param name="model">The message model.</param>
-    /// <param name="waitAcknowledge">If true, waits for the target to acknowledge receipt.</param>
+    /// <param name="waitForAcknowledge">If true, waits for the target to acknowledge receipt.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task<HorseResult> SendByType<T>(string type, ushort contentType, T model, bool waitAcknowledge, CancellationToken cancellationToken);
+    Task<HorseResult> SendByType<T>(string type, ushort contentType, T model, bool waitForAcknowledge, CancellationToken cancellationToken);
 
     /// <summary>
     /// Sends a model to a client resolved by type, with custom headers.
@@ -126,10 +126,10 @@ public interface IHorseDirectBus : IHorseConnection
     /// <param name="type">Target client type.</param>
     /// <param name="contentType">Application-defined content type code.</param>
     /// <param name="model">The message model.</param>
-    /// <param name="waitAcknowledge">If true, waits for the target to acknowledge receipt.</param>
+    /// <param name="waitForAcknowledge">If true, waits for the target to acknowledge receipt.</param>
     /// <param name="messageHeaders">Additional message headers.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task<HorseResult> SendByType<T>(string type, ushort contentType, T model, bool waitAcknowledge,
+    Task<HorseResult> SendByType<T>(string type, ushort contentType, T model, bool waitForAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken);
 
     /// <summary>
@@ -138,9 +138,9 @@ public interface IHorseDirectBus : IHorseConnection
     /// <param name="id">Target client unique id.</param>
     /// <param name="contentType">Application-defined content type code.</param>
     /// <param name="model">The message model.</param>
-    /// <param name="waitAcknowledge">If true, waits for the target to acknowledge receipt.</param>
+    /// <param name="waitForAcknowledge">If true, waits for the target to acknowledge receipt.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task<HorseResult> SendById<T>(string id, ushort contentType, T model, bool waitAcknowledge, CancellationToken cancellationToken);
+    Task<HorseResult> SendById<T>(string id, ushort contentType, T model, bool waitForAcknowledge, CancellationToken cancellationToken);
 
     /// <summary>
     /// Sends a model to a client resolved by id, with custom headers.
@@ -148,10 +148,10 @@ public interface IHorseDirectBus : IHorseConnection
     /// <param name="id">Target client unique id.</param>
     /// <param name="contentType">Application-defined content type code.</param>
     /// <param name="model">The message model.</param>
-    /// <param name="waitAcknowledge">If true, waits for the target to acknowledge receipt.</param>
+    /// <param name="waitForAcknowledge">If true, waits for the target to acknowledge receipt.</param>
     /// <param name="messageHeaders">Additional message headers.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task<HorseResult> SendById<T>(string id, ushort contentType, T model, bool waitAcknowledge,
+    Task<HorseResult> SendById<T>(string id, ushort contentType, T model, bool waitForAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken);
 
     /// <summary>
@@ -165,18 +165,18 @@ public interface IHorseDirectBus : IHorseConnection
     /// Sends a model to a target resolved from the model's DirectTarget attribute.
     /// </summary>
     /// <param name="model">The message model with DirectTarget attribute.</param>
-    /// <param name="waitAcknowledge">If true, waits for the target to acknowledge receipt.</param>
+    /// <param name="waitForAcknowledge">If true, waits for the target to acknowledge receipt.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task<HorseResult> Send<T>(T model, bool waitAcknowledge, CancellationToken cancellationToken);
+    Task<HorseResult> Send<T>(T model, bool waitForAcknowledge, CancellationToken cancellationToken);
 
     /// <summary>
     /// Sends a model to a target resolved from the model's DirectTarget attribute, with custom headers.
     /// </summary>
     /// <param name="model">The message model with DirectTarget attribute.</param>
-    /// <param name="waitAcknowledge">If true, waits for the target to acknowledge receipt.</param>
+    /// <param name="waitForAcknowledge">If true, waits for the target to acknowledge receipt.</param>
     /// <param name="messageHeaders">Additional message headers.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task<HorseResult> Send<T>(T model, bool waitAcknowledge,
+    Task<HorseResult> Send<T>(T model, bool waitForAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken);
 
     #endregion

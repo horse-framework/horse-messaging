@@ -372,28 +372,9 @@ public class PingPongTest
     #region Reconnect After Ping Timeout
 
     /// <summary>
-    /// If the server stops, the client should detect the connection loss and fire Disconnected.
-    /// 
-    /// KNOWN BUG: This test currently fails because of two issues:
-    /// 
-    /// 1. HorseServer.StopAsync does NOT actively close existing client TCP connections.
-    ///    It stops the listener and heartbeat manager but leaves connected sockets open.
-    ///    The client's Read() loop remains blocked on Stream.ReadAsync because the OS
-    ///    TCP connection is still technically open (half-open state).
-    /// 
-    /// 2. The client has NO pong-timeout mechanism. Unlike the server (which tracks
-    ///    PongRequired and disconnects after a missed pong), the client only sends PINGs
-    ///    but never checks whether PONGs come back. So even if the server becomes
-    ///    unresponsive, the client keeps sending PINGs into the void via BeginWrite
-    ///    (which buffers into the OS TCP send buffer and appears to succeed).
-    /// 
-    /// FIX NEEDED (in horse-server):
-    ///   - HorseServer.StopAsync should iterate all connected clients and call Disconnect()
-    ///     on each before stopping the listener.
-    ///   - Optionally: Client should implement a pong-timeout so it can detect an
-    ///     unresponsive server even without a clean TCP close.
+    /// If the server stops, the client should detect the connection loss and fire Disconnected event.
     /// </summary>
-    [Fact(Skip = "Known bug: server StopAsync does not close existing client connections, and client lacks pong-timeout detection. See test comments for details.")]
+    [Fact]
     public async Task ServerStops_ClientDetectsViaHeartbeat_DisconnectsFires()
     {
         TestHorseRider server = new TestHorseRider();

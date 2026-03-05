@@ -153,15 +153,15 @@ public class RouterOperator
     /// <summary>
     /// Publishes raw binary content to a router.
     /// </summary>
-    public Task<HorseResult> Publish(string routerName, byte[] data, bool waitAcknowledge, CancellationToken cancellationToken)
+    public Task<HorseResult> Publish(string routerName, byte[] data, bool waitForAcknowledge, CancellationToken cancellationToken)
     {
-        return Publish(routerName, data, null, waitAcknowledge, 0, null, cancellationToken);
+        return Publish(routerName, data, null, waitForAcknowledge, 0, null, cancellationToken);
     }
 
     /// <summary>
     /// Publishes raw binary content to a router.
     /// </summary>
-    public async Task<HorseResult> Publish(string routerName, byte[] data, string messageId, bool waitAcknowledge,
+    public async Task<HorseResult> Publish(string routerName, byte[] data, string messageId, bool waitForAcknowledge,
         ushort contentType, IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
     {
         HorseMessage msg = new HorseMessage(MessageType.Router, routerName, contentType);
@@ -171,14 +171,14 @@ public class RouterOperator
         else
             msg.SetMessageId(_client.UniqueIdGenerator.Create());
 
-        msg.WaitResponse = waitAcknowledge;
+        msg.WaitResponse = waitForAcknowledge;
         msg.Content = new MemoryStream(data);
 
         if (messageHeaders != null)
             foreach (KeyValuePair<string, string> pair in messageHeaders)
                 msg.AddHeader(pair.Key, pair.Value);
 
-        return await _client.WaitResponse(msg, waitAcknowledge, cancellationToken);
+        return await _client.WaitResponse(msg, waitForAcknowledge, cancellationToken);
     }
 
     /// <summary>
@@ -192,51 +192,51 @@ public class RouterOperator
     /// <summary>
     /// Publishes a serialized model to a router. Router name resolved from attribute.
     /// </summary>
-    public Task<HorseResult> Publish<T>(T model, bool waitAcknowledge, CancellationToken cancellationToken) where T : class
+    public Task<HorseResult> Publish<T>(T model, bool waitForAcknowledge, CancellationToken cancellationToken) where T : class
     {
-        return PublishObject(null, model, null, waitAcknowledge, null, null, cancellationToken);
+        return PublishObject(null, model, null, waitForAcknowledge, null, null, cancellationToken);
     }
 
     /// <summary>
     /// Publishes a serialized model to the specified router.
     /// </summary>
-    public Task<HorseResult> Publish<T>(string routerName, T model, bool waitAcknowledge, CancellationToken cancellationToken) where T : class
+    public Task<HorseResult> Publish<T>(string routerName, T model, bool waitForAcknowledge, CancellationToken cancellationToken) where T : class
     {
-        return PublishObject(routerName, model, null, waitAcknowledge, null, null, cancellationToken);
+        return PublishObject(routerName, model, null, waitForAcknowledge, null, null, cancellationToken);
     }
 
     /// <summary>
     /// Publishes a serialized model to the specified router.
     /// </summary>
-    public Task<HorseResult> Publish<T>(string routerName, T model, bool waitAcknowledge,
+    public Task<HorseResult> Publish<T>(string routerName, T model, bool waitForAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken) where T : class
     {
-        return PublishObject(routerName, model, null, waitAcknowledge, null, messageHeaders, cancellationToken);
+        return PublishObject(routerName, model, null, waitForAcknowledge, null, messageHeaders, cancellationToken);
     }
 
     /// <summary>
     /// Publishes a serialized model to the specified router with an explicit content type.
     /// </summary>
-    public Task<HorseResult> Publish<T>(string routerName, T model, ushort? contentType, bool waitAcknowledge,
+    public Task<HorseResult> Publish<T>(string routerName, T model, ushort? contentType, bool waitForAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken) where T : class
     {
-        return PublishObject(routerName, model, null, waitAcknowledge, contentType, messageHeaders, cancellationToken);
+        return PublishObject(routerName, model, null, waitForAcknowledge, contentType, messageHeaders, cancellationToken);
     }
 
     /// <summary>
     /// Publishes a serialized model to the specified router with an explicit message id and content type.
     /// </summary>
-    public Task<HorseResult> Publish<T>(string routerName, T model, string messageId, ushort? contentType, bool waitAcknowledge,
+    public Task<HorseResult> Publish<T>(string routerName, T model, string messageId, ushort? contentType, bool waitForAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken) where T : class
     {
-        return PublishObject(routerName, model, messageId, waitAcknowledge, contentType, messageHeaders, cancellationToken);
+        return PublishObject(routerName, model, messageId, waitForAcknowledge, contentType, messageHeaders, cancellationToken);
     }
 
     /// <summary>
     /// Internal publish for object models
     /// </summary>
     internal async Task<HorseResult> PublishObject(string routerName, object model, string messageId,
-        bool waitAcknowledge, ushort? contentType,
+        bool waitForAcknowledge, ushort? contentType,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
     {
         RouterTypeDescriptor descriptor = _descriptorContainer.GetDescriptor(model.GetType());
@@ -254,14 +254,14 @@ public class RouterOperator
         else
             message.SetMessageId(_client.UniqueIdGenerator.Create());
 
-        message.WaitResponse = waitAcknowledge;
+        message.WaitResponse = waitForAcknowledge;
         message.Serialize(model, _client.MessageSerializer);
 
         if (messageHeaders != null)
             foreach (KeyValuePair<string, string> pair in messageHeaders)
                 message.AddHeader(pair.Key, pair.Value);
 
-        return await _client.WaitResponse(message, waitAcknowledge, cancellationToken);
+        return await _client.WaitResponse(message, waitForAcknowledge, cancellationToken);
     }
 
     /// <summary>

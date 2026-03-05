@@ -14,7 +14,7 @@ Every message is delivered to **all** subscribed consumers. This is a fan-out / 
 
 - Each consumer receives every message.
 - If there are no consumers, the message is stored in the queue until a consumer subscribes (depending on options).
-- When `waitAcknowledge` is enabled with multiple consumers, the queue waits until **any one** consumer acks before dispatching the next message — it does not wait for all consumers. See [Acknowledgment & Reliability](acknowledgment.md#waitAcknowledge--behavior-by-queue-type) for details.
+- When `waitForAcknowledge` is enabled with multiple consumers, the queue waits until **any one** consumer acks before dispatching the next message — it does not wait for all consumers. See [Acknowledgment & Reliability](acknowledgment.md#waitForAcknowledge--behavior-by-queue-type) for details.
 - Useful for notification broadcasts, event distribution, or replication scenarios.
 
 **Server-side:**
@@ -41,10 +41,10 @@ Each message is delivered to **exactly one** consumer, rotating through subscrib
 
 - The server picks the next available consumer in round-robin order.
 - If no consumers are available, the message stays in the queue.
-- When `waitAcknowledge` is enabled, the server does **not** send a second message to a consumer that is still processing a previous one. A busy consumer is skipped and the next available consumer receives the message. This means:
+- When `waitForAcknowledge` is enabled, the server does **not** send a second message to a consumer that is still processing a previous one. A busy consumer is skipped and the next available consumer receives the message. This means:
   - **Single consumer:** Strict FIFO — one message at a time, next message waits until ack.
   - **Multiple consumers:** Each consumer processes one message at a time, but different consumers work **in parallel**. Queue-wide ordering is not guaranteed; per-consumer ordering is.
-  - See [Acknowledgment & Reliability](acknowledgment.md#waitAcknowledge--behavior-by-queue-type) for full details.
+  - See [Acknowledgment & Reliability](acknowledgment.md#waitForAcknowledge--behavior-by-queue-type) for full details.
 - This is the **default** queue type.
 
 **Server-side:**
@@ -102,7 +102,7 @@ foreach (var message in container.ReceivedMessages)
 | Load balancing | No | Yes | Consumer-controlled |
 | Message removed after | Sent to all | Acknowledged by one | Delivered to requester |
 | Default | No | **Yes** | No |
-| Supports `waitAcknowledge` | Yes | Yes (per-consumer) | No (ack is implicit) |
+| Supports `waitForAcknowledge` | Yes | Yes (per-consumer) | No (ack is implicit) |
 
 ## Choosing a Type
 

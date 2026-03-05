@@ -27,7 +27,7 @@ cfg.UseMemoryQueues("Fast", queue =>
 
 cfg.UseMemoryQueues("Reliable", queue =>
 {
-    queue.Options.Acknowledge = QueueAckDecision.waitAcknowledge;
+    queue.Options.Acknowledge = QueueAckDecision.waitForAcknowledge;
 });
 ```
 
@@ -57,7 +57,7 @@ Pass the `queueManagerName` parameter when creating a queue programmatically via
 await client.Queue.Create("orders", options =>
 {
     options.Type = QueueType.RoundRobin;
-    options.Acknowledge = QueueAckDecision.waitAcknowledge;
+    options.Acknowledge = QueueAckDecision.waitForAcknowledge;
 }, queueManagerName: "Persistent");
 ```
 
@@ -138,7 +138,7 @@ cfg.UsePersistentQueues(
     },
     queue =>
     {
-        queue.Options.Acknowledge = QueueAckDecision.waitAcknowledge;
+        queue.Options.Acknowledge = QueueAckDecision.waitForAcknowledge;
         queue.Options.CommitWhen = CommitWhen.AfterReceived;
     }
 );

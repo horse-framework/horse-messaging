@@ -21,7 +21,7 @@ namespace Test.Queues.Delivery;
 ///
 ///   QueueType:        Push, RoundRobin, Pull
 ///   CommitWhen:       None, AfterReceived, AfterSent, AfterAcknowledge
-///   QueueAckDecision: None, JustRequest, waitAcknowledge
+///   QueueAckDecision: None, JustRequest, WaitForAcknowledge
 ///
 /// Not every combination is meaningful:
 ///   - Pull queues ignore CommitWhen and Acknowledge (delivery is request-based).
@@ -137,7 +137,7 @@ public class CombinedTest
         {
             o.Type = QueueType.Push;
             o.CommitWhen = CommitWhen.None;
-            o.Acknowledge = QueueAckDecision.waitAcknowledge;
+            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
             o.AcknowledgeTimeout = TimeSpan.FromSeconds(10);
         });
 
@@ -219,7 +219,7 @@ public class CombinedTest
         {
             o.Type = QueueType.Push;
             o.CommitWhen = CommitWhen.AfterReceived;
-            o.Acknowledge = QueueAckDecision.waitAcknowledge;
+            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
             o.AcknowledgeTimeout = TimeSpan.FromSeconds(10);
         });
 
@@ -340,7 +340,7 @@ public class CombinedTest
         {
             o.Type = QueueType.Push;
             o.CommitWhen = CommitWhen.AfterAcknowledge;
-            o.Acknowledge = QueueAckDecision.waitAcknowledge;
+            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
             o.AcknowledgeTimeout = TimeSpan.FromSeconds(10);
         });
 
@@ -586,7 +586,7 @@ public class CombinedTest
         {
             o.Type = QueueType.RoundRobin;
             o.CommitWhen = CommitWhen.AfterAcknowledge;
-            o.Acknowledge = QueueAckDecision.waitAcknowledge;
+            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
             o.AcknowledgeTimeout = TimeSpan.FromSeconds(10);
         });
 
@@ -618,7 +618,7 @@ public class CombinedTest
         {
             o.Type = QueueType.RoundRobin;
             o.CommitWhen = CommitWhen.AfterAcknowledge;
-            o.Acknowledge = QueueAckDecision.waitAcknowledge;
+            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
             o.AcknowledgeTimeout = TimeSpan.FromSeconds(10);
             o.PutBack = PutBackDecision.No;
         });
@@ -681,7 +681,7 @@ public class CombinedTest
 
     #endregion
 
-    #region RoundRobin + waitAcknowledge + Multiple Consumers
+    #region RoundRobin + WaitForAcknowledge + Multiple Consumers
 
     [Theory]
     [InlineData("memory")]
@@ -694,7 +694,7 @@ public class CombinedTest
         {
             o.Type = QueueType.RoundRobin;
             o.CommitWhen = CommitWhen.AfterReceived;
-            o.Acknowledge = QueueAckDecision.waitAcknowledge;
+            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
             o.AcknowledgeTimeout = TimeSpan.FromSeconds(15);
         });
 
@@ -754,7 +754,7 @@ public class CombinedTest
         {
             o.Type = QueueType.RoundRobin;
             o.CommitWhen = CommitWhen.AfterReceived;
-            o.Acknowledge = QueueAckDecision.waitAcknowledge;
+            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
             o.AcknowledgeTimeout = TimeSpan.FromSeconds(10);
         });
 
@@ -791,14 +791,14 @@ public class CombinedTest
     [InlineData("persistent")]
     public async Task RR_WaitForAck_AllConsumersBusy_ThirdMessageWaitsForFreeConsumer(string mode)
     {
-        // RoundRobin + waitAcknowledge: when all consumers are busy (haven't acked),
+        // RoundRobin + WaitForAcknowledge: when all consumers are busy (haven't acked),
         // the server retries in a loop until a consumer becomes available.
         // The 3rd message is NOT delivered to any consumer until one of them acks.
         await using var ctx = await QueueTestServer.Create(mode, o =>
         {
             o.Type = QueueType.RoundRobin;
             o.CommitWhen = CommitWhen.AfterReceived;
-            o.Acknowledge = QueueAckDecision.waitAcknowledge;
+            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
             o.AcknowledgeTimeout = TimeSpan.FromSeconds(15);
         });
 
@@ -994,13 +994,13 @@ public class CombinedTest
     [InlineData("persistent")]
     public async Task Pull_CommitWhenAndAck_Ignored(string mode)
     {
-        // Even with CommitWhen.AfterAcknowledge and waitAcknowledge,
+        // Even with CommitWhen.AfterAcknowledge and WaitForAcknowledge,
         // Pull queues should still work normally — these settings are irrelevant for Pull.
         await using var ctx = await QueueTestServer.Create(mode, o =>
         {
             o.Type = QueueType.Pull;
             o.CommitWhen = CommitWhen.AfterAcknowledge;
-            o.Acknowledge = QueueAckDecision.waitAcknowledge;
+            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
         });
 
         await ctx.Rider.Queue.Create("q");

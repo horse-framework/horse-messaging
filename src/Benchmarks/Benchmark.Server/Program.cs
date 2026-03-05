@@ -44,7 +44,7 @@ class Program
                 cfg.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(30);
 
                 if (acks == "W")
-                    cfg.Options.Acknowledge = QueueAckDecision.waitAcknowledge;
+                    cfg.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
                 else if (acks == "J")
                     cfg.Options.Acknowledge = QueueAckDecision.JustRequest;
                 else

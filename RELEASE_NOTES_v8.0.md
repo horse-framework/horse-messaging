@@ -780,7 +780,7 @@ await client.Router.Publish("router", "Hello", true);          // string overloa
 ```csharp
 await client.Queue.Push("my-queue", Encoding.UTF8.GetBytes("Hello"), false);       // byte[] overload
 await client.Queue.Push("my-queue", new MemoryStream(data), false);                // MemoryStream overload
-await client.Router.Publish("router", Encoding.UTF8.GetBytes("Hello"), messageId: null, waitAcknowledge: true);
+await client.Router.Publish("router", Encoding.UTF8.GetBytes("Hello"), messageId: null, waitForAcknowledge: true);
 ```
 
 ### RouterOperator.Publish — Convenience byte[] Overload Merged
@@ -790,7 +790,7 @@ The two `byte[]` `Publish` overloads (with/without `messageId`) have been merged
 ```csharp
 // Single overload — pass null or omit messageId
 Task<HorseResult> Publish(string routerName, byte[] data,
-    string messageId = null, bool waitAcknowledge = false, ...);
+    string messageId = null, bool waitForAcknowledge = false, ...);
 ```
 
 ### QueueOperator.Push — byte[] Convenience Overloads Added
@@ -805,7 +805,7 @@ Task<HorseResult> Push(string queue, byte[] data, string messageId, bool waitFor
 ### Parameter Order Consistency
 
 All public APIs now follow a consistent parameter order:
-`(target, content/model, [messageId], waitForCommit/waitAcknowledge, [contentType], messageHeaders, [partitionLabel], cancellationToken)`
+`(target, content/model, [messageId], waitForCommit/waitForAcknowledge, [contentType], messageHeaders, [partitionLabel], cancellationToken)`
 
 **After (v8.0):**
 ```csharp
