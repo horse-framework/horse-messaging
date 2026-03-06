@@ -55,6 +55,19 @@ public class QueueDModel
 }
 
 /// <summary>
+/// Model for tier disconnect/reconnect scenario.
+/// Used with a labeled partitioned queue (free/standard/premium).
+/// </summary>
+[QueueName("TierEvent")]
+[QueueType(MessagingQueueType.RoundRobin)]
+[Acknowledge(QueueAckDecision.JustRequest)]
+public class TierEventModel
+{
+    public string Tier { get; set; }
+    public int Sequence { get; set; }
+}
+
+/// <summary>
 /// Model whose attribute overrides server default MaxPartitionCount to 1.
 /// Queue auto-created with MaxPartitionCount=1 → only 1 partition allowed.
 /// </summary>
@@ -191,6 +204,16 @@ public class UnlimitedPartitionConsumer(TrackerAccessor accessor) : IQueueConsum
     public Task Consume(HorseMessage message, UnlimitedPartitionModel model, HorseClient client, CancellationToken cancellationToken = default)
     {
         accessor.Tracker.Record("UnlimitedQ", model.Data, 0);
+        return Task.CompletedTask;
+    }
+}
+
+[AutoAck]
+public class TierEventConsumer(TrackerAccessor accessor) : IQueueConsumer<TierEventModel>
+{
+    public Task Consume(HorseMessage message, TierEventModel model, HorseClient client, CancellationToken cancellationToken = default)
+    {
+        accessor.Tracker.Record("TierEvent", model.Tier, model.Sequence);
         return Task.CompletedTask;
     }
 }
@@ -1533,6 +1556,22 @@ public class PartitionComplexIntegrationTests
     private static Task PushLabeled(HorseClient producer, string queue, string label, string body = null)
         => PushModel(producer, queue, label);
 
+    /// <summary>
+    /// Builds a worker that subscribes to TierEvent queue with a specific partition label.
+    /// Uses AddScopedConsumer with label + maxPartitions=3 as per the requirement.
+    /// </summary>
+    private static HorseClient BuildTierWorker(int port, string clientType, TrackerAccessor accessor, string label)
+    {
+        ServiceCollection services = new();
+        services.AddSingleton(accessor);
+        HorseClientBuilder builder = new(services);
+        builder.AddHost($"horse://localhost:{port}");
+        builder.SetClientType(clientType);
+        builder.AutoSubscribe(true);
+        builder.AddScopedConsumer<TierEventConsumer>(label, maxPartitions: 3, subscribersPerPartition: 1);
+        return builder.Build();
+    }
+
     #endregion
 
     #region Shared Helpers
@@ -2055,5 +2094,288 @@ public class PartitionComplexIntegrationTests
     }
 
     #endregion
-}
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // 20. Tier Disconnect / Reconnect — Labeled Workers
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #region Tier Disconnect Reconnect
+
+    /// <summary>
+    /// Server partition options:
+    ///   Enabled=true, AutoDestroy=NoMessages, AutoAssignWorkers=true,
+    ///   MaxPartitionCount=0, MaxPartitionsPerWorker=0, SubscribersPerPartition=1,
+    ///   AutoDestroyIdleSeconds=300
+    ///
+    /// 3 workers subscribe with AddScopedConsumer label: free, standard, premium
+    ///   maxPartitionCount=3 per worker registration.
+    ///
+    /// Test flow:
+    ///   1. All three tiers get messages → each worker consumes its own tier only.
+    ///   2. Free worker disconnects → free messages accumulate in the partition.
+    ///   3. Standard and premium workers must NOT consume free messages.
+    ///   4. Free worker reconnects → consumes all backlogged free messages.
+    /// </summary>
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task TierDisconnectReconnect_FreeWorkerMissesMessages_ReconnectsAndConsumesBacklog(string mode)
+    {
+        // ── Server setup — queue will be auto-created on-the-fly when consumers subscribe ──
+        PartitionTestContext ctx = await PartitionTestServer.Create(mode, opts =>
+        {
+            opts.Type = QueueType.RoundRobin;
+            opts.Acknowledge = QueueAckDecision.JustRequest;
+            opts.AutoQueueCreation = true;
+            opts.Partition = new PartitionOptions
+            {
+                Enabled = true,
+                AutoDestroy = PartitionAutoDestroy.NoMessages,
+                AutoAssignWorkers = true,
+                MaxPartitionCount = 0,
+                MaxPartitionsPerWorker = 0,
+                SubscribersPerPartition = 1,
+                AutoDestroyIdleSeconds = 300
+            };
+        });
+        await using var _ = ctx;
+
+        // ── Per-test tracker ──
+        ConsumeTracker tracker = new();
+        TrackerAccessor accessor = new(tracker);
+
+        // ── Step 1: Connect all 3 workers with labeled AddScopedConsumer ──
+        HorseClient wFree = BuildTierWorker(ctx.Port, "w-free", accessor, "free");
+        HorseClient wStandard = BuildTierWorker(ctx.Port, "w-standard", accessor, "standard");
+        HorseClient wPremium = BuildTierWorker(ctx.Port, "w-premium", accessor, "premium");
+        await wFree.ConnectAsync();
+        await wStandard.ConnectAsync();
+        await wPremium.ConnectAsync();
+        await Task.Delay(500);
+
+        HorseQueue queue = ctx.Rider.Queue.Find("TierEvent");
+        Assert.NotNull(queue);
+        Assert.NotNull(queue.PartitionManager);
+
+        // ── Step 2: Send messages to all tiers, verify each worker consumes its own ──
+        HorseClient producer = await CreateProducer(ctx.Port);
+        IHorseQueueBus bus = new HorseQueueBus(producer);
+
+        for (int i = 0; i < 5; i++)
+        {
+            await bus.Push(new TierEventModel { Tier = "free", Sequence = i }, false, null, "free", CancellationToken.None);
+            await bus.Push(new TierEventModel { Tier = "standard", Sequence = i }, false, null, "standard", CancellationToken.None);
+            await bus.Push(new TierEventModel { Tier = "premium", Sequence = i }, false, null, "premium", CancellationToken.None);
+        }
+
+        await WaitForConsume(tracker, 15, 10_000);
+
+        Assert.Equal(5, tracker.Get("TierEvent", "free").Count);
+        Assert.Equal(5, tracker.Get("TierEvent", "standard").Count);
+        Assert.Equal(5, tracker.Get("TierEvent", "premium").Count);
+
+        // ── Step 3: Disconnect free worker ──
+        wFree.Disconnect();
+        await Task.Delay(500);
+
+        // Capture current counts so we can verify no cross-tier consumption
+        int standardBefore = tracker.Get("TierEvent", "standard").Count;
+        int premiumBefore = tracker.Get("TierEvent", "premium").Count;
+
+        // Send more messages to ALL tiers, including free
+        for (int i = 5; i < 10; i++)
+        {
+            await bus.Push(new TierEventModel { Tier = "free", Sequence = i }, false, null, "free", CancellationToken.None);
+            await bus.Push(new TierEventModel { Tier = "standard", Sequence = i }, false, null, "standard", CancellationToken.None);
+            await bus.Push(new TierEventModel { Tier = "premium", Sequence = i }, false, null, "premium", CancellationToken.None);
+        }
+
+        // Wait for standard and premium to consume their new messages
+        await WaitUntil(() =>
+            tracker.Get("TierEvent", "standard").Count >= 10 &&
+            tracker.Get("TierEvent", "premium").Count >= 10, 10_000);
+
+        Assert.Equal(10, tracker.Get("TierEvent", "standard").Count);
+        Assert.Equal(10, tracker.Get("TierEvent", "premium").Count);
+
+        // Free must still have only the original 5 — no cross-tier consumption
+        Assert.Equal(5, tracker.Get("TierEvent", "free").Count);
+
+        // Verify the free partition still exists with queued messages (AutoDestroy=NoMessages but messages exist)
+        PartitionEntry freePartition = queue.PartitionManager.Partitions.FirstOrDefault(p => p.Label == "free");
+        Assert.NotNull(freePartition);
+
+        // ── Step 4: Reconnect free worker → consumes backlog ──
+        HorseClient wFreeReconnected = BuildTierWorker(ctx.Port, "w-free-reconnected", accessor, "free");
+        await wFreeReconnected.ConnectAsync();
+
+        await WaitUntil(() => tracker.Get("TierEvent", "free").Count >= 10, 10_000);
+
+        Assert.Equal(10, tracker.Get("TierEvent", "free").Count);
+        Assert.Equal(10, tracker.Get("TierEvent", "standard").Count);
+        Assert.Equal(10, tracker.Get("TierEvent", "premium").Count);
+
+        // Verify free partition received messages in correct order (0..9)
+        List<int> freeRecords = tracker.Get("TierEvent", "free");
+        for (int i = 0; i < 10; i++)
+            Assert.Equal(i, freeRecords[i]);
+
+        // Cleanup
+        producer.Disconnect();
+        wStandard.Disconnect();
+        wPremium.Disconnect();
+        wFreeReconnected.Disconnect();
+    }
+
+    /// <summary>
+    /// Same scenario but verifies that standard and premium workers never touch the free partition.
+    /// Specifically: after free worker disconnects, push ONLY free messages.
+    /// If standard/premium workers consumed them, we'd see unexpected records.
+    /// </summary>
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task TierIsolation_FreeDisconnected_OnlyFreeMessagesStall(string mode)
+    {
+        PartitionTestContext ctx = await PartitionTestServer.Create(mode, opts =>
+        {
+            opts.Type = QueueType.RoundRobin;
+            opts.Acknowledge = QueueAckDecision.JustRequest;
+            opts.AutoQueueCreation = true;
+            opts.Partition = new PartitionOptions
+            {
+                Enabled = true,
+                AutoDestroy = PartitionAutoDestroy.NoMessages,
+                AutoAssignWorkers = true,
+                MaxPartitionCount = 0,
+                MaxPartitionsPerWorker = 0,
+                SubscribersPerPartition = 1,
+                AutoDestroyIdleSeconds = 300
+            };
+        });
+        await using var _ = ctx;
+
+        ConsumeTracker tracker = new();
+        TrackerAccessor accessor = new(tracker);
+
+        HorseClient wFree = BuildTierWorker(ctx.Port, "w-free", accessor, "free");
+        HorseClient wStandard = BuildTierWorker(ctx.Port, "w-standard", accessor, "standard");
+        HorseClient wPremium = BuildTierWorker(ctx.Port, "w-premium", accessor, "premium");
+        await wFree.ConnectAsync();
+        await wStandard.ConnectAsync();
+        await wPremium.ConnectAsync();
+        await Task.Delay(500);
+
+        HorseClient producer = await CreateProducer(ctx.Port);
+        IHorseQueueBus bus = new HorseQueueBus(producer);
+
+        // Send initial message to create all partitions
+        await bus.Push(new TierEventModel { Tier = "free", Sequence = 0 }, false, null, "free", CancellationToken.None);
+        await bus.Push(new TierEventModel { Tier = "standard", Sequence = 0 }, false, null, "standard", CancellationToken.None);
+        await bus.Push(new TierEventModel { Tier = "premium", Sequence = 0 }, false, null, "premium", CancellationToken.None);
+        await WaitForConsume(tracker, 3, 5_000);
+
+        // Disconnect free
+        wFree.Disconnect();
+        await Task.Delay(500);
+
+        int standardCountBefore = tracker.Get("TierEvent", "standard").Count;
+        int premiumCountBefore = tracker.Get("TierEvent", "premium").Count;
+
+        // Send 10 messages ONLY to free tier
+        for (int i = 1; i <= 10; i++)
+            await bus.Push(new TierEventModel { Tier = "free", Sequence = i }, false, null, "free", CancellationToken.None);
+
+        // Wait a bit — standard/premium should NOT pick these up
+        await Task.Delay(2000);
+
+        // Standard and premium counts must remain unchanged
+        Assert.Equal(standardCountBefore, tracker.Get("TierEvent", "standard").Count);
+        Assert.Equal(premiumCountBefore, tracker.Get("TierEvent", "premium").Count);
+
+        // Free still at 1 (only the initial message before disconnect)
+        Assert.Equal(1, tracker.Get("TierEvent", "free").Count);
+
+        // Reconnect free → consumes all 10 backlogged messages
+        HorseClient wFreeReconnected = BuildTierWorker(ctx.Port, "w-free-reconnected", accessor, "free");
+        await wFreeReconnected.ConnectAsync();
+
+        await WaitUntil(() => tracker.Get("TierEvent", "free").Count >= 11, 10_000);
+        Assert.Equal(11, tracker.Get("TierEvent", "free").Count);
+
+        // Verify order: 0, 1, 2, ..., 10
+        List<int> freeRecords = tracker.Get("TierEvent", "free");
+        for (int i = 0; i <= 10; i++)
+            Assert.Equal(i, freeRecords[i]);
+
+        producer.Disconnect();
+        wStandard.Disconnect();
+        wPremium.Disconnect();
+        wFreeReconnected.Disconnect();
+    }
+
+    /// <summary>
+    /// Verifies that partition metrics correctly reflect 3 labeled partitions with
+    /// the exact server options from the requirement.
+    /// </summary>
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task TierDisconnectReconnect_PartitionsCorrectlyCreated(string mode)
+    {
+        PartitionTestContext ctx = await PartitionTestServer.Create(mode, opts =>
+        {
+            opts.Type = QueueType.RoundRobin;
+            opts.Acknowledge = QueueAckDecision.JustRequest;
+            opts.AutoQueueCreation = true;
+            opts.Partition = new PartitionOptions
+            {
+                Enabled = true,
+                AutoDestroy = PartitionAutoDestroy.NoMessages,
+                AutoAssignWorkers = true,
+                MaxPartitionCount = 0,
+                MaxPartitionsPerWorker = 0,
+                SubscribersPerPartition = 1,
+                AutoDestroyIdleSeconds = 300
+            };
+        });
+        await using var _ = ctx;
+
+        ConsumeTracker tracker = new();
+        TrackerAccessor accessor = new(tracker);
+
+        HorseClient wFree = BuildTierWorker(ctx.Port, "w-free", accessor, "free");
+        HorseClient wStandard = BuildTierWorker(ctx.Port, "w-standard", accessor, "standard");
+        HorseClient wPremium = BuildTierWorker(ctx.Port, "w-premium", accessor, "premium");
+        await wFree.ConnectAsync();
+        await wStandard.ConnectAsync();
+        await wPremium.ConnectAsync();
+        await Task.Delay(500);
+
+        HorseClient producer = await CreateProducer(ctx.Port);
+        IHorseQueueBus bus = new HorseQueueBus(producer);
+
+        // Trigger partition creation by sending 1 message per tier
+        await bus.Push(new TierEventModel { Tier = "free", Sequence = 0 }, false, null, "free", CancellationToken.None);
+        await bus.Push(new TierEventModel { Tier = "standard", Sequence = 0 }, false, null, "standard", CancellationToken.None);
+        await bus.Push(new TierEventModel { Tier = "premium", Sequence = 0 }, false, null, "premium", CancellationToken.None);
+        await WaitForConsume(tracker, 3, 5_000);
+
+        HorseQueue queue = ctx.Rider.Queue.Find("TierEvent");
+        Assert.NotNull(queue?.PartitionManager);
+
+        List<PartitionMetricSnapshot> metrics = queue.PartitionManager.GetMetrics().ToList();
+        Assert.Equal(3, metrics.Count);
+
+        Assert.Contains(metrics, m => string.Equals(m.Label, "free", StringComparison.OrdinalIgnoreCase) && m.ConsumerCount == 1);
+        Assert.Contains(metrics, m => string.Equals(m.Label, "standard", StringComparison.OrdinalIgnoreCase) && m.ConsumerCount == 1);
+        Assert.Contains(metrics, m => string.Equals(m.Label, "premium", StringComparison.OrdinalIgnoreCase) && m.ConsumerCount == 1);
+
+        producer.Disconnect();
+        wFree.Disconnect();
+        wStandard.Disconnect();
+        wPremium.Disconnect();
+    }
+
+    #endregion
+}

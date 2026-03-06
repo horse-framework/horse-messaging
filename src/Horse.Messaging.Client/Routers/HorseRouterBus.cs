@@ -52,6 +52,11 @@ public class HorseRouterBus : IHorseRouterBus
         => _client.Router.Publish(model, waitForAcknowledge, cancellationToken);
 
     /// <inheritdoc />
+    public Task<HorseResult> Publish<T>(T model, bool waitForAcknowledge,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken) where T : class
+        => _client.Router.Publish(model, waitForAcknowledge, messageHeaders, cancellationToken);
+
+    /// <inheritdoc />
     public Task<HorseResult> Publish<T>(string routerName, T model, bool waitForAcknowledge, CancellationToken cancellationToken) where T : class
         => _client.Router.Publish(routerName, model, waitForAcknowledge, cancellationToken);
 

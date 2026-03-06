@@ -52,6 +52,10 @@ internal class HorseChannelBus : IHorseChannelBus
     public Task<HorseResult> Publish(object model, bool waitForAcknowledge, CancellationToken cancellationToken)
         => _client.Channel.Publish(model, waitForAcknowledge, cancellationToken);
 
+    public Task<HorseResult> Publish(object model, bool waitForAcknowledge,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
+        => _client.Channel.Publish(model, waitForAcknowledge, messageHeaders, cancellationToken);
+
     public Task<HorseResult> Publish(string channel, object model, bool waitForAcknowledge, CancellationToken cancellationToken)
         => _client.Channel.Publish(channel, model, waitForAcknowledge, cancellationToken);
 

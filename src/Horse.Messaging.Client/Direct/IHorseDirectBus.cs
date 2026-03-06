@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿﻿using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,6 +25,12 @@ public interface IHorseDirectBus : IHorseConnection
     /// <summary>
     /// Sends raw binary content directly to a target client.
     /// </summary>
+    /// <param name="target">Target client identifier. Can be a client id, <c>@name:xxx</c>, or <c>@type:xxx</c>.</param>
+    /// <param name="contentType">Custom content type identifier.</param>
+    /// <param name="content">Raw binary content as <see cref="MemoryStream"/>.</param>
+    /// <param name="waitForAcknowledge">If <c>true</c>, blocks until the target sends an acknowledgement. If <c>false</c>, fire-and-forget.</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the pending operation.</param>
+    /// <returns>A <see cref="HorseResult"/> indicating the operation result.</returns>
     Task<HorseResult> SendAsync(string target, ushort contentType, MemoryStream content, bool waitForAcknowledge, CancellationToken cancellationToken);
 
     /// <inheritdoc cref="SendAsync(string, ushort, MemoryStream, bool, IEnumerable{KeyValuePair{string,string}}, CancellationToken)"/>
@@ -35,6 +41,13 @@ public interface IHorseDirectBus : IHorseConnection
     /// <summary>
     /// Sends raw binary content directly to a target client with custom headers.
     /// </summary>
+    /// <param name="target">Target client identifier.</param>
+    /// <param name="contentType">Custom content type identifier.</param>
+    /// <param name="content">Raw binary content as <see cref="MemoryStream"/>.</param>
+    /// <param name="waitForAcknowledge">If <c>true</c>, blocks until the target sends an acknowledgement. If <c>false</c>, fire-and-forget.</param>
+    /// <param name="messageHeaders">Additional key-value headers to attach to the message. Pass <c>null</c> if not needed.</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the pending operation.</param>
+    /// <returns>A <see cref="HorseResult"/> indicating the operation result.</returns>
     Task<HorseResult> SendAsync(string target, ushort contentType, MemoryStream content, bool waitForAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken);
 
@@ -147,8 +160,12 @@ public interface IHorseDirectBus : IHorseConnection
         => Send(model, CancellationToken.None);
 
     /// <summary>
-    /// Sends a model to a target resolved from the model's DirectTarget attribute without waiting for acknowledgement.
+    /// Sends a model to a target resolved from the model's <c>[DirectTarget]</c> attribute without waiting for acknowledgement.
     /// </summary>
+    /// <typeparam name="T">Message model type.</typeparam>
+    /// <param name="model">The message model to serialize and send.</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the pending operation.</param>
+    /// <returns>A <see cref="HorseResult"/> indicating the operation result.</returns>
     Task<HorseResult> Send<T>(T model, CancellationToken cancellationToken);
 
     /// <inheritdoc cref="Send{T}(T, bool, CancellationToken)"/>
@@ -156,8 +173,13 @@ public interface IHorseDirectBus : IHorseConnection
         => Send(model, waitForAcknowledge, CancellationToken.None);
 
     /// <summary>
-    /// Sends a model to a target resolved from the model's DirectTarget attribute.
+    /// Sends a model to a target resolved from the model's <c>[DirectTarget]</c> attribute.
     /// </summary>
+    /// <typeparam name="T">Message model type.</typeparam>
+    /// <param name="model">The message model to serialize and send.</param>
+    /// <param name="waitForAcknowledge">If <c>true</c>, blocks until the target sends an acknowledgement. If <c>false</c>, fire-and-forget.</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the pending operation.</param>
+    /// <returns>A <see cref="HorseResult"/> indicating the operation result.</returns>
     Task<HorseResult> Send<T>(T model, bool waitForAcknowledge, CancellationToken cancellationToken);
 
     /// <inheritdoc cref="Send{T}(T, bool, IEnumerable{KeyValuePair{string,string}}, CancellationToken)"/>
@@ -166,8 +188,14 @@ public interface IHorseDirectBus : IHorseConnection
         => Send(model, waitForAcknowledge, messageHeaders, CancellationToken.None);
 
     /// <summary>
-    /// Sends a model to a target resolved from the model's DirectTarget attribute, with custom headers.
+    /// Sends a model to a target resolved from the model's <c>[DirectTarget]</c> attribute, with custom headers.
     /// </summary>
+    /// <typeparam name="T">Message model type.</typeparam>
+    /// <param name="model">The message model to serialize and send.</param>
+    /// <param name="waitForAcknowledge">If <c>true</c>, blocks until the target sends an acknowledgement. If <c>false</c>, fire-and-forget.</param>
+    /// <param name="messageHeaders">Additional key-value headers to attach to the message. Pass <c>null</c> if not needed.</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the pending operation.</param>
+    /// <returns>A <see cref="HorseResult"/> indicating the operation result.</returns>
     Task<HorseResult> Send<T>(T model, bool waitForAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken);
 
