@@ -468,7 +468,8 @@ public class QueueOperator : IDisposable
     public async Task<HorseResult> Push<T>(string queue, T model, string messageId, bool waitForCommit,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken = default) where T : class
     {
-        QueueTypeDescriptor descriptor = DescriptorContainer.GetDescriptor(typeof(T));
+        Type runtimeType = model.GetType();
+        QueueTypeDescriptor descriptor = DescriptorContainer.GetDescriptor(runtimeType);
 
         if (!string.IsNullOrEmpty(queue))
             descriptor.QueueName = queue;
@@ -477,7 +478,7 @@ public class QueueOperator : IDisposable
             descriptor.QueueName = NameHandler.Invoke(new QueueNameHandlerContext
             {
                 Client = Client,
-                Type = typeof(T),
+                Type = runtimeType,
                 QueueName = descriptor.QueueName
             });
 
@@ -697,6 +698,27 @@ public class QueueOperator : IDisposable
     #region PushBulk
 
     /// <summary>
+    /// Pushes multiple models to a queue. Queue name is resolved from the runtime type of the first item.
+    /// </summary>
+    /// <param name="items">List of model instances to push.</param>
+    /// <param name="callback">Optional callback invoked per message with the commit result.</param>
+    public void PushBulk<T>(List<T> items, Action<HorseMessage, bool> callback) where T : class
+    {
+        PushBulk(null, items, callback, null);
+    }
+
+    /// <summary>
+    /// Pushes multiple models to a queue with custom headers. Queue name is resolved from the runtime type of the first item.
+    /// </summary>
+    /// <param name="items">List of model instances to push.</param>
+    /// <param name="callback">Optional callback invoked per message with the commit result.</param>
+    /// <param name="messageHeaders">Additional message headers applied to all messages.</param>
+    public void PushBulk<T>(List<T> items, Action<HorseMessage, bool> callback, IEnumerable<KeyValuePair<string, string>> messageHeaders) where T : class
+    {
+        PushBulk(null, items, callback, messageHeaders);
+    }
+
+    /// <summary>
     /// Pushes multiple models to a queue.
     /// </summary>
     /// <param name="queue">Target queue name.</param>
@@ -719,7 +741,8 @@ public class QueueOperator : IDisposable
         if (items == null || items.Count == 0)
             return;
 
-        QueueTypeDescriptor descriptor = DescriptorContainer.GetDescriptor(typeof(T));
+        Type runtimeType = items[0].GetType();
+        QueueTypeDescriptor descriptor = DescriptorContainer.GetDescriptor(runtimeType);
 
         if (!string.IsNullOrEmpty(queue))
             descriptor.QueueName = queue;
@@ -728,7 +751,7 @@ public class QueueOperator : IDisposable
             descriptor.QueueName = NameHandler.Invoke(new QueueNameHandlerContext
             {
                 Client = Client,
-                Type = typeof(T),
+                Type = runtimeType,
                 QueueName = descriptor.QueueName
             });
 

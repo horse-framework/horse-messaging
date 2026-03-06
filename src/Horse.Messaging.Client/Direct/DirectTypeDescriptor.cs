@@ -60,7 +60,7 @@ public class DirectTypeDescriptor : ITypeDescriptor
         string target = overwrittenTarget ?? DirectTarget;
             
         if (string.IsNullOrEmpty(target))
-            throw new ArgumentNullException("Message target cannot be null");
+            return null;
 
         HorseMessage message = new HorseMessage(MessageType.DirectMessage, target, ContentType ?? 0);
         if (HighPriority.HasValue)

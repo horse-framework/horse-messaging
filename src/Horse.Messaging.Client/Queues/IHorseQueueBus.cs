@@ -527,6 +527,19 @@ public interface IHorseQueueBus : IHorseConnection
     #region PushBulk
 
     /// <inheritdoc cref="PushBulk{T}(string, List{T}, Action{HorseMessage, bool}, IEnumerable{KeyValuePair{string,string}}, string)"/>
+    void PushBulk<T>(List<T> items) where T : class
+        => PushBulk(null, items, null, null, null);
+
+    /// <inheritdoc cref="PushBulk{T}(string, List{T}, Action{HorseMessage, bool}, IEnumerable{KeyValuePair{string,string}}, string)"/>
+    void PushBulk<T>(List<T> items, Action<HorseMessage, bool> callback) where T : class
+        => PushBulk(null, items, callback, null, null);
+
+    /// <inheritdoc cref="PushBulk{T}(string, List{T}, Action{HorseMessage, bool}, IEnumerable{KeyValuePair{string,string}}, string)"/>
+    void PushBulk<T>(List<T> items, Action<HorseMessage, bool> callback,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders) where T : class
+        => PushBulk(null, items, callback, messageHeaders, null);
+
+    /// <inheritdoc cref="PushBulk{T}(string, List{T}, Action{HorseMessage, bool}, IEnumerable{KeyValuePair{string,string}}, string)"/>
     void PushBulk<T>(string queue, List<T> items) where T : class
         => PushBulk(queue, items, null, null, null);
 
