@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client.Internal;
 using Horse.Messaging.Protocol;
@@ -14,9 +15,6 @@ internal class EventSubscriberExecutor : ExecutorBase
     private readonly Func<IHandlerFactory> _subscriberFactoryCreator;
     private EventSubscriberRegistration _registration;
 
-    /// <summary>
-    /// Channel subscriber executor
-    /// </summary>
     public EventSubscriberExecutor(Type handlerType, IHorseEventHandler handler, Func<IHandlerFactory> handlerFactoryCreator)
     {
         _handlerType = handlerType;
@@ -26,11 +24,11 @@ internal class EventSubscriberExecutor : ExecutorBase
 
     public override void Resolve(object registration)
     {
-        EventSubscriberRegistration reg = registration as EventSubscriberRegistration;
-        _registration = reg;
+        _registration = registration as EventSubscriberRegistration;
     }
 
-    public override async Task Execute(HorseClient client, HorseMessage message, object model)
+    public override async Task Execute(HorseClient client, HorseMessage message, object model,
+        CancellationToken cancellationToken)
     {
         HorseEvent horseEvent = (HorseEvent) model;
         ProvidedHandler providedHandler = null;
@@ -38,14 +36,13 @@ internal class EventSubscriberExecutor : ExecutorBase
         try
         {
             if (_handler != null)
-                await Handle(_handler, message, horseEvent, client);
-
+                await Handle(_handler, message, horseEvent, client, cancellationToken);
             else if (_subscriberFactoryCreator != null)
             {
                 IHandlerFactory handlerFactory = _subscriberFactoryCreator();
                 providedHandler = handlerFactory.CreateHandler(_handlerType);
                 IHorseEventHandler consumer = (IHorseEventHandler) providedHandler.Service;
-                await Handle(consumer, message, horseEvent, client);
+                await Handle(consumer, message, horseEvent, client, cancellationToken);
             }
             else
                 throw new ArgumentNullException("There is no event handler");
@@ -56,12 +53,12 @@ internal class EventSubscriberExecutor : ExecutorBase
         }
         finally
         {
-            if (providedHandler != null)
-                providedHandler.Dispose();
+            providedHandler?.Dispose();
         }
     }
 
-    private async Task Handle(IHorseEventHandler handler, HorseMessage message, HorseEvent horseEvent, HorseClient client)
+    private async Task Handle(IHorseEventHandler handler, HorseMessage message, HorseEvent horseEvent,
+        HorseClient client, CancellationToken cancellationToken)
     {
         if (Retry == null)
         {
@@ -80,14 +77,14 @@ internal class EventSubscriberExecutor : ExecutorBase
             catch (Exception e)
             {
                 Type type = e.GetType();
-                if (Retry.IgnoreExceptions != null && Retry.IgnoreExceptions.Length > 0)
+                if (Retry.IgnoreExceptions is {Length: > 0})
                 {
                     if (Retry.IgnoreExceptions.Any(x => x.IsAssignableFrom(type)))
                         throw;
                 }
 
                 if (Retry.DelayBetweenRetries > 0)
-                    await Task.Delay(Retry.DelayBetweenRetries);
+                    await Task.Delay(Retry.DelayBetweenRetries, cancellationToken);
 
                 if (i == count - 1)
                     throw;

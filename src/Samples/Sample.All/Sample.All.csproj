@@ -13,6 +13,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\Horse.Messaging.Data\Horse.Messaging.Data.csproj" />
       <ProjectReference Include="..\..\Horse.Messaging.Extensions.Client\Horse.Messaging.Extensions.Client.csproj" />
       <ProjectReference Include="..\..\Horse.Messaging.Server\Horse.Messaging.Server.csproj" />
     </ItemGroup>

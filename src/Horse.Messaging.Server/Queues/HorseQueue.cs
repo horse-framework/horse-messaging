@@ -14,6 +14,7 @@ using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Messaging.Server.Queues.Managers;
+using Horse.Messaging.Server.Queues.Partitions;
 using Horse.Messaging.Server.Queues.States;
 using Horse.Messaging.Server.Queues.Sync;
 using Horse.Messaging.Server.Security;
@@ -92,6 +93,37 @@ public class HorseQueue
     public QueueInfo Info { get; } = new();
 
     /// <summary>
+    /// Partition manager for this queue.
+    /// Non-null only when Options.Partition.Enabled = true and IsPartitionQueue = false.
+    /// </summary>
+    public PartitionManager PartitionManager { get; private set; }
+
+    /// <summary>
+    /// True when this queue is a virtual parent queue with active partitions.
+    /// </summary>
+    public bool IsPartitioned => PartitionManager != null;
+
+    /// <summary>
+    /// True when this queue IS a partition sub-queue (child of a partitioned parent).
+    /// Prevents recursive partitioning.
+    /// </summary>
+    public bool IsPartitionQueue { get; internal set; } = false;
+
+    /// <summary>
+    /// When true, <see cref="UpdateConfiguration"/> is a no-op.
+    /// Used for partition sub-queues with deterministic names that do not need
+    /// to be persisted in queues.json — they are re-created on demand.
+    /// </summary>
+    internal bool SkipPersistence { get; set; }
+
+    /// <summary>
+    /// Non-null when <see cref="IsPartitionQueue"/> is true.
+    /// Carries the parent queue name, partition id and label used for
+    /// persistence and restart recovery.
+    /// </summary>
+    public SubPartitionMeta PartitionMeta { get; internal set; }
+
+    /// <summary>
     /// Queue manager name
     /// </summary>
     internal string ManagerName { get; set; }
@@ -163,7 +195,7 @@ public class HorseQueue
 
     private readonly SemaphoreSlim _triggerLock = new(1, 1);
     private readonly List<PutBackQueueMessage> _putBackWaitList = new(8);
-    private readonly SortedSet<string> _messageIdList = new(StringComparer.InvariantCulture);
+    private readonly HashSet<string> _messageIdList = new(StringComparer.Ordinal);
 
     private readonly object _queueClientLock = new();
     private readonly QueueClient[] _queueClients = new QueueClient[32];
@@ -276,6 +308,12 @@ public class HorseQueue
 
             Status = QueueStatus.Running;
 
+            // Initialize partition manager for partitioned queues (not for partition sub-queues)
+            if (Options.Partition is { Enabled: true } && !IsPartitionQueue)
+            {
+                PartitionManager = new PartitionManager(this, Options.Partition);
+            }
+
             _triggerTimer = new Timer(a =>
             {
                 if (!_triggering && State != null && State.TriggerSupported)
@@ -307,6 +345,14 @@ public class HorseQueue
 
         try
         {
+            // Destroy all partition sub-queues before destroying the parent
+            if (IsPartitioned)
+            {
+                PartitionManager.Dispose();
+                foreach (PartitionEntry entry in PartitionManager.Partitions.ToList())
+                    await Rider.Queue.Remove(entry.Queue);
+            }
+
             await Manager.Destroy();
 
             QueueLock?.Dispose();
@@ -345,7 +391,7 @@ public class HorseQueue
         switch (Options.AutoDestroy)
         {
             case QueueDestroy.NoConsumers:
-                if (_queueClients.All(x => x == null))
+                if (!HasAnyClient())
                     await Rider.Queue.Remove(this);
 
                 break;
@@ -357,7 +403,7 @@ public class HorseQueue
                 break;
 
             case QueueDestroy.Empty:
-                if (_queueClients.All(x => x == null) && IsEmpty && Manager.DeliveryHandler.Tracker.GetDeliveryCount() == 0)
+                if (!HasAnyClient() && IsEmpty && Manager.DeliveryHandler.Tracker.GetDeliveryCount() == 0)
                     await Rider.Queue.Remove(this);
 
                 break;
@@ -369,6 +415,9 @@ public class HorseQueue
     /// </summary>
     public void UpdateConfiguration(bool notifyCluster)
     {
+        if (SkipPersistence)
+            return;
+
         IOptionsConfigurator<QueueConfiguration> options = Rider.Queue.OptionsConfigurator;
 
         if (options == null)
@@ -477,22 +526,22 @@ public class HorseQueue
 
         foreach (KeyValuePair<string, string> pair in message.Headers)
         {
-            if (pair.Key.Equals(HorseHeaders.ACKNOWLEDGE, StringComparison.InvariantCultureIgnoreCase))
+            if (pair.Key.Equals(HorseHeaders.ACKNOWLEDGE, StringComparison.OrdinalIgnoreCase))
                 Options.Acknowledge = Enums.Parse<QueueAckDecision>(pair.Value, true, EnumFormat.Description);
 
-            else if (pair.Key.Equals(HorseHeaders.QUEUE_TYPE, StringComparison.InvariantCultureIgnoreCase))
+            else if (pair.Key.Equals(HorseHeaders.QUEUE_TYPE, StringComparison.OrdinalIgnoreCase))
                 Options.Type = Enums.Parse<QueueType>(pair.Value, true, EnumFormat.Description);
 
-            else if (pair.Key.Equals(HorseHeaders.QUEUE_TOPIC, StringComparison.InvariantCultureIgnoreCase))
+            else if (pair.Key.Equals(HorseHeaders.QUEUE_TOPIC, StringComparison.OrdinalIgnoreCase))
                 Topic = pair.Value;
 
-            else if (pair.Key.Equals(HorseHeaders.PUT_BACK, StringComparison.InvariantCultureIgnoreCase))
+            else if (pair.Key.Equals(HorseHeaders.PUT_BACK, StringComparison.OrdinalIgnoreCase))
                 Options.PutBack = Enums.Parse<PutBackDecision>(pair.Value, true, EnumFormat.Description);
 
-            else if (pair.Key.Equals(HorseHeaders.PUT_BACK_DELAY, StringComparison.InvariantCultureIgnoreCase))
+            else if (pair.Key.Equals(HorseHeaders.PUT_BACK_DELAY, StringComparison.OrdinalIgnoreCase))
                 Options.PutBackDelay = Convert.ToInt32(pair.Value);
 
-            else if (pair.Key.Equals(HorseHeaders.MESSAGE_TIMEOUT, StringComparison.InvariantCultureIgnoreCase))
+            else if (pair.Key.Equals(HorseHeaders.MESSAGE_TIMEOUT, StringComparison.OrdinalIgnoreCase))
             {
                 string[] timeoutValues = pair.Value.Split(';', StringSplitOptions.RemoveEmptyEntries);
                 if (timeoutValues.Length == 3)
@@ -504,13 +553,13 @@ public class HorseQueue
                     };
             }
 
-            else if (pair.Key.Equals(HorseHeaders.ACK_TIMEOUT, StringComparison.InvariantCultureIgnoreCase))
+            else if (pair.Key.Equals(HorseHeaders.ACK_TIMEOUT, StringComparison.OrdinalIgnoreCase))
                 Options.AcknowledgeTimeout = TimeSpan.FromSeconds(Convert.ToInt32(pair.Value));
 
-            else if (pair.Key.Equals(HorseHeaders.MESSAGE_ID_UNIQUE_CHECK, StringComparison.InvariantCultureIgnoreCase))
-                Options.MessageIdUniqueCheck = pair.Value.Equals("true", StringComparison.InvariantCultureIgnoreCase) || Convert.ToInt32(pair.Value) == 1;
+            else if (pair.Key.Equals(HorseHeaders.MESSAGE_ID_UNIQUE_CHECK, StringComparison.OrdinalIgnoreCase))
+                Options.MessageIdUniqueCheck = pair.Value.Equals("true", StringComparison.OrdinalIgnoreCase) || Convert.ToInt32(pair.Value) == 1;
 
-            else if (pair.Key.Equals(HorseHeaders.DELAY_BETWEEN_MESSAGES, StringComparison.InvariantCultureIgnoreCase))
+            else if (pair.Key.Equals(HorseHeaders.DELAY_BETWEEN_MESSAGES, StringComparison.OrdinalIgnoreCase))
             {
                 if (!string.IsNullOrEmpty(pair.Value))
                     Options.DelayBetweenMessages = Convert.ToInt32(pair.Value);
@@ -612,6 +661,13 @@ public class HorseQueue
 
         if (Status is QueueStatus.OnlyConsume or QueueStatus.Paused)
             return PushResult.StatusNotSupported;
+
+        // Partition routing: delegate to PartitionManager instead of pushing directly
+        if (IsPartitioned)
+        {
+            var (_, partitionResult) = await PartitionManager.RouteMessage(message, sender);
+            return partitionResult;
+        }
 
         if (Options.MessageLimit > 0)
         {
@@ -794,7 +850,7 @@ public class HorseQueue
 
             bool waitForAck = Options.Type != QueueType.RoundRobin && Options.Acknowledge == QueueAckDecision.WaitForAcknowledge;
             if (waitForAck)
-                await WaitForAcknowledge();
+                await waitForAcknowledge();
 
             QueueMessage message = null;
 
@@ -1163,7 +1219,7 @@ public class HorseQueue
     /// <summary>
     /// When wait for acknowledge is active, this method locks the queue until acknowledge is received
     /// </summary>
-    internal async Task WaitForAcknowledge()
+    internal async Task waitForAcknowledge()
     {
         TaskCompletionSource<bool> source = _acknowledgeCallback;
         if (source != null && !source.Task.IsCompleted)
@@ -1190,7 +1246,7 @@ public class HorseQueue
             //so we need to check it again after a few milliseconds
             if (delivery == null)
             {
-                await Task.Delay(1);
+                await Task.Yield();
                 delivery = Manager.DeliveryHandler.Tracker.FindDelivery(from, deliveryMessage.MessageId, true);
 
                 //try again
@@ -1214,7 +1270,7 @@ public class HorseQueue
             if (delivery.Acknowledge == DeliveryAcknowledge.Timeout)
                 return;
 
-            bool success = !(deliveryMessage.HasHeader && deliveryMessage.Headers.Any(x => x.Key.Equals(HorseHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.InvariantCultureIgnoreCase)));
+            bool success = !(deliveryMessage.HasHeader && deliveryMessage.Headers.Any(x => x.Key.Equals(HorseHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.OrdinalIgnoreCase)));
 
             delivery.MarkAsAcknowledged(success);
             ReleaseAcknowledgeLock(true);
@@ -1305,7 +1361,7 @@ public class HorseQueue
         {
             for (int i = 0; i < _queueClients.Length; i++)
             {
-                if (Options.ClientLimit > 0 && i + 1 >= Options.ClientLimit)
+                if (Options.ClientLimit > 0 && i + 1 > Options.ClientLimit)
                     return SubscriptionResult.Full;
 
                 if (_queueClients[i] == null)

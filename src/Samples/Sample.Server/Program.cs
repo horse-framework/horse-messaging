@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Client.Queues.Annotations;
@@ -18,7 +19,8 @@ public class Model
 
 public class ModelConsumer : IQueueConsumer<Model>
 {
-    public Task Consume(HorseMessage message, Model model, HorseClient client)
+    public Task Consume(HorseMessage message, Model model, HorseClient client,
+        CancellationToken cancellationToken = default)
     {
         throw new System.NotImplementedException();
     }

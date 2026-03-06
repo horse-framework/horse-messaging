@@ -86,6 +86,13 @@ public enum HorseEventType : short
     QueueMessageTimeout = 210,
 
     /// <summary>
+    /// Triggered when a new partition is created for a partitioned queue.
+    /// Event target = parent queue name.
+    /// Event parameters: Partition-Id, Partition-Queue, Partition-Label
+    /// </summary>
+    QueuePartitionCreated = 211,
+
+    /// <summary>
     /// Triggered when new router is created
     /// </summary>
     RouterCreate = 301,

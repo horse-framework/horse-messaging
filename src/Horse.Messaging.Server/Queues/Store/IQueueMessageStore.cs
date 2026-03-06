@@ -47,6 +47,11 @@ public interface IQueueMessageStore
     QueueMessage ConsumeFirst();
 
     /// <summary>
+    /// Gets last message from store (LIFO order)
+    /// </summary>
+    QueueMessage ConsumeLast();
+
+    /// <summary>
     /// Finds a message by Id
     /// </summary>
     QueueMessage Find(string messageId);

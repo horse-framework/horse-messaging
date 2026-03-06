@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>Benchmark.Partition.ConsumerBounceRedeliveryBenchmark-20260228-093139</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, macOS 26.2 (25C56) [Darwin 25.2.0]
+Apple M1 Max, 1 CPU, 10 logical and 10 physical cores
+.NET SDK 10.0.102
+  [Host]     : .NET 10.0.2 (10.0.225.61305), Arm64 RyuJIT AdvSIMD
+  Job-ATPBMG : .NET 10.0.2 (10.0.225.61305), Arm64 RyuJIT AdvSIMD
+</code></pre>
+<pre><code>IterationCount=5  LaunchCount=1  WarmupCount=2  
+</code></pre>
+
+<table>
+<thead><tr><th>Method           </th><th>MessageCount</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Median</th><th>Rank</th><th>Gen0</th><th>Gen1</th><th>Gen2</th><th>Allocated</th>
+</tr>
+</thead><tbody><tr><td>Bounce_Buffer_Redeliver</td><td>5000</td><td>166.0 ms</td><td>9.00 ms</td><td>1.39 ms</td><td>165.97 ms</td><td>1</td><td>6000.0000</td><td>1000.0000</td><td>333.3333</td><td>37612.07 KB</td>
+</tr><tr><td>Bounce_Buffer_Redeliver</td><td>100</td><td>567.6 ms</td><td>1,978.41 ms</td><td>513.79 ms</td><td>942.78 ms</td><td>2</td><td>125.0000</td><td>62.5000</td><td>-</td><td>796.53 KB</td>
+</tr><tr><td>Bounce_Buffer_Redeliver</td><td>1000</td><td>894.3 ms</td><td>4,523.43 ms</td><td>1,174.72 ms</td><td>38.10 ms</td><td>2</td><td>1285.7143</td><td>500.0000</td><td>71.4286</td><td>7565.19 KB</td>
+</tr></tbody></table>
+</body>
+</html>

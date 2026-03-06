@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -13,7 +12,7 @@ namespace Horse.Messaging.Protocol;
 /// <summary>
 /// Horse Protocol message
 /// </summary>
-public class HorseMessage
+public class HorseMessage : IDisposable
 {
     #region Properties
 
@@ -148,15 +147,19 @@ public class HorseMessage
         SetTarget(target);
     }
 
-    ~HorseMessage()
-    {
-        Content?.Dispose();
-        AdditionalContent?.Dispose();
-    }
 
     #endregion
 
     #region Methods
+
+    /// <summary>
+    /// Disposes message content streams to release memory
+    /// </summary>
+    public void Dispose()
+    {
+        Content?.Dispose();
+        AdditionalContent?.Dispose();
+    }
 
     /// <summary>
     /// Changes id of the message
@@ -205,6 +208,9 @@ public class HorseMessage
         if (Content == null)
             return string.Empty;
 
+        if (Content.TryGetBuffer(out ArraySegment<byte> buffer))
+            return Encoding.UTF8.GetString(buffer.AsSpan());
+
         return Encoding.UTF8.GetString(Content.ToArray());
     }
 
@@ -213,11 +219,18 @@ public class HorseMessage
     /// </summary>
     public void SetStringContent(string content)
     {
-        if (string.IsNullOrEmpty(content))
+        if (content == null)
             return;
 
-        Content = new MemoryStream(Encoding.UTF8.GetBytes(content));
-        Length = Content != null ? (ulong)Content.Length : 0;
+        int byteCount = Encoding.UTF8.GetByteCount(content);
+        Content = new MemoryStream(byteCount);
+        Content.SetLength(byteCount);
+        if (byteCount > 0)
+        {
+            Span<byte> span = Content.GetBuffer().AsSpan(0, byteCount);
+            Encoding.UTF8.GetBytes(content.AsSpan(), span);
+        }
+        Length = (ulong)byteCount;
     }
 
     /// <summary>
@@ -263,8 +276,14 @@ public class HorseMessage
     /// <returns></returns>
     public string GetStringContent()
     {
-        if (Content == null || Length == 0)
+        if (Content == null)
             return null;
+
+        if (Length == 0 || Content.Length == 0)
+            return string.Empty;
+
+        if (Content.TryGetBuffer(out ArraySegment<byte> buffer))
+            return Encoding.UTF8.GetString(buffer.AsSpan());
 
         return Encoding.UTF8.GetString(Content.ToArray());
     }
@@ -330,10 +349,14 @@ public class HorseMessage
     #region Header
 
     /// <summary>
-    /// Adds new header key value pair
+    /// Adds new header key value pair.
+    /// If key or value is null, the header is silently skipped.
     /// </summary>
     public void AddHeader(string key, string value)
     {
+        if (key == null || value == null)
+            return;
+
         if (!HasHeader)
             HasHeader = true;
 
@@ -371,7 +394,7 @@ public class HorseMessage
         for (int i = 0; i < HeadersList.Count; i++)
         {
             KeyValuePair<string, string> pair = HeadersList[i];
-            if (pair.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase))
+            if (pair.Key.Equals(key, StringComparison.OrdinalIgnoreCase))
             {
                 HeadersList[i] = new KeyValuePair<string, string>(key, value);
                 return;
@@ -390,8 +413,13 @@ public class HorseMessage
         if (!HasHeader || HeadersList == null || HeadersList.Count == 0)
             return null;
 
-        KeyValuePair<string, string> pair = HeadersList.FirstOrDefault(x => x.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase));
-        return pair.Value;
+        for (int i = 0; i < HeadersList.Count; i++)
+        {
+            if (HeadersList[i].Key.Equals(key, StringComparison.OrdinalIgnoreCase))
+                return HeadersList[i].Value;
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -408,7 +436,7 @@ public class HorseMessage
     /// </summary>
     public void RemoveHeader(string key)
     {
-        HeadersList.RemoveAll(x => x.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase));
+        HeadersList.RemoveAll(x => x.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
         HasHeader = HeadersList.Count > 0;
     }
 
@@ -420,7 +448,7 @@ public class HorseMessage
         if (HeadersList == null || HeadersList.Count == 0)
             return;
 
-        StringComparer comparer = StringComparer.InvariantCultureIgnoreCase;
+        StringComparer comparer = StringComparer.OrdinalIgnoreCase;
         HeadersList.RemoveAll(x => keys.Contains(x.Key, comparer));
         HasHeader = HeadersList.Count > 0;
     }

@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using RoutingSample.Models;
@@ -13,7 +14,7 @@ namespace RoutingSample.DirectConsumer
 			{
 				Foo = "Hello from sample direct message consumer"
 			};
-			HorseResult<GiveMeGuidResponse> guidResponse = await Program.RouterBus.PublishRequestJson<GiveMeGuidRequest, GiveMeGuidResponse>(request);
+                        HorseResult<GiveMeGuidResponse> guidResponse = await Program.RouterBus.PublishRequest<GiveMeGuidRequest, GiveMeGuidResponse>(request);
 			Console.WriteLine($"SAMPLE DIRECT MESSAGE CONSUMED [{guidResponse.Model.Guid}]");
 		}
 	}

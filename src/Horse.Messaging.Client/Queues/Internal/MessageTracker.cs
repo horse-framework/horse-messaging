@@ -17,7 +17,7 @@ internal class MessageTracker : IDisposable
     /// Sent messages
     /// </summary>
     //private readonly List<MessageDescriptor> _descriptors = new List<MessageDescriptor>();
-    private readonly SortedDictionary<string, MessageDescriptor> _sortedDescriptors = new(StringComparer.InvariantCultureIgnoreCase);
+    private readonly SortedDictionary<string, MessageDescriptor> _sortedDescriptors = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Temp message descriptor list
@@ -135,13 +135,13 @@ internal class MessageTracker : IDisposable
     public async Task<HorseMessage> Track(HorseMessage message)
     {
         if (!message.WaitResponse || string.IsNullOrEmpty(message.MessageId))
-            return default;
+            return null;
 
         DateTime expiration = DateTime.UtcNow + _client.ResponseTimeout;
         ResponseMessageDescriptor descriptor = new ResponseMessageDescriptor(message, expiration);
 
         lock (_sortedDescriptors)
-            _sortedDescriptors.Add(message.MessageId, descriptor);
+            _sortedDescriptors[message.MessageId] = descriptor;
 
         return await descriptor.Source.Task;
     }

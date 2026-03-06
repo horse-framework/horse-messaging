@@ -97,6 +97,9 @@ public class HorseClientBuilder
     /// </summary>
     public virtual HorseClient Build()
     {
+        if (_services != null && _client.Provider == null)
+            _client.Provider = _services.BuildServiceProvider();
+
         return _client;
     }
     #endregion
@@ -579,6 +582,103 @@ public class HorseClientBuilder
     }
 
     /// <summary>
+    /// Adds a queue consumer with transient life time and subscribes to a partitioned queue.
+    /// </summary>
+    /// <param name="partitionLabel">
+    /// Routing label sent as <c>Partition-Label</c> header.
+    /// Pass <c>null</c> or empty string for label-less (round-robin) partitioned subscribe.
+    /// </param>
+    /// <param name="maxPartitions">
+    /// Maximum partitions forwarded as <c>Partition-Limit</c> header for auto-create.
+    /// <c>null</c> = not set (server default), <c>0</c> = unlimited.
+    /// </param>
+    /// <param name="subscribersPerPartition">
+    /// Max subscribers per partition for auto-create. <c>null</c> = not set (server default).
+    /// </param>
+    public HorseClientBuilder AddTransientConsumer<TConsumer>(string partitionLabel, int? maxPartitions = null, int? subscribersPerPartition = null) where TConsumer : class
+    {
+        if (_services == null)
+            throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                            "If you want to use transient queue consumers " +
+                                            "Build HorseClient with IServiceCollection");
+
+        QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+        registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient), partitionLabel, maxPartitions, subscribersPerPartition);
+        _services.AddTransient<TConsumer>();
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a queue consumer with transient life time, overrides the queue name,
+    /// and optionally subscribes with a partition label.
+    /// </summary>
+    /// <param name="queueName">Overrides the queue name resolved from attributes or model type.</param>
+    /// <param name="partitionLabel">Optional partition label. Pass null for no partition.</param>
+    public HorseClientBuilder AddTransientConsumer<TConsumer>(string queueName, string partitionLabel) where TConsumer : class
+    {
+        if (_services == null)
+            throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                            "If you want to use transient queue consumers " +
+                                            "Build HorseClient with IServiceCollection");
+
+        QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+        registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient), queueName, partitionLabel);
+        _services.AddTransient<TConsumer>();
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a queue consumer with transient life time, transforms the queue name resolved from attributes,
+    /// and optionally enters the partition worker pool for auto-assignment.
+    /// </summary>
+    /// <param name="queueNameTransform">
+    /// Receives the original queue name (from <c>[QueueName]</c> attribute or model type) and returns the final queue name.
+    /// Example: <c>name => $"{name}-Free"</c>
+    /// </param>
+    /// <param name="enterWorkerPool">
+    /// When true, the consumer subscribes as a partitioned worker without a label.
+    /// The server will dynamically assign it to newly created partitions.
+    /// </param>
+    public HorseClientBuilder AddTransientConsumer<TConsumer>(Func<string, string> queueNameTransform, bool enterWorkerPool = false) where TConsumer : class
+    {
+        if (_services == null)
+            throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                            "If you want to use transient queue consumers " +
+                                            "Build HorseClient with IServiceCollection");
+
+        QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+        registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient), queueNameTransform, enterWorkerPool);
+        _services.AddTransient<TConsumer>();
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a queue consumer with transient life time, transforms the queue name resolved from attributes,
+    /// and subscribes with the given partition label.
+    /// </summary>
+    /// <param name="queueNameTransform">
+    /// Receives the original queue name (from <c>[QueueName]</c> attribute or model type) and returns the final queue name.
+    /// Example: <c>name => $"{name}-Free"</c>
+    /// </param>
+    /// <param name="partitionLabel">
+    /// The partition label to subscribe with. Cannot be null or empty.
+    /// To enter the worker pool without a label, use the <c>enterWorkerPool</c> overload.
+    /// </param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="partitionLabel"/> is null or empty.</exception>
+    public HorseClientBuilder AddTransientConsumer<TConsumer>(Func<string, string> queueNameTransform, string partitionLabel) where TConsumer : class
+    {
+        if (_services == null)
+            throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                            "If you want to use transient queue consumers " +
+                                            "Build HorseClient with IServiceCollection");
+
+        QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+        registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient), queueNameTransform, partitionLabel);
+        _services.AddTransient<TConsumer>();
+        return this;
+    }
+
+    /// <summary>
     /// Adds a queue consumer with scoped life time
     /// </summary>
     public HorseClientBuilder AddScopedConsumer<TConsumer>() where TConsumer : class
@@ -595,6 +695,98 @@ public class HorseClientBuilder
     }
 
     /// <summary>
+    /// Adds a queue consumer with scoped life time and subscribes to a partitioned queue.
+    /// </summary>
+    /// <param name="partitionLabel">
+    /// Routing label sent as <c>Partition-Label</c> header.
+    /// Pass <c>null</c> or empty string for label-less partitioned subscribe.
+    /// </param>
+    /// <param name="maxPartitions">Maximum partitions for auto-create. <c>null</c> = not set (server default), <c>0</c> = unlimited.</param>
+    /// <param name="subscribersPerPartition">Max subscribers per partition. <c>null</c> = not set (server default).</param>
+    public HorseClientBuilder AddScopedConsumer<TConsumer>(string partitionLabel, int? maxPartitions = null, int? subscribersPerPartition = null) where TConsumer : class
+    {
+        if (_services == null)
+            throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                            "If you want to use scoped queue consumers " +
+                                            "Build HorseClient with IServiceCollection");
+
+        QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+        registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped), partitionLabel, maxPartitions, subscribersPerPartition);
+        _services.AddScoped<TConsumer>();
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a queue consumer with scoped life time, overrides the queue name,
+    /// and optionally subscribes with a partition label.
+    /// </summary>
+    /// <param name="queueName">Overrides the queue name resolved from attributes or model type.</param>
+    /// <param name="partitionLabel">Optional partition label. Pass null for no partition.</param>
+    public HorseClientBuilder AddScopedConsumer<TConsumer>(string queueName, string partitionLabel) where TConsumer : class
+    {
+        if (_services == null)
+            throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                            "If you want to use scoped queue consumers " +
+                                            "Build HorseClient with IServiceCollection");
+
+        QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+        registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped), queueName, partitionLabel);
+        _services.AddScoped<TConsumer>();
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a queue consumer with scoped life time, transforms the queue name resolved from attributes,
+    /// and optionally enters the partition worker pool for auto-assignment.
+    /// </summary>
+    /// <param name="queueNameTransform">
+    /// Receives the original queue name (from <c>[QueueName]</c> attribute or model type) and returns the final queue name.
+    /// Example: <c>name => $"{name}-Free"</c>
+    /// </param>
+    /// <param name="enterWorkerPool">
+    /// When true, the consumer subscribes as a partitioned worker without a label.
+    /// The server will dynamically assign it to newly created partitions.
+    /// </param>
+    public HorseClientBuilder AddScopedConsumer<TConsumer>(Func<string, string> queueNameTransform, bool enterWorkerPool = false) where TConsumer : class
+    {
+        if (_services == null)
+            throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                            "If you want to use scoped queue consumers " +
+                                            "Build HorseClient with IServiceCollection");
+
+        QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+        registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped), queueNameTransform, enterWorkerPool);
+        _services.AddScoped<TConsumer>();
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a queue consumer with scoped life time, transforms the queue name resolved from attributes,
+    /// and subscribes with the given partition label.
+    /// </summary>
+    /// <param name="queueNameTransform">
+    /// Receives the original queue name (from <c>[QueueName]</c> attribute or model type) and returns the final queue name.
+    /// Example: <c>name => $"{name}-Free"</c>
+    /// </param>
+    /// <param name="partitionLabel">
+    /// The partition label to subscribe with. Cannot be null or empty.
+    /// To enter the worker pool without a label, use the <c>enterWorkerPool</c> overload.
+    /// </param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="partitionLabel"/> is null or empty.</exception>
+    public HorseClientBuilder AddScopedConsumer<TConsumer>(Func<string, string> queueNameTransform, string partitionLabel) where TConsumer : class
+    {
+        if (_services == null)
+            throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                            "If you want to use scoped queue consumers " +
+                                            "Build HorseClient with IServiceCollection");
+
+        QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+        registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped), queueNameTransform, partitionLabel);
+        _services.AddScoped<TConsumer>();
+        return this;
+    }
+
+    /// <summary>
     /// Adds a queue consumer with singleton life time
     /// </summary>
     public HorseClientBuilder AddSingletonConsumer<TConsumer>() where TConsumer : class
@@ -605,6 +797,102 @@ public class HorseClientBuilder
         else
         {
             registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton));
+            _services.AddSingleton<TConsumer>();
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a queue consumer with singleton life time and subscribes to a partitioned queue.
+    /// </summary>
+    /// <param name="partitionLabel">
+    /// Routing label sent as <c>Partition-Label</c> header.
+    /// Pass <c>null</c> or empty string for label-less partitioned subscribe.
+    /// </param>
+    /// <param name="maxPartitions">Maximum partitions for auto-create. <c>null</c> = not set (server default), <c>0</c> = unlimited.</param>
+    /// <param name="subscribersPerPartition">Max subscribers per partition. <c>null</c> = not set (server default).</param>
+    public HorseClientBuilder AddSingletonConsumer<TConsumer>(string partitionLabel, int? maxPartitions = null, int? subscribersPerPartition = null) where TConsumer : class
+    {
+        QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+        if (_services == null)
+            registrar.RegisterConsumer(typeof(TConsumer), null, partitionLabel, maxPartitions, subscribersPerPartition);
+        else
+        {
+            registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), partitionLabel, maxPartitions, subscribersPerPartition);
+            _services.AddSingleton<TConsumer>();
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a queue consumer with singleton life time, overrides the queue name,
+    /// and optionally subscribes with a partition label.
+    /// </summary>
+    /// <param name="queueName">Overrides the queue name resolved from attributes or model type.</param>
+    /// <param name="partitionLabel">Optional partition label. Pass null for no partition.</param>
+    public HorseClientBuilder AddSingletonConsumer<TConsumer>(string queueName, string partitionLabel) where TConsumer : class
+    {
+        QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+        if (_services == null)
+            registrar.RegisterConsumer(typeof(TConsumer), null, queueName, partitionLabel);
+        else
+        {
+            registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), queueName, partitionLabel);
+            _services.AddSingleton<TConsumer>();
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a queue consumer with singleton life time, transforms the queue name resolved from attributes,
+    /// and optionally enters the partition worker pool for auto-assignment.
+    /// </summary>
+    /// <param name="queueNameTransform">
+    /// Receives the original queue name (from <c>[QueueName]</c> attribute or model type) and returns the final queue name.
+    /// Example: <c>name => $"{name}-Free"</c>
+    /// </param>
+    /// <param name="enterWorkerPool">
+    /// When true, the consumer subscribes as a partitioned worker without a label.
+    /// The server will dynamically assign it to newly created partitions.
+    /// </param>
+    public HorseClientBuilder AddSingletonConsumer<TConsumer>(Func<string, string> queueNameTransform, bool enterWorkerPool = false) where TConsumer : class
+    {
+        QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+        if (_services == null)
+            registrar.RegisterConsumer(typeof(TConsumer), null, queueNameTransform, enterWorkerPool);
+        else
+        {
+            registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), queueNameTransform, enterWorkerPool);
+            _services.AddSingleton<TConsumer>();
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a queue consumer with singleton life time, transforms the queue name resolved from attributes,
+    /// and subscribes with the given partition label.
+    /// </summary>
+    /// <param name="queueNameTransform">
+    /// Receives the original queue name (from <c>[QueueName]</c> attribute or model type) and returns the final queue name.
+    /// Example: <c>name => $"{name}-Free"</c>
+    /// </param>
+    /// <param name="partitionLabel">
+    /// The partition label to subscribe with. Cannot be null or empty.
+    /// To enter the worker pool without a label, use the <c>enterWorkerPool</c> overload.
+    /// </param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="partitionLabel"/> is null or empty.</exception>
+    public HorseClientBuilder AddSingletonConsumer<TConsumer>(Func<string, string> queueNameTransform, string partitionLabel) where TConsumer : class
+    {
+        QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+        if (_services == null)
+            registrar.RegisterConsumer(typeof(TConsumer), null, queueNameTransform, partitionLabel);
+        else
+        {
+            registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), queueNameTransform, partitionLabel);
             _services.AddSingleton<TConsumer>();
         }
 
@@ -923,8 +1211,9 @@ public class HorseClientBuilder
 
     private static void Shutdown(HorseClient client, TimeSpan minWait, TimeSpan maxWait)
     {
-        _ = client.Queue.UnsubscribeFromAllQueues();
-        _ = client.Channel.UnsubscribeFromAllChannels();
+        using var shutdownCts = new CancellationTokenSource(maxWait);
+        _ = client.Queue.UnsubscribeFromAllQueues(shutdownCts.Token);
+        _ = client.Channel.UnsubscribeFromAllChannels(shutdownCts.Token);
         
         int min = Convert.ToInt32(minWait.TotalMilliseconds);
         int max = Convert.ToInt32(maxWait.TotalMilliseconds);

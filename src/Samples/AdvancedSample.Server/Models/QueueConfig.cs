@@ -1,3 +1,4 @@
+using System.Threading;
 ﻿using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
@@ -18,7 +19,7 @@ public class InMemoryQueueConfig
 
 public class QueueConfigOptions
 {
-    public QueueAckDecision Acknowledge { get; set; } = QueueAckDecision.WaitForAcknowledge;
+    public QueueAckDecision Acknowledge { get; set; } = QueueAckDecision.waitForAcknowledge;
     public CommitWhen CommitWhen { get; set; } = CommitWhen.AfterReceived;
     public string AcknowledgeTimeout { get; set; } = "1s";
     public string MessageTimeout { get; set; } = "1s";

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Cache;
@@ -30,7 +31,7 @@ class Program
             try
             {
                 Console.ReadLine();
-                incrementalData = await client.Cache.GetIncrementalValue("IncrementalTestKey");
+                incrementalData = await client.Cache.GetIncrementalValue("IncrementalTestKey", CancellationToken.None);
                 Console.WriteLine($"Incremental value: {incrementalData.Value}");
             }
             catch { }

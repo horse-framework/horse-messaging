@@ -12,6 +12,6 @@ public class DefaultUniqueIdGenerator : IUniqueIdGenerator
     /// </summary>
     public string Create()
     {
-        return Guid.NewGuid().ToString("N");
+        return Guid.CreateVersion7().ToString("N");
     }
 }

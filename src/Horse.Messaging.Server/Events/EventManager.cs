@@ -59,6 +59,14 @@ public class EventManager : IDisposable
     /// <summary>
     /// Triggers event and sends message to subscribers
     /// </summary>
+    internal void Trigger(MessagingClient subject)
+    {
+        Trigger(subject, null, Array.Empty<KeyValuePair<string, string>>());
+    }
+
+    /// <summary>
+    /// Triggers event and sends message to subscribers
+    /// </summary>
     internal void Trigger(MessagingClient subject, params KeyValuePair<string, string>[] parameters)
     {
         Trigger(subject, null, parameters);
@@ -95,6 +103,14 @@ public class EventManager : IDisposable
     internal void Trigger(string target, params KeyValuePair<string, string>[] parameters)
     {
         Trigger((EventSubject)null, target, parameters);
+    }
+
+    /// <summary>
+    /// Triggers event and sends message to subscribers (no params, avoids array allocation)
+    /// </summary>
+    internal void Trigger()
+    {
+        Trigger((EventSubject)null, null, Array.Empty<KeyValuePair<string, string>>());
     }
 
     /// <summary>

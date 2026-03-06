@@ -1,3 +1,4 @@
+using System.Threading;
 ﻿using Horse.Messaging.Plugins;
 
 namespace Sample.Plugins;

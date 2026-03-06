@@ -1,4 +1,6 @@
 using System;
+using System;
+using System.Threading;
 using System.Threading.Tasks;
 using AdvancedSample.Service.Interceptors;
 using Horse.Messaging.Client;
@@ -11,13 +13,14 @@ namespace AdvancedSample.Service.Handlers;
 [Interceptor(typeof(TestInterceptor))]
 public abstract class RequestHandler<TRequest, TResponse> : IHorseRequestHandler<TRequest, TResponse>
 {
-    public async Task<TResponse> Handle(TRequest query, HorseMessage message, HorseClient client)
+    public async Task<TResponse> Handle(TRequest query, HorseMessage message, HorseClient client,
+        CancellationToken cancellationToken = default)
     {
-        TResponse result = await Handle(query, message);
-        return result;
+        return await Handle(query, message);
     }
 
-    public Task<ErrorResponse> OnError(Exception exception, TRequest request, HorseMessage rawMessage, HorseClient client)
+    public Task<ErrorResponse> OnError(Exception exception, TRequest request, HorseMessage rawMessage, HorseClient client,
+        CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new ErrorResponse
         {

@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client.Internal;
 using Horse.Messaging.Protocol;
@@ -37,7 +38,8 @@ internal class ChannelSubscriberExecutor<TModel> : ExecutorBase
     /// <summary>
     /// Executes the channel message
     /// </summary>
-    public override async Task Execute(HorseClient client, HorseMessage message, object model)
+    public override async Task Execute(HorseClient client, HorseMessage message, object model,
+        CancellationToken cancellationToken)
     {
         TModel t = (TModel) model;
         ProvidedHandler providedHandler = null;
@@ -45,14 +47,14 @@ internal class ChannelSubscriberExecutor<TModel> : ExecutorBase
         try
         {
             if (_subscriber != null)
-                await Handle(_subscriber, message, t, client);
+                await Handle(_subscriber, message, t, client, cancellationToken);
 
             else if (_subscriberFactoryCreator != null)
             {
                 IHandlerFactory handlerFactory = _subscriberFactoryCreator();
                 providedHandler = handlerFactory.CreateHandler(_subscriberType);
                 IChannelSubscriber<TModel> consumer = (IChannelSubscriber<TModel>) providedHandler.Service;
-                await Handle(consumer, message, t, client);
+                await Handle(consumer, message, t, client, cancellationToken);
             }
             else
                 throw new NullReferenceException("There is no consumer defined");
@@ -67,11 +69,12 @@ internal class ChannelSubscriberExecutor<TModel> : ExecutorBase
         }
     }
 
-    private async Task Handle(IChannelSubscriber<TModel> subscriber, HorseMessage message, TModel model, HorseClient client)
+    private async Task Handle(IChannelSubscriber<TModel> subscriber, HorseMessage message, TModel model,
+        HorseClient client, CancellationToken cancellationToken)
     {
         if (Retry == null)
         {
-            await subscriber.Handle(model, message, client);
+            await subscriber.Handle(model, message, client, cancellationToken);
             return;
         }
 
@@ -80,7 +83,7 @@ internal class ChannelSubscriberExecutor<TModel> : ExecutorBase
         {
             try
             {
-                await subscriber.Handle(model, message, client);
+                await subscriber.Handle(model, message, client, cancellationToken);
                 return;
             }
             catch (Exception e)
@@ -93,7 +96,7 @@ internal class ChannelSubscriberExecutor<TModel> : ExecutorBase
                 }
 
                 if (Retry.DelayBetweenRetries > 0)
-                    await Task.Delay(Retry.DelayBetweenRetries);
+                    await Task.Delay(Retry.DelayBetweenRetries, cancellationToken);
 
                 if (i == count - 1)
                     throw;

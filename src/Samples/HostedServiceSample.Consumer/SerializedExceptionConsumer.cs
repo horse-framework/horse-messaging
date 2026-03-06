@@ -1,5 +1,6 @@
 using System;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Queues;
@@ -13,15 +14,13 @@ namespace HostedServiceSample.Consumer;
 [AutoNack(NegativeReason.Error)]
 internal class SerializedExceptionConsumer: IQueueConsumer<SerializedException>
 {
-	readonly JsonSerializerOptions _options = new()
-    {
-		WriteIndented = true
-	};
+    readonly JsonSerializerOptions _options = new() { WriteIndented = true };
 
-	public Task Consume(HorseMessage message, SerializedException model, HorseClient client)
-	{
-		_ = Console.Out.WriteLineAsync("Exception Consumed!!!");
-		_ = Console.Out.WriteLineAsync(JsonSerializer.Serialize(model, _options));
-		return Task.CompletedTask;
-	}
+    public Task Consume(HorseMessage message, SerializedException model, HorseClient client,
+        CancellationToken cancellationToken = default)
+    {
+        _ = Console.Out.WriteLineAsync("Exception Consumed!!!");
+        _ = Console.Out.WriteLineAsync(JsonSerializer.Serialize(model, _options));
+        return Task.CompletedTask;
+    }
 }

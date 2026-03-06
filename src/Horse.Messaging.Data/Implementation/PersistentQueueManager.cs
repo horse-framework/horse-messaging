@@ -57,7 +57,7 @@ public class PersistentQueueManager : IHorseQueueManager
         DeliveryHandler = new PersistentMessageDeliveryHandler(this);
 
         DatabaseOptions prioDbOptions = databaseOptions.Clone();
-        if (prioDbOptions.Filename.EndsWith(".hdb", StringComparison.InvariantCultureIgnoreCase))
+        if (prioDbOptions.Filename.EndsWith(".hdb", StringComparison.OrdinalIgnoreCase))
             prioDbOptions.Filename = prioDbOptions.Filename.Substring(0, prioDbOptions.Filename.Length - 4) +
                                      "_prio" +
                                      ".hdb";

@@ -117,9 +117,9 @@ internal class CacheNetworkHandler : INetworkMessageHandler
                     warning = TimeSpan.FromSeconds(Convert.ToInt32(warningDuration));
 
                 if (!string.IsNullOrEmpty(persistentCache))
-                    persistent = string.Equals(persistentCache, "1") || string.Equals(persistentCache, "true", StringComparison.InvariantCultureIgnoreCase);
+                    persistent = string.Equals(persistentCache, "1") || string.Equals(persistentCache, "true", StringComparison.OrdinalIgnoreCase);
 
-                CacheOperation operation = await _cache.Set(client, !client.IsNodeClient, message.Target, message.Content, timeout, warning, tagNames, persistent);
+                CacheOperation operation = _cache.Set(client, !client.IsNodeClient, message.Target, message.Content, timeout, warning, tagNames, persistent);
                 switch (operation.Result)
                 {
                     case CacheResult.Ok:
@@ -166,7 +166,7 @@ internal class CacheNetworkHandler : INetworkMessageHandler
                 if (!string.IsNullOrEmpty(messageTimeout))
                     timeout = TimeSpan.FromSeconds(Convert.ToInt32(messageTimeout));
 
-                GetCacheItemResult getResult = await _cache.GetIncremental(message.Target, timeout, increment, tagNames);
+                GetCacheItemResult getResult = _cache.GetIncremental(message.Target, timeout, increment, tagNames);
                 HorseCacheItem item = getResult.Item;
 
                 HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
@@ -205,7 +205,7 @@ internal class CacheNetworkHandler : INetworkMessageHandler
                     }
                 }
 
-                await _cache.Remove(client, message.Target, true);
+                _cache.Remove(client, message.Target, true);
                 await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
                 return;
             }
@@ -225,9 +225,9 @@ internal class CacheNetworkHandler : INetworkMessageHandler
                 string tagName = message.FindHeader(HorseHeaders.TAG);
 
                 if (string.IsNullOrEmpty(tagName))
-                    await _cache.Purge(client, true);
+                    _cache.Purge(client, true);
                 else
-                    await _cache.PurgeByTag(tagName.Trim(), client, true);
+                    _cache.PurgeByTag(tagName.Trim(), client, true);
 
                 await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
                 return;
@@ -236,7 +236,7 @@ internal class CacheNetworkHandler : INetworkMessageHandler
             case KnownContentTypes.GetCacheList:
             {
                 string filter = message.FindHeader(HorseHeaders.FILTER);
-                List<CacheInformation> caches = await _cache.GetCacheKeys();
+                List<CacheInformation> caches = _cache.GetCacheKeys();
 
                 if (!string.IsNullOrEmpty(filter))
                     caches = caches.Where(x => Filter.CheckMatch(x.Key, filter)).ToList();

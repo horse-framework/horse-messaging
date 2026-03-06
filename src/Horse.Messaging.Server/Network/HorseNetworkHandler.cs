@@ -83,7 +83,7 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
         }
 
         string nodeValue = data.Properties.GetStringValue(HorseHeaders.HORSE_NODE);
-        bool isNode = nodeValue != null && nodeValue.Equals(HorseHeaders.YES, StringComparison.InvariantCultureIgnoreCase);
+        bool isNode = nodeValue != null && nodeValue.Equals(HorseHeaders.YES, StringComparison.OrdinalIgnoreCase);
 
         if (!isNode && _rider.Options.ClientLimit > 0 && _rider.Client.GetOnlineClients() >= _rider.Options.ClientLimit)
             return null;
@@ -157,17 +157,9 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
             if (_rider.Cluster.SuccessorNode?.PublicHost != null)
                 accepted.AddHeader(HorseHeaders.SUCCESSOR_NODE, _rider.Cluster.SuccessorNode.PublicHost);
 
-            string alternate = string.Empty;
-            foreach (NodeClient nodeClient in _rider.Cluster.Clients)
-            {
-                if (!nodeClient.IsConnected)
-                    continue;
-
-                if (nodeClient.Info.Id == _rider.Cluster.SuccessorNode?.Id)
-                    continue;
-
-                alternate += alternate.Length == 0 ? nodeClient.Info.PublicHost : $",{nodeClient.Info.PublicHost}";
-            }
+            string alternate = string.Join(',', _rider.Cluster.Clients
+                .Where(nc => nc.IsConnected && nc.Info.Id != _rider.Cluster.SuccessorNode?.Id)
+                .Select(nc => nc.Info.PublicHost));
 
             if (!string.IsNullOrEmpty(alternate))
                 accepted.AddHeader(HorseHeaders.REPLICA_NODE, alternate);

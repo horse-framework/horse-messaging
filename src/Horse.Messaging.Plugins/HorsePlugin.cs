@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.Loader;
 using System.Threading.Tasks;
 using System.Timers;
 
@@ -43,7 +42,7 @@ public abstract class HorsePlugin
     internal string AssemblyFilename { get; set; }
     internal string AssemblyVersion { get; set; }
 
-    internal SortedDictionary<string, IHorsePluginHandler> Handlers { get; } = new SortedDictionary<string, IHorsePluginHandler>(StringComparer.InvariantCultureIgnoreCase);
+    internal SortedDictionary<string, IHorsePluginHandler> Handlers { get; } = new SortedDictionary<string, IHorsePluginHandler>(StringComparer.OrdinalIgnoreCase);
 
     private IHorsePluginHandler _requestHandler;
     private Timer[] _timers = [];

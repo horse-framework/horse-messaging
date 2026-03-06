@@ -126,7 +126,6 @@ public class HorseRider
         Cache = new HorseCache(this);
         Plugin = new PluginRider(this);
 
-        Cache.Initialize();
         Cluster.Initialize();
     }
 
@@ -141,6 +140,7 @@ public class HorseRider
         _initialized = true;
 
         Options.DataPath = Configurator.Initialize(Options.DataPath);
+        Cache.Initialize();
         Transaction.Initialize();
         Router.Initialize();
         Channel.Initialize();

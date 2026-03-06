@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -16,7 +17,7 @@ namespace RoutingSample.Producer
 
             while (true)
             {
-                HorseResult result = await client.Router.PublishJson(new SampleMessage(), true);
+                HorseResult result = await client.Router.Publish(new SampleMessage(), true, CancellationToken.None);
                 Console.WriteLine($"Push: {result.Code}");
                 await Task.Delay(5000);
             }

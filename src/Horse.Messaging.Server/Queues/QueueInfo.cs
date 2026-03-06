@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Horse.Messaging.Server.Helpers;
+using Horse.Messaging.Server.Queues.Partitions;
 
 namespace Horse.Messaging.Server.Queues;
 
@@ -91,6 +94,28 @@ public class QueueInfo
     /// Last message sent date
     /// </summary>
     public DateTime? LastMessageSendDate { get; private set; }
+
+    /// <summary>
+    /// Total number of active partitions. Zero if not partitioned.
+    /// </summary>
+    public int PartitionCount { get; private set; }
+
+    /// <summary>
+    /// Per-partition message and consumer counts. Empty when partitioning is disabled.
+    /// </summary>
+    public IReadOnlyList<PartitionMetricSnapshot> PartitionMetrics { get; private set; }
+        = Array.Empty<PartitionMetricSnapshot>();
+
+    /// <summary>
+    /// Refreshes partition metrics from the given PartitionManager.
+    /// Call before serializing QueueInfo to clients.
+    /// </summary>
+    public void RefreshPartitionMetrics(PartitionManager manager)
+    {
+        var snapshots = manager.GetMetrics().ToList();
+        PartitionCount   = snapshots.Count;
+        PartitionMetrics = snapshots.AsReadOnly();
+    }
 
     /// <summary>
     /// Returns last message received date in unix milliseconds

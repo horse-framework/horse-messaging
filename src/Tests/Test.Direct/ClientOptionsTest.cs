@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -41,14 +42,14 @@ public class ClientOptionsTest
         {
             HorseMessage rmsg = m.CreateResponse(HorseResultCode.Ok);
             rmsg.SetStringContent("Response!");
-            await ((HorseClient) c).SendAsync(rmsg);
+            await ((HorseClient) c).SendAsync(rmsg, CancellationToken.None);
         };
 
         HorseMessage msg = new HorseMessage(MessageType.DirectMessage, "client-2");
         msg.WaitResponse = true;
         msg.SetStringContent("Hello, World!");
 
-        HorseMessage response = await client1.Request(msg);
+        HorseMessage response = await client1.Request(msg, CancellationToken.None);
         await Task.Delay(500);
         Assert.NotNull(response);
         Assert.Equal(msg.MessageId, response.MessageId);

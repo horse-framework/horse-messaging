@@ -23,6 +23,23 @@ public class QueueTypeDescriptor : ITypeDescriptor
     public bool HighPriority { get; set; }
 
     /// <summary>
+    /// If not null, subscribe uses partitioned mode with this label.
+    /// Empty string = label-less partitioned subscribe.
+    /// Null = plain subscribe.
+    /// </summary>
+    public string PartitionLabel { get; set; }
+
+    /// <summary>
+    /// Maximum partition count for auto-create. null = not set (server default), 0 = unlimited.
+    /// </summary>
+    public int? MaxPartitions { get; set; }
+
+    /// <summary>
+    /// Max subscribers per partition for auto-create. null = not set (server default).
+    /// </summary>
+    public int? SubscribersPerPartition { get; set; }
+
+    /// <summary>
     /// If queue is created with a message push and that value is not null, that option will be used
     /// </summary>
     public QueueAckDecision? Acknowledge { get; set; }

@@ -399,7 +399,7 @@ public class PluginRider : IPluginRider
         HorsePlugin plugin = builder.Build();
         plugin.SetName(builder.GetName());
 
-        if (Plugins.Any(x => string.Equals(x.Name, plugin.Name, StringComparison.InvariantCultureIgnoreCase) && !x.Removed))
+        if (Plugins.Any(x => string.Equals(x.Name, plugin.Name, StringComparison.OrdinalIgnoreCase) && !x.Removed))
             throw new DuplicateNameException($"There is already active plugin with name: {plugin.Name}. Please remove it first.");
 
         plugin.Set(this);
@@ -410,7 +410,7 @@ public class PluginRider : IPluginRider
         plugin.AssemblyVersion = assemblyData.AssemblyVersion;
 
         var plugins = Plugins.ToList();
-        plugins.RemoveAll(x => string.Equals(x.Name, plugin.Name, StringComparison.InvariantCultureIgnoreCase) && x.Removed);
+        plugins.RemoveAll(x => string.Equals(x.Name, plugin.Name, StringComparison.OrdinalIgnoreCase) && x.Removed);
         plugins.Add(plugin);
         Plugins = plugins.ToArray();
 
@@ -455,7 +455,7 @@ public class PluginRider : IPluginRider
                 if (!string.Equals(data.AssemblyVersion, version, StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                PluginData pluginData = data.Plugins.FirstOrDefault(x => string.Equals(x.Name, pluginName, StringComparison.InvariantCultureIgnoreCase));
+                PluginData pluginData = data.Plugins.FirstOrDefault(x => string.Equals(x.Name, pluginName, StringComparison.OrdinalIgnoreCase));
                 if (pluginData != null)
                 {
                     pluginData.Disabled = true;
@@ -672,7 +672,7 @@ public class PluginRider : IPluginRider
 
             case MessageType.DirectMessage:
 
-                if (message.Target.StartsWith("@type:", StringComparison.InvariantCultureIgnoreCase))
+                if (message.Target.StartsWith("@type:", StringComparison.OrdinalIgnoreCase))
                 {
                     MessagingClient[] receivers = _rider.Client.FindByType(message.Target.Substring(6));
                     if (receivers.Length == 0)
@@ -690,7 +690,7 @@ public class PluginRider : IPluginRider
                     return true;
                 }
 
-                if (message.Target.StartsWith("@name:", StringComparison.InvariantCultureIgnoreCase))
+                if (message.Target.StartsWith("@name:", StringComparison.OrdinalIgnoreCase))
                 {
                     MessagingClient[] receivers = _rider.Client.FindClientByName(message.Target.Substring(6));
                     if (receivers.Length == 0)

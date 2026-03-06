@@ -31,4 +31,30 @@ internal class QueueConsumerRegistration
     /// Consumer executor
     /// </summary>
     internal ExecutorBase ConsumerExecuter { get; set; }
+
+    // ── Partition metadata ────────────────────────────────────────────────
+
+    /// <summary>
+    /// If not null, <see cref="QueueOperator.SubscribePartitioned"/> is called instead of
+    /// plain <see cref="QueueOperator.Subscribe"/> during auto-subscribe.
+    /// Sourced from <see cref="Annotations.PartitionedQueueAttribute"/> or the builder overload.
+    /// Empty string means "label-less partitioned subscribe" (round-robin path).
+    /// Null means "not partitioned" — plain subscribe is used.
+    /// </summary>
+    public string PartitionLabel { get; set; }
+
+    /// <summary>
+    /// Maximum number of partitions forwarded as <c>Partition-Limit</c> header during
+    /// auto-create. null = not set (server default), 0 = unlimited, >0 = explicit limit.
+    /// </summary>
+    public int? MaxPartitions { get; set; }
+
+    /// <summary>
+    /// Maximum subscribers per partition forwarded as <c>Partition-Subscribers</c> header
+    /// during auto-create. null = not set (server default), >0 = explicit value.
+    /// </summary>
+    public int? SubscribersPerPartition { get; set; }
+
+    /// <summary>Returns true when this registration uses partitioned subscribe.</summary>
+    public bool IsPartitioned => PartitionLabel != null;
 }

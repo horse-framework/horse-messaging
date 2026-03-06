@@ -127,6 +127,8 @@ In a multi-layered system where multiple modules (e.g., databases, various servi
 
 ## Quick Start
 
+> 📖 **[Full Documentation](docs/README.md)** — Comprehensive guides for all features: Queues, Channels, Direct Messaging, Routers, Cache, Transactions, Clustering, and more.
+
 Install and run basic server application
 
 ```docker run -p 2626:2626 -p 2627:2627 horseframework/messaging-server```

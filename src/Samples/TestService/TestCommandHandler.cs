@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using AdvancedSample.Service.Handlers;
 using AdvancedSample.ServiceModels;
@@ -28,7 +29,8 @@ public class TestTransactionModel
 [QueueName("CommitQueue")]
 public class CommitHandler : IQueueConsumer<TestTransactionModel>
 {
-    public Task Consume(HorseMessage message, TestTransactionModel model, HorseClient client)
+    public Task Consume(HorseMessage message, TestTransactionModel model, HorseClient client,
+        CancellationToken cancellationToken = default)
     {
         return Task.CompletedTask;
     }
