@@ -1,6 +1,9 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
@@ -45,6 +48,73 @@ public class PaymentCompletedWithQueueNameEvent : IEvent
 {
     public string EventId { get; set; }
     public decimal Amount { get; set; }
+}
+
+#endregion
+
+#region Custom Serializers
+
+/// <summary>
+/// A naive custom serializer that serializes using standard System.Text.Json.
+/// This should NOT affect queue routing because routing happens before serialization.
+/// </summary>
+public class NaiveCustomSerializer : IMessageContentSerializer
+{
+    public void Serialize(HorseMessage message, object model)
+    {
+        message.Content = new MemoryStream();
+        JsonSerializer.Serialize(message.Content, model, model.GetType());
+        message.Content.Position = 0;
+    }
+
+    public object Deserialize(HorseMessage message, Type type)
+    {
+        if (message.Content == null || message.Content.Length < 1)
+            return null;
+
+        message.Content.Position = 0;
+        return JsonSerializer.Deserialize(message.Content, type);
+    }
+}
+
+/// <summary>
+/// A custom serializer that embeds the runtime type name as a $type discriminator.
+/// This simulates Newtonsoft.Json-style polymorphic serialization.
+/// </summary>
+public class TypeDiscriminatorSerializer : IMessageContentSerializer
+{
+    public void Serialize(HorseMessage message, object model)
+    {
+        var wrapper = new Dictionary<string, object>
+        {
+            ["$type"] = model.GetType().AssemblyQualifiedName,
+            ["$value"] = model
+        };
+
+        message.Content = new MemoryStream();
+        JsonSerializer.Serialize(message.Content, wrapper);
+        message.Content.Position = 0;
+    }
+
+    public object Deserialize(HorseMessage message, Type type)
+    {
+        if (message.Content == null || message.Content.Length < 1)
+            return null;
+
+        message.Content.Position = 0;
+        using var doc = JsonDocument.Parse(message.Content);
+        var root = doc.RootElement;
+
+        if (root.TryGetProperty("$type", out var typeProp))
+        {
+            var actualType = Type.GetType(typeProp.GetString()!);
+            if (actualType != null && root.TryGetProperty("$value", out var valueProp))
+                return JsonSerializer.Deserialize(valueProp.GetRawText(), actualType);
+        }
+
+        message.Content.Position = 0;
+        return JsonSerializer.Deserialize(message.Content, type);
+    }
 }
 
 #endregion
@@ -757,6 +827,301 @@ public class InterfaceTypeResolutionTest
         Assert.DoesNotContain("IEvent", allQueues);
 
         client.Disconnect();
+        consumer.Disconnect();
+    }
+
+    #endregion
+
+    #region Custom Serializer Tests
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task CustomSerializer_NaiveSerializer_PushWithInterfaceType_RoutesToConcreteQueue(string mode)
+    {
+        // A custom serializer should not affect queue routing.
+        // Queue name is resolved BEFORE serialization happens.
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.Type = QueueType.Push;
+            o.CommitWhen = CommitWhen.AfterReceived;
+            o.Acknowledge = QueueAckDecision.None;
+            o.AutoQueueCreation = true;
+        });
+
+        var producer = new HorseClient();
+        producer.MessageSerializer = new NaiveCustomSerializer();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        Assert.True(producer.IsConnected);
+
+        var consumer = new HorseClient();
+        consumer.MessageSerializer = new NaiveCustomSerializer();
+        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await consumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
+
+        List<HorseMessage> received = new();
+        consumer.MessageReceived += (_, m) => { lock (received) received.Add(m); };
+
+        await Task.Delay(300);
+
+        IEvent order = new OrderCreatedEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
+        await producer.Queue.Push<IEvent>(order, true, CancellationToken.None);
+
+        await Task.Delay(1000);
+
+        Assert.Single(received);
+
+        var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
+        Assert.Contains("OrderCreatedEvent", allQueues);
+        Assert.DoesNotContain("IEvent", allQueues);
+
+        producer.Disconnect();
+        consumer.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task CustomSerializer_NaiveSerializer_QueueNameAttr_RoutesToAttributeQueue(string mode)
+    {
+        // Custom serializer + [QueueName("OrderQueue")] + Push<IEvent> → must go to "OrderQueue"
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.Type = QueueType.Push;
+            o.CommitWhen = CommitWhen.AfterReceived;
+            o.Acknowledge = QueueAckDecision.None;
+            o.AutoQueueCreation = true;
+        });
+
+        var producer = new HorseClient();
+        producer.MessageSerializer = new NaiveCustomSerializer();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        Assert.True(producer.IsConnected);
+
+        var consumer = new HorseClient();
+        consumer.MessageSerializer = new NaiveCustomSerializer();
+        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await consumer.Queue.Subscribe("OrderQueue", true, CancellationToken.None);
+
+        List<HorseMessage> received = new();
+        consumer.MessageReceived += (_, m) => { lock (received) received.Add(m); };
+
+        await Task.Delay(300);
+
+        IEvent order = new OrderCreatedWithQueueNameEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
+        await producer.Queue.Push<IEvent>(order, true, CancellationToken.None);
+
+        await Task.Delay(1000);
+
+        Assert.Single(received);
+
+        var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
+        Assert.Contains("OrderQueue", allQueues);
+        Assert.DoesNotContain("IEvent", allQueues);
+        Assert.DoesNotContain("OrderCreatedWithQueueNameEvent", allQueues);
+
+        producer.Disconnect();
+        consumer.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task CustomSerializer_TypeDiscriminator_PushWithInterfaceType_RoutesToConcreteQueue(string mode)
+    {
+        // TypeDiscriminatorSerializer wraps the payload with $type/$value.
+        // Queue routing must still use model.GetType(), not anything from serialization.
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.Type = QueueType.Push;
+            o.CommitWhen = CommitWhen.AfterReceived;
+            o.Acknowledge = QueueAckDecision.None;
+            o.AutoQueueCreation = true;
+        });
+
+        var producer = new HorseClient();
+        producer.MessageSerializer = new TypeDiscriminatorSerializer();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        Assert.True(producer.IsConnected);
+
+        var orderConsumer = new HorseClient();
+        orderConsumer.MessageSerializer = new TypeDiscriminatorSerializer();
+        await orderConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await orderConsumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
+
+        var paymentConsumer = new HorseClient();
+        paymentConsumer.MessageSerializer = new TypeDiscriminatorSerializer();
+        await paymentConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await paymentConsumer.Queue.Subscribe("PaymentCompletedEvent", true, CancellationToken.None);
+
+        List<HorseMessage> orderMsgs = new();
+        orderConsumer.MessageReceived += (_, m) => { lock (orderMsgs) orderMsgs.Add(m); };
+
+        List<HorseMessage> paymentMsgs = new();
+        paymentConsumer.MessageReceived += (_, m) => { lock (paymentMsgs) paymentMsgs.Add(m); };
+
+        await Task.Delay(300);
+
+        IEvent order = new OrderCreatedEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
+        IEvent payment = new PaymentCompletedEvent { EventId = "evt-2", Amount = 49.99m };
+
+        await producer.Queue.Push<IEvent>(order, true, CancellationToken.None);
+        await producer.Queue.Push<IEvent>(payment, true, CancellationToken.None);
+
+        await Task.Delay(1000);
+
+        Assert.Single(orderMsgs);
+        Assert.Single(paymentMsgs);
+
+        var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
+        Assert.Contains("OrderCreatedEvent", allQueues);
+        Assert.Contains("PaymentCompletedEvent", allQueues);
+        Assert.DoesNotContain("IEvent", allQueues);
+
+        producer.Disconnect();
+        orderConsumer.Disconnect();
+        paymentConsumer.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task CustomSerializer_GenericPublisher_ExplicitInterfaceType_RoutesToConcreteQueue(string mode)
+    {
+        // Full real-world scenario: custom serializer + generic publisher wrapper + interface type
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.Type = QueueType.Push;
+            o.CommitWhen = CommitWhen.AfterReceived;
+            o.Acknowledge = QueueAckDecision.None;
+            o.AutoQueueCreation = true;
+        });
+
+        var client = new HorseClient();
+        client.MessageSerializer = new NaiveCustomSerializer();
+        await client.ConnectAsync($"horse://localhost:{ctx.Port}");
+        Assert.True(client.IsConnected);
+
+        var consumer = new HorseClient();
+        consumer.MessageSerializer = new NaiveCustomSerializer();
+        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await consumer.Queue.Subscribe("OrderQueue", true, CancellationToken.None);
+
+        List<HorseMessage> received = new();
+        consumer.MessageReceived += (_, m) => { lock (received) received.Add(m); };
+
+        await Task.Delay(300);
+
+        var publisher = new TestPublisher(client.Queue);
+
+        IEvent order = new OrderCreatedWithQueueNameEvent { EventId = "e1", OrderNumber = "ORD-1" };
+        await publisher.RaiseEvent<IEvent>(order, CancellationToken.None);
+
+        await Task.Delay(1000);
+
+        Assert.Single(received);
+
+        var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
+        Assert.Contains("OrderQueue", allQueues);
+        Assert.DoesNotContain("IEvent", allQueues);
+
+        client.Disconnect();
+        consumer.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task CustomSerializer_BusPublisher_ExplicitInterfaceType_RoutesToConcreteQueue(string mode)
+    {
+        // IHorseQueueBus + custom serializer + Push<IEvent> → must route to concrete queue
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.Type = QueueType.Push;
+            o.CommitWhen = CommitWhen.AfterReceived;
+            o.Acknowledge = QueueAckDecision.None;
+            o.AutoQueueCreation = true;
+        });
+
+        var client = new HorseClient();
+        client.MessageSerializer = new NaiveCustomSerializer();
+        await client.ConnectAsync($"horse://localhost:{ctx.Port}");
+        Assert.True(client.IsConnected);
+
+        IHorseQueueBus bus = new HorseQueueBus(client);
+
+        var consumer = new HorseClient();
+        consumer.MessageSerializer = new NaiveCustomSerializer();
+        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await consumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
+
+        List<HorseMessage> received = new();
+        consumer.MessageReceived += (_, m) => { lock (received) received.Add(m); };
+
+        await Task.Delay(300);
+
+        IEvent order = new OrderCreatedEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
+        await bus.Push<IEvent>(order, true, CancellationToken.None);
+
+        await Task.Delay(1000);
+
+        Assert.Single(received);
+
+        var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
+        Assert.Contains("OrderCreatedEvent", allQueues);
+        Assert.DoesNotContain("IEvent", allQueues);
+
+        client.Disconnect();
+        consumer.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task CustomSerializer_PushBulk_WithInterfaceType_RoutesToConcreteQueue(string mode)
+    {
+        // PushBulk<IEvent> + custom serializer → must route to concrete queue
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.Type = QueueType.Push;
+            o.CommitWhen = CommitWhen.AfterReceived;
+            o.Acknowledge = QueueAckDecision.None;
+            o.AutoQueueCreation = true;
+        });
+
+        var producer = new HorseClient();
+        producer.MessageSerializer = new NaiveCustomSerializer();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        Assert.True(producer.IsConnected);
+
+        var consumer = new HorseClient();
+        consumer.MessageSerializer = new NaiveCustomSerializer();
+        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+        await consumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
+
+        List<HorseMessage> received = new();
+        consumer.MessageReceived += (_, m) => { lock (received) received.Add(m); };
+
+        await Task.Delay(300);
+
+        var items = new List<IEvent>
+        {
+            new OrderCreatedEvent { EventId = "evt-1", OrderNumber = "ORD-1" },
+            new OrderCreatedEvent { EventId = "evt-2", OrderNumber = "ORD-2" }
+        };
+
+        producer.Queue.PushBulk(items, null);
+
+        for (int i = 0; i < 50 && received.Count < 2; i++)
+            await Task.Delay(100);
+
+        Assert.Equal(2, received.Count);
+
+        var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
+        Assert.Contains("OrderCreatedEvent", allQueues);
+        Assert.DoesNotContain("IEvent", allQueues);
+
+        producer.Disconnect();
         consumer.Disconnect();
     }
 

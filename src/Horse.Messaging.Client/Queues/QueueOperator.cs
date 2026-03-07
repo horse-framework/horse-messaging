@@ -471,18 +471,25 @@ public class QueueOperator : IDisposable
         Type runtimeType = model.GetType();
         QueueTypeDescriptor descriptor = DescriptorContainer.GetDescriptor(runtimeType);
 
+        string resolvedQueue = descriptor.QueueName;
+
         if (!string.IsNullOrEmpty(queue))
-            descriptor.QueueName = queue;
+            resolvedQueue = queue;
 
         if (NameHandler != null)
-            descriptor.QueueName = NameHandler.Invoke(new QueueNameHandlerContext
+        {
+            string handlerResult = NameHandler.Invoke(new QueueNameHandlerContext
             {
                 Client = Client,
                 Type = runtimeType,
-                QueueName = descriptor.QueueName
+                QueueName = resolvedQueue
             });
 
-        HorseMessage message = descriptor.CreateMessage();
+            if (!string.IsNullOrEmpty(handlerResult))
+                resolvedQueue = handlerResult;
+        }
+
+        HorseMessage message = descriptor.CreateMessage(resolvedQueue);
 
         if (!string.IsNullOrEmpty(messageId))
             message.SetMessageId(messageId);
@@ -516,20 +523,28 @@ public class QueueOperator : IDisposable
     internal async Task<HorseResult> PushObject(string queue, object model, string messageId, bool waitForCommit,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken = default)
     {
-        QueueTypeDescriptor descriptor = DescriptorContainer.GetDescriptor(model.GetType());
+        Type runtimeType = model.GetType();
+        QueueTypeDescriptor descriptor = DescriptorContainer.GetDescriptor(runtimeType);
+
+        string resolvedQueue = descriptor.QueueName;
 
         if (!string.IsNullOrEmpty(queue))
-            descriptor.QueueName = queue;
+            resolvedQueue = queue;
 
         if (NameHandler != null)
-            descriptor.QueueName = NameHandler.Invoke(new QueueNameHandlerContext
+        {
+            string handlerResult = NameHandler.Invoke(new QueueNameHandlerContext
             {
                 Client = Client,
-                Type = model.GetType(),
-                QueueName = descriptor.QueueName
+                Type = runtimeType,
+                QueueName = resolvedQueue
             });
 
-        HorseMessage message = descriptor.CreateMessage();
+            if (!string.IsNullOrEmpty(handlerResult))
+                resolvedQueue = handlerResult;
+        }
+
+        HorseMessage message = descriptor.CreateMessage(resolvedQueue);
 
         if (!string.IsNullOrEmpty(messageId))
             message.SetMessageId(messageId);
@@ -744,18 +759,25 @@ public class QueueOperator : IDisposable
         Type runtimeType = items[0].GetType();
         QueueTypeDescriptor descriptor = DescriptorContainer.GetDescriptor(runtimeType);
 
+        string resolvedQueue = descriptor.QueueName;
+
         if (!string.IsNullOrEmpty(queue))
-            descriptor.QueueName = queue;
+            resolvedQueue = queue;
 
         if (NameHandler != null)
-            descriptor.QueueName = NameHandler.Invoke(new QueueNameHandlerContext
+        {
+            string handlerResult = NameHandler.Invoke(new QueueNameHandlerContext
             {
                 Client = Client,
                 Type = runtimeType,
-                QueueName = descriptor.QueueName
+                QueueName = resolvedQueue
             });
 
-        HorseMessage firstMessage = descriptor.CreateMessage();
+            if (!string.IsNullOrEmpty(handlerResult))
+                resolvedQueue = handlerResult;
+        }
+
+        HorseMessage firstMessage = descriptor.CreateMessage(resolvedQueue);
         firstMessage.WaitResponse = true;
         firstMessage.SetMessageId(Client.UniqueIdGenerator.Create());
 

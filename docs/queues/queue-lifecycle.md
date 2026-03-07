@@ -36,10 +36,9 @@ HorseQueue queue = await rider.Queue.Create("my-queue", o =>
 
 ### 3. Client-Initiated Creation
 
-When a client pushes or subscribes and the queue doesn't exist, the server creates it using:
-1. Server default options (lowest priority)
-2. Options from the client's subscription/push headers
-3. Attributes on the model class (highest priority)
+When a client pushes or subscribes and the queue doesn't exist, the server starts with its default queue options and then applies any queue-related headers on the request.
+
+Model and consumer attributes do not reach the server directly — the client converts them into headers first. In auto-subscribe flows, consumer-derived headers override model-derived headers for the same key. If you also add explicit headers programmatically, the last value sent for a header wins.
 
 ## Queue Status
 

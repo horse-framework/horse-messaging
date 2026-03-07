@@ -1,4 +1,4 @@
-﻿﻿using Horse.Messaging.Client.Internal;
+﻿using Horse.Messaging.Client.Internal;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Models;
@@ -265,13 +265,24 @@ public class RouterOperator
     {
         RouterTypeDescriptor descriptor = _descriptorContainer.GetDescriptor(model.GetType());
 
+        string resolvedRouter = descriptor.RouterName;
+        ushort resolvedContentType = descriptor.ContentType;
+
         if (!string.IsNullOrEmpty(routerName))
-            descriptor.RouterName = routerName;
+            resolvedRouter = routerName;
 
         if (contentType.HasValue)
-            descriptor.ContentType = contentType.Value;
+            resolvedContentType = contentType.Value;
 
-        HorseMessage message = descriptor.CreateMessage();
+        HorseMessage message = new HorseMessage(MessageType.Router, resolvedRouter, resolvedContentType);
+        if (descriptor.HighPriority)
+            message.HighPriority = true;
+
+        if (!string.IsNullOrEmpty(descriptor.Topic))
+            message.AddHeader(HorseHeaders.QUEUE_TOPIC, descriptor.Topic);
+
+        foreach (KeyValuePair<string, string> pair in descriptor.Headers)
+            message.AddHeader(pair.Key, pair.Value);
 
         if (!string.IsNullOrEmpty(messageId))
             message.SetMessageId(messageId);
@@ -355,13 +366,25 @@ public class RouterOperator
     {
         RouterTypeDescriptor descriptor = _descriptorContainer.GetDescriptor(request.GetType());
 
+        string resolvedRouter = descriptor.RouterName;
+        ushort resolvedContentType = descriptor.ContentType;
+
         if (!string.IsNullOrEmpty(routerName))
-            descriptor.RouterName = routerName;
+            resolvedRouter = routerName;
 
         if (contentType.HasValue)
-            descriptor.ContentType = contentType.Value;
+            resolvedContentType = contentType.Value;
 
-        HorseMessage message = descriptor.CreateMessage();
+        HorseMessage message = new HorseMessage(MessageType.Router, resolvedRouter, resolvedContentType);
+        if (descriptor.HighPriority)
+            message.HighPriority = true;
+
+        if (!string.IsNullOrEmpty(descriptor.Topic))
+            message.AddHeader(HorseHeaders.QUEUE_TOPIC, descriptor.Topic);
+
+        foreach (KeyValuePair<string, string> pair in descriptor.Headers)
+            message.AddHeader(pair.Key, pair.Value);
+
         message.WaitResponse = true;
         message.Serialize(request, _client.MessageSerializer);
 

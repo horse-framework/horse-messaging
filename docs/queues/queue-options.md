@@ -9,7 +9,7 @@ Every queue has its own `QueueOptions` instance. When a queue is created, the se
 | Property | `Acknowledge` |
 |----------|---------------|
 | Type | `QueueAckDecision` enum |
-| Default | `waitForAcknowledge` |
+| Default | `WaitForAcknowledge` |
 
 Controls whether the server expects an acknowledgment from the consumer after delivering a message. For detailed behavior, put-back policies, and reliability patterns, see [Acknowledgment & Reliability](acknowledgment.md).
 
@@ -17,10 +17,10 @@ Controls whether the server expects an acknowledgment from the consumer after de
 |-------|----------|
 | `None` | No acknowledgment requested. Message is removed immediately after delivery. |
 | `JustRequest` | Acknowledgment is requested, but the queue keeps sending the next messages without waiting. If no ack arrives within the timeout, the put-back decision applies. |
-| `waitForAcknowledge` | The queue waits for a consumer to acknowledge before sending the next message. **Push:** The message is sent to all consumers simultaneously (fan-out). The queue waits until **any one** consumer acknowledges (or the timeout expires) before dispatching the next message. It does not wait for all consumers to ack. **RoundRobin:** The message is delivered to one consumer at a time. Busy consumers (haven't acked) are skipped. FIFO ordering is **not guaranteed** with multiple consumers — it is only guaranteed with exactly one consumer. **Pull:** This option has no effect; pull queues are consumer-driven. |
+| `WaitForAcknowledge` | The queue waits for a consumer to acknowledge before sending the next message. **Push:** The message is sent to all consumers simultaneously (fan-out). The queue waits until **any one** consumer acknowledges (or the timeout expires) before dispatching the next message. It does not wait for all consumers to ack. **RoundRobin:** The message is delivered to one consumer at a time. Busy consumers (haven't acked) are skipped. FIFO ordering is **not guaranteed** with multiple consumers — it is only guaranteed with exactly one consumer. **Pull:** This option has no effect; pull queues are consumer-driven. |
 
 ```csharp
-cfg.Options.Acknowledge = QueueAckDecision.waitForAcknowledge;
+cfg.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
 ```
 
 ---
@@ -268,7 +268,7 @@ HorseRider rider = HorseRiderBuilder.Create()
     .ConfigureQueues(cfg =>
     {
         cfg.Options.Type = QueueType.RoundRobin;
-        cfg.Options.Acknowledge = QueueAckDecision.waitForAcknowledge;
+        cfg.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
         cfg.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(30);
         cfg.Options.CommitWhen = CommitWhen.AfterReceived;
         cfg.Options.AutoDestroy = QueueDestroy.Empty;
@@ -279,4 +279,3 @@ HorseRider rider = HorseRiderBuilder.Create()
     })
     .Build();
 ```
-

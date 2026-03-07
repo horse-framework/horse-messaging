@@ -12,7 +12,7 @@ HorseRider rider = HorseRiderBuilder.Create()
     {
         // Set default options for all queues
         cfg.Options.Type = QueueType.RoundRobin;
-        cfg.Options.Acknowledge = QueueAckDecision.waitForAcknowledge;
+        cfg.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
         cfg.Options.AutoQueueCreation = true;
 
         // Register a storage backend
@@ -118,39 +118,28 @@ Implement `IQueueMessageEventHandler` to track individual message events:
 ```csharp
 public class MyMessageEventHandler : IQueueMessageEventHandler
 {
-    public Task OnProduced(HorseQueue queue, QueueMessage message, MessagingClient producer)
+    public Task OnProduced(HorseQueue queue, QueueMessage message, MessagingClient sender)
     {
-        // Message was received from a producer
         return Task.CompletedTask;
     }
 
-    public Task OnConsumed(HorseQueue queue, QueueMessage message, MessagingClient consumer)
+    public Task OnConsumed(HorseQueue queue, MessageDelivery delivery, MessagingClient receiver)
     {
-        // Message was sent to a consumer
         return Task.CompletedTask;
     }
 
-    public Task OnAcknowledged(HorseQueue queue, QueueMessage message, MessagingClient consumer, bool positive)
+    public Task OnAcknowledged(HorseQueue queue, HorseMessage acknowledgeMessage, MessageDelivery delivery, bool success)
     {
-        // Acknowledge received (positive or negative)
         return Task.CompletedTask;
     }
 
-    public Task OnTimedOut(HorseQueue queue, QueueMessage message)
+    public Task MessageTimedOut(HorseQueue queue, QueueMessage message)
     {
-        // Message expired
         return Task.CompletedTask;
     }
 
-    public Task OnRemoved(HorseQueue queue, QueueMessage message)
+    public Task OnAcknowledgeTimedOut(HorseQueue queue, MessageDelivery delivery)
     {
-        // Message was removed from the queue
-        return Task.CompletedTask;
-    }
-
-    public Task OnException(HorseQueue queue, QueueMessage message, Exception exception)
-    {
-        // An error occurred during message processing
         return Task.CompletedTask;
     }
 }
@@ -185,7 +174,7 @@ cfg.Authenticators.Add(new MyQueueAuthenticator());
 
 ## Configuration Persistence
 
-By default, queue configurations are persisted to a JSON file (`data/queues.json`). When the server restarts, it reloads the saved queue definitions.
+By default, queue configurations are persisted to `queues.json` under the rider data path. With the default `HorseRiderOptions.DataPath` value, that means `data/queues.json`.
 
 You can customize or disable this:
 
@@ -198,4 +187,3 @@ cfg.UseCustomPersistentConfigurator(
 // Or disable persistence entirely
 cfg.UseCustomPersistentConfigurator(null);
 ```
-
