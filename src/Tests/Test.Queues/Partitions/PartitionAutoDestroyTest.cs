@@ -167,7 +167,7 @@ public class PartitionAutoDestroyTest
     [Fact]
     public async Task AutoDestroy_Empty_PartitionDestroyedWhenBothConditionsMet()
     {
-        var (server, port, queue) = await CreateQueue(PartitionAutoDestroy.Empty, idleSeconds: 1);
+        var (server, port, queue) = await CreateQueue(PartitionAutoDestroy.Empty, idleSeconds: 2);
 
         HorseClient client = new HorseClient();
         client.AutoAcknowledge = true;
@@ -175,11 +175,20 @@ public class PartitionAutoDestroyTest
         await client.Queue.Subscribe("ad-q", true,
             new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "emp-w") }, CancellationToken.None);
 
-        await Task.Delay(200);
-        string partId = queue.PartitionManager.Partitions.First().PartitionId;
+        // Wait until partition is created (subscribe may take time under load)
+        PartitionEntry created = null;
+        for (int i = 0; i < 20; i++)
+        {
+            created = queue.PartitionManager.Partitions.FirstOrDefault();
+            if (created != null) break;
+            await Task.Delay(100);
+        }
+
+        Assert.NotNull(created);
+        string partId = created.PartitionId;
 
         client.Disconnect();
-        await Task.Delay(3000);
+        await Task.Delay(5000);
 
         bool gone = queue.PartitionManager.Partitions.All(p => p.PartitionId != partId);
         Assert.True(gone);

@@ -37,8 +37,35 @@ public class PartitionManager
     /// </summary>
     private readonly ConcurrentDictionary<string, int> _workerAssignmentCount = new();
 
+    /// <summary>
+    /// Tracks the original partition label each worker subscribed with.
+    /// Key = MessagingClient.UniqueId, Value = original label (e.g. "free", "standard").
+    /// Used by <see cref="TryAssignPooledWorker"/> to enforce label isolation: a worker that
+    /// originally subscribed with label "free" must not be auto-assigned to a "standard" partition.
+    /// Workers without a label (label-less subscribe) are not tracked here and can be
+    /// assigned to any partition — this enables the dynamic tenant-id scenario.
+    /// </summary>
+    private readonly ConcurrentDictionary<string, string> _workerLabels = new();
+
+    /// <summary>
+    /// Tracks which workers are subscribed to each partition.
+    /// Key = PartitionId, Value = set of worker UniqueIds.
+    /// Used by <see cref="OnPartitionQueueDestroyed"/> to reliably return workers to the pool,
+    /// because <c>entry.Queue.Clients</c> may already be empty when the destroy callback fires.
+    /// </summary>
+    private readonly ConcurrentDictionary<string, HashSet<string>> _partitionSubscribers = new();
+
     /// <summary>All active partition entries (snapshot).</summary>
     public IEnumerable<PartitionEntry> Partitions => _partitions.Values;
+
+    /// <summary>Exposes worker label assignments for diagnostics. Key = worker UniqueId, Value = label.</summary>
+    public IReadOnlyDictionary<string, string> WorkerLabels => _workerLabels;
+
+    /// <summary>Exposes worker pool count for diagnostics.</summary>
+    public int AvailableWorkerCount => _availableWorkers.Count;
+
+    /// <summary>Exposes partition subscriber tracking for diagnostics.</summary>
+    public IReadOnlyDictionary<string, HashSet<string>> PartitionSubscribers => _partitionSubscribers;
 
     public PartitionManager(HorseQueue parentQueue, PartitionOptions options)
     {
@@ -77,6 +104,13 @@ public class PartitionManager
             SubscriptionResult result = await entry.Queue.AddClient(client);
             if (result == SubscriptionResult.Full)
                 return null;
+
+            // Record the label this worker originally subscribed with.
+            // TryAssignPooledWorker uses this for label isolation after destroy/re-create cycles.
+            _workerLabels[client.UniqueId] = partitionLabel;
+
+            // Track subscriber for reliable pool re-entry on partition destroy
+            TrackPartitionSubscriber(entry.PartitionId, client.UniqueId);
         }
         else if (_options.AutoAssignWorkers)
         {
@@ -323,30 +357,42 @@ public class PartitionManager
     private void OnPartitionQueueDestroyed(PartitionEntry entry)
     {
         // When AutoAssignWorkers is enabled, decrement assignment counts and
-        // ensure workers with remaining capacity are back in the pool
+        // ensure workers with remaining capacity are back in the pool.
+        // We use _partitionSubscribers as the primary source because
+        // entry.Queue.Clients may already be empty when this callback fires.
         if (_options.AutoAssignWorkers)
         {
-            foreach (QueueClient qc in entry.Queue.Clients)
+            _partitionSubscribers.TryRemove(entry.PartitionId, out HashSet<string> subscriberIds);
+
+            if (subscriberIds != null)
             {
-                if (!qc.Client.IsConnected)
+                lock (subscriberIds)
                 {
-                    _workerAssignmentCount.TryRemove(qc.Client.UniqueId, out _);
-                    continue;
+                    foreach (string workerId in subscriberIds)
+                    {
+                        MessagingClient worker = _parentQueue.Rider.Client.Find(workerId);
+                        if (worker == null || !worker.IsConnected)
+                        {
+                            _workerAssignmentCount.TryRemove(workerId, out _);
+                            _workerLabels.TryRemove(workerId, out _);
+                            continue;
+                        }
+
+                        int newCount = _workerAssignmentCount.AddOrUpdate(
+                            workerId, 0, (_, c) => Math.Max(0, c - 1));
+
+                        // If worker is not already in the pool and has capacity, add it back
+                        int max = _options.MaxPartitionsPerWorker;
+                        bool hasCapacity = max == 0 || newCount < max;
+                        bool alreadyInPool = _availableWorkers.Any(w => w.UniqueId == workerId);
+
+                        if (hasCapacity && !alreadyInPool)
+                            _availableWorkers.Enqueue(worker);
+
+                        if (newCount == 0)
+                            _workerAssignmentCount.TryRemove(workerId, out _);
+                    }
                 }
-
-                int newCount = _workerAssignmentCount.AddOrUpdate(
-                    qc.Client.UniqueId, 0, (_, c) => Math.Max(0, c - 1));
-
-                // If worker is not already in the pool and has capacity, add it back
-                int max = _options.MaxPartitionsPerWorker;
-                bool hasCapacity = max == 0 || newCount < max;
-                bool alreadyInPool = _availableWorkers.Any(w => w.UniqueId == qc.Client.UniqueId);
-
-                if (hasCapacity && !alreadyInPool)
-                    _availableWorkers.Enqueue(qc.Client);
-
-                if (newCount == 0)
-                    _workerAssignmentCount.TryRemove(qc.Client.UniqueId, out _);
             }
         }
 
@@ -358,9 +404,10 @@ public class PartitionManager
         foreach (IPartitionEventHandler handler in _parentQueue.Rider.Queue.PartitionEventHandlers.All())
             _ = handler.OnPartitionDestroyed(_parentQueue, entry.PartitionId);
 
-        // After returning workers to pool, try to assign them to partitions that need consumers
+        // After returning workers to pool AND removing the destroyed partition from indexes,
+        // try to assign freed workers to remaining partitions that need consumers.
         if (_options.AutoAssignWorkers)
-            _ = Task.Run(TryAssignPooledWorkersToStarvedPartitions);
+            _ = TryAssignPooledWorkersToStarvedPartitions();
     }
 
     /// <summary>
@@ -394,6 +441,21 @@ public class PartitionManager
 
     #region Helpers
 
+    /// <summary>
+    /// Records a worker as a subscriber of the given partition.
+    /// Used by <see cref="OnPartitionQueueDestroyed"/> for reliable pool re-entry.
+    /// </summary>
+    private void TrackPartitionSubscriber(string partitionId, string workerId)
+    {
+        _partitionSubscribers.AddOrUpdate(
+            partitionId,
+            _ => new HashSet<string> { workerId },
+            (_, set) =>
+            {
+                lock (set) set.Add(workerId);
+                return set;
+            });
+    }
 
     private async Task<PartitionEntry> GetOrCreateLabelPartition(string label)
     {
@@ -433,6 +495,7 @@ public class PartitionManager
             if (!w.IsConnected)
             {
                 _workerAssignmentCount.TryRemove(w.UniqueId, out _);
+                _workerLabels.TryRemove(w.UniqueId, out _);
                 continue;
             }
 
@@ -470,10 +533,24 @@ public class PartitionManager
                 continue;
             }
 
+            // Label isolation: if the worker has a recorded label (from labeled subscribe),
+            // it must only be assigned to partitions with the same label.
+            // Workers without a recorded label (label-less subscribe) can be assigned anywhere —
+            // this enables the dynamic tenant-id scenario where workers float between tenants.
+            if (_workerLabels.TryGetValue(worker.UniqueId, out string workerLabel))
+            {
+                if (!string.Equals(workerLabel, entry.Label, StringComparison.OrdinalIgnoreCase))
+                {
+                    _availableWorkers.Enqueue(worker);
+                    continue;
+                }
+            }
+
             SubscriptionResult result = await entry.Queue.AddClient(worker);
             if (result == SubscriptionResult.Success)
             {
                 int newCount = _workerAssignmentCount.AddOrUpdate(worker.UniqueId, 1, (_, c) => c + 1);
+                TrackPartitionSubscriber(entry.PartitionId, worker.UniqueId);
 
                 // If worker still has capacity, keep it in the pool
                 if (max == 0 || newCount < max)
@@ -547,6 +624,7 @@ public class PartitionManager
             if (result == SubscriptionResult.Success)
             {
                 _ = entry.Queue.Trigger();
+                TrackPartitionSubscriber(entry.PartitionId, client.UniqueId);
                 firstAssigned ??= entry;
                 assignedCount++;
             }

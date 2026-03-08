@@ -611,7 +611,7 @@ public class PartitionComplexIntegrationTests
         {
             Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 1,
             AutoAssignWorkers = true, MaxPartitionsPerWorker = 5,
-            AutoDestroy = PartitionAutoDestroy.NoMessages, AutoDestroyIdleSeconds = 2
+            AutoDestroy = PartitionAutoDestroy.NoMessages, AutoDestroyIdleSeconds = 3
         }, ack: QueueAckDecision.WaitForAcknowledge);
         await using PartitionTestContext _ = ctx;
 
@@ -622,15 +622,22 @@ public class PartitionComplexIntegrationTests
 
         HorseClient producer = await CreateProducer(ctx.Port);
 
-        // tenant-2: start pushing continuously BEFORE tenant-1 so it's always non-empty
+        // tenant-2: start pushing continuously BEFORE tenant-1 so it's always non-empty.
+        // Push multiple messages per iteration to ensure the message store is never
+        // momentarily empty when the auto-destroy timer fires (race window fix).
         bool keepPushing = true;
         Task pushTask = Task.Run(async () =>
         {
             while (keepPushing)
             {
-                try { await PushLabeled(producer, "ad-multi-q", "tenant-2"); }
+                try
+                {
+                    await PushLabeled(producer, "ad-multi-q", "tenant-2");
+                    await PushLabeled(producer, "ad-multi-q", "tenant-2");
+                    await PushLabeled(producer, "ad-multi-q", "tenant-2");
+                }
                 catch { /* producer may disconnect at end */ }
-                await Task.Delay(5);
+                await Task.Delay(1);
             }
         });
 
