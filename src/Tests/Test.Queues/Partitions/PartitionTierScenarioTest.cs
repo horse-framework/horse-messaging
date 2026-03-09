@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -39,7 +40,7 @@ public class PartitionTierScenarioTest
     /// Creates a server with AutoQueueCreation + default partition options.
     /// Queues created on-the-fly will inherit this partition config.
     /// </summary>
-    private static async Task<(HorseRider rider, int port)> CreateTierServer(
+    private static async Task<(PartitionTestContext ctx, HorseRider rider, int port)> CreateTierServer(
         int maxPartitionsPerWorker = 10,
         PartitionAutoDestroy autoDestroy = PartitionAutoDestroy.Disabled)
     {
@@ -65,14 +66,15 @@ public class PartitionTierScenarioTest
             });
         }
 
-        return (rider, port);
+        var ctx = new PartitionTestContext(rider, port, $"tier-{Environment.TickCount}", server);
+        return (ctx, rider, port);
     }
 
     /// <summary>
     /// Creates a server with a single labeled (non-AutoAssign) partitioned queue.
     /// Workers subscribe WITH a label for tier-based subscribe.
     /// </summary>
-    private static async Task<(HorseRider rider, int port, HorseQueue queue)> CreateLabeledQueue(
+    private static async Task<(PartitionTestContext ctx, HorseRider rider, int port, HorseQueue queue)> CreateLabeledQueue(
         string name = "FetchOrders",
         int subscribersPerPartition = 5)
     {
@@ -93,7 +95,8 @@ public class PartitionTierScenarioTest
         });
 
         HorseQueue queue = rider.Queue.Find(name);
-        return (rider, port, queue);
+        var ctx = new PartitionTestContext(rider, port, $"labeled-{Environment.TickCount}", server);
+        return (ctx, rider, port, queue);
     }
 
     private static async Task<HorseClient> Connect(int port)
@@ -132,7 +135,8 @@ public class PartitionTierScenarioTest
     [Fact]
     public async Task LabeledSubscribe_FreeWorkers_SamePartition()
     {
-        var (rider, port, queue) = await CreateLabeledQueue("FetchOrders", subscribersPerPartition: 3);
+        var (ctx, rider, port, queue) = await CreateLabeledQueue("FetchOrders", subscribersPerPartition: 3);
+        await using var _ = ctx;
 
         HorseClient w1 = await Connect(port);
         HorseClient w2 = await Connect(port);
@@ -153,7 +157,8 @@ public class PartitionTierScenarioTest
     [Fact]
     public async Task LabeledSubscribe_DifferentTiers_SeparatePartitions()
     {
-        var (rider, port, queue) = await CreateLabeledQueue("MapOrders", subscribersPerPartition: 2);
+        var (ctx, rider, port, queue) = await CreateLabeledQueue("MapOrders", subscribersPerPartition: 2);
+        await using var _ = ctx;
 
         HorseClient freeW = await Connect(port);
         HorseClient stdW = await Connect(port);
@@ -173,7 +178,8 @@ public class PartitionTierScenarioTest
     [Fact]
     public async Task LabeledSubscribe_MessageGoesToCorrectTier()
     {
-        var (rider, port, queue) = await CreateLabeledQueue("SaveOrder", subscribersPerPartition: 2);
+        var (ctx, rider, port, queue) = await CreateLabeledQueue("SaveOrder", subscribersPerPartition: 2);
+        await using var _ = ctx;
 
         HorseClient freeW = await Connect(port);
         HorseClient premW = await Connect(port);
@@ -199,7 +205,8 @@ public class PartitionTierScenarioTest
     [Fact]
     public async Task LabeledSubscribe_TierIsolation_FreeBurstDoesNotAffectPremium()
     {
-        var (rider, port, queue) = await CreateLabeledQueue("OrderProcess", subscribersPerPartition: 1);
+        var (ctx, rider, port, queue) = await CreateLabeledQueue("OrderProcess", subscribersPerPartition: 1);
+        await using var _ = ctx;
 
         HorseClient freeW = await Connect(port);
         HorseClient premW = await Connect(port);
@@ -235,7 +242,8 @@ public class PartitionTierScenarioTest
     [Fact]
     public async Task QueueNameOverride_WorkerSubscribesToCorrectQueue()
     {
-        var (rider, port) = await CreateTierServer();
+        var (ctx, rider, port) = await CreateTierServer();
+        await using var _ = ctx;
 
         HorseClient worker = await Connect(port);
         await SubscribeNoLabel(worker, "CompareOrders-Free");
@@ -256,7 +264,8 @@ public class PartitionTierScenarioTest
     [Fact]
     public async Task QueueNameOverride_TenantMessage_AutoAssignedToFreeWorker()
     {
-        var (rider, port) = await CreateTierServer();
+        var (ctx, rider, port) = await CreateTierServer();
+        await using var _ = ctx;
 
         HorseClient freeW = await Connect(port);
         HorseClient producer = await Connect(port);
@@ -281,7 +290,8 @@ public class PartitionTierScenarioTest
     [Fact]
     public async Task QueueNameOverride_CrossTierIsolation()
     {
-        var (rider, port) = await CreateTierServer();
+        var (ctx, rider, port) = await CreateTierServer();
+        await using var _ = ctx;
 
         HorseClient freeW = await Connect(port);
         HorseClient premW = await Connect(port);
@@ -347,7 +357,8 @@ public class PartitionTierScenarioTest
     [Fact]
     public async Task QueueNameTransform_E2E_WorkerSubscribesToTransformedQueue()
     {
-        var (rider, port) = await CreateTierServer();
+        var (ctx, rider, port) = await CreateTierServer();
+        await using var _ = ctx;
 
         HorseClient client = new HorseClient();
         client.AutoSubscribe = true;
@@ -472,7 +483,8 @@ public class PartitionTierScenarioTest
     [Fact]
     public async Task TenantFIFO_SameTenantMessages_DeliveredInOrder()
     {
-        var (rider, port) = await CreateTierServer(maxPartitionsPerWorker: 5);
+        var (ctx, rider, port) = await CreateTierServer(maxPartitionsPerWorker: 5);
+        await using var _ = ctx;
 
         HorseClient worker = await Connect(port);
         HorseClient producer = await Connect(port);
@@ -506,7 +518,8 @@ public class PartitionTierScenarioTest
     [Fact]
     public async Task TenantFIFO_DifferentTenants_InterleavedButIsolated()
     {
-        var (rider, port) = await CreateTierServer(maxPartitionsPerWorker: 10);
+        var (ctx, rider, port) = await CreateTierServer(maxPartitionsPerWorker: 10);
+        await using var _ = ctx;
 
         HorseClient worker = await Connect(port);
         HorseClient producer = await Connect(port);
@@ -574,7 +587,8 @@ public class PartitionTierScenarioTest
     [Fact]
     public async Task MultiWorker_TenTenantsDistributedAcrossFiveWorkers()
     {
-        var (rider, port) = await CreateTierServer(maxPartitionsPerWorker: 2);
+        var (ctx, rider, port) = await CreateTierServer(maxPartitionsPerWorker: 2);
+        await using var _ = ctx;
 
         HorseClient producer = await Connect(port);
         var workers = new List<HorseClient>();
@@ -611,7 +625,8 @@ public class PartitionTierScenarioTest
     [Fact]
     public async Task MultiWorker_CapacityExhausted_ExtraTenantsHaveNoConsumer()
     {
-        var (rider, port) = await CreateTierServer(maxPartitionsPerWorker: 1);
+        var (ctx, rider, port) = await CreateTierServer(maxPartitionsPerWorker: 1);
+        await using var _ = ctx;
 
         HorseClient producer = await Connect(port);
 
@@ -747,7 +762,8 @@ public class PartitionTierScenarioTest
     [Fact]
     public async Task Edge_SameTenantDifferentTierQueues_CompletelyIsolated()
     {
-        var (rider, port) = await CreateTierServer();
+        var (ctx, rider, port) = await CreateTierServer();
+        await using var _ = ctx;
 
         HorseClient freeW = await Connect(port);
         HorseClient premW = await Connect(port);
@@ -785,7 +801,8 @@ public class PartitionTierScenarioTest
     [Fact]
     public async Task Edge_WorkerDisconnects_OtherTiersUnaffected()
     {
-        var (rider, port) = await CreateTierServer();
+        var (ctx, rider, port) = await CreateTierServer();
+        await using var _ = ctx;
 
         HorseClient freeW = await Connect(port);
         HorseClient premW = await Connect(port);
@@ -817,7 +834,8 @@ public class PartitionTierScenarioTest
     [Fact]
     public async Task Edge_ProducerSendsToNonExistentTierQueue_NoError()
     {
-        var (rider, port) = await CreateTierServer();
+        var (ctx, rider, port) = await CreateTierServer();
+        await using var _ = ctx;
 
         HorseClient producer = await Connect(port);
 
@@ -838,7 +856,8 @@ public class PartitionTierScenarioTest
     [Fact]
     public async Task Edge_LateWorkerJoin_PicksUpStoredMessages()
     {
-        var (rider, port) = await CreateTierServer(maxPartitionsPerWorker: 5);
+        var (ctx, rider, port) = await CreateTierServer(maxPartitionsPerWorker: 5);
+        await using var _ = ctx;
 
         HorseClient producer = await Connect(port);
 
@@ -869,7 +888,8 @@ public class PartitionTierScenarioTest
     [Fact]
     public async Task Edge_MultipleTenantsPerWorker_EachTenantGetsOwnPartition()
     {
-        var (rider, port) = await CreateTierServer(maxPartitionsPerWorker: 0); // unlimited
+        var (ctx, rider, port) = await CreateTierServer(maxPartitionsPerWorker: 0); // unlimited
+        await using var _ = ctx;
 
         HorseClient worker = await Connect(port);
         HorseClient producer = await Connect(port);
@@ -908,7 +928,8 @@ public class PartitionTierScenarioTest
     [Fact]
     public async Task LabeledSubscribe_ExceedsSubscribersPerPartition_Rejected()
     {
-        var (rider, port, queue) = await CreateLabeledQueue("LimitQueue", subscribersPerPartition: 1);
+        var (ctx, rider, port, queue) = await CreateLabeledQueue("LimitQueue", subscribersPerPartition: 1);
+        await using var _ = ctx;
 
         HorseClient w1 = await Connect(port);
         HorseClient w2 = await Connect(port);
@@ -930,7 +951,8 @@ public class PartitionTierScenarioTest
     [Fact]
     public async Task Reconnect_WorkerRejoinsPool_ReceivesNewMessages()
     {
-        var (rider, port) = await CreateTierServer(maxPartitionsPerWorker: 5);
+        var (ctx, rider, port) = await CreateTierServer(maxPartitionsPerWorker: 5);
+        await using var _ = ctx;
 
         HorseClient producer = await Connect(port);
         HorseClient worker = await Connect(port);
@@ -972,7 +994,8 @@ public class PartitionTierScenarioTest
     [Fact]
     public async Task Metrics_EachTierReportsCorrectPartitionCount()
     {
-        var (rider, port) = await CreateTierServer(maxPartitionsPerWorker: 10);
+        var (ctx, rider, port) = await CreateTierServer(maxPartitionsPerWorker: 10);
+        await using var _ = ctx;
 
         HorseClient freeW = await Connect(port);
         HorseClient stdW = await Connect(port);

@@ -202,14 +202,16 @@ public class PartitionAutoAssignTest
 
         await SubscribeNoLabel(w1);
         await SubscribeNoLabel(w2);
-        await Task.Delay(500);
+        await WaitUntil(() => w1.IsConnected && w2.IsConnected);
 
         await PushLabeled(producer, "t-1");
-        await Task.Delay(500);
+        await WaitUntil(() => queue.PartitionManager.Partitions.Count() >= 1);
+
         await PushLabeled(producer, "t-2");
-        await Task.Delay(500);
+        await WaitUntil(() => queue.PartitionManager.Partitions.Count() >= 2);
+
         await PushLabeled(producer, "t-3");
-        await Task.Delay(500);
+        await WaitUntil(() => queue.PartitionManager.Partitions.Count() >= 3);
 
         var partitions = queue.PartitionManager.Partitions.ToList();
         Assert.Equal(3, partitions.Count);

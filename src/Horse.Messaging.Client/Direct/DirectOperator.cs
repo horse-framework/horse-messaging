@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -171,9 +171,9 @@ public class DirectOperator
     public async Task<HorseResult> Send<T>(T model, bool waitForAcknowledge,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken = default)
     {
-        DirectTypeDescriptor descriptor = _descriptorContainer.GetDescriptor<T>();
+        DirectTypeDescriptor descriptor = _descriptorContainer.GetDescriptor(model.GetType());
         HorseMessage message = descriptor.CreateMessage();
-        if (string.IsNullOrEmpty(message.Target))
+        if (message == null || string.IsNullOrEmpty(message.Target))
             return new HorseResult(HorseResultCode.SendError);
 
         message.WaitResponse = waitForAcknowledge;
@@ -286,7 +286,8 @@ public class DirectOperator
             ? descriptor.CreateMessage(target)
             : new HorseMessage(MessageType.DirectMessage, target, contentType ?? 0);
 
-        if (contentType.HasValue)
+        if (message == null)
+            return new HorseResult<TResponse>(HorseResultCode.SendError, "Message target is not specified");
             message.ContentType = contentType.Value;
 
         message.Serialize(model, _client.MessageSerializer);

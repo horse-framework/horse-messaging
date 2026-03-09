@@ -38,12 +38,22 @@ public class HorseQueueBus : IHorseQueueBus
 
     /// <inheritdoc />
     public Task<HorseResult> Push(string queue, MemoryStream content, bool waitForCommit,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
+        => _client.Queue.Push(queue, content, waitForCommit, messageHeaders, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<HorseResult> Push(string queue, MemoryStream content, bool waitForCommit,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, string partitionLabel, CancellationToken cancellationToken)
         => _client.Queue.Push(queue, content, waitForCommit, MergePartitionHeader(partitionLabel, messageHeaders), cancellationToken);
 
     /// <inheritdoc />
     public Task<HorseResult> Push(string queue, MemoryStream content, string messageId, bool waitForCommit, CancellationToken cancellationToken)
         => _client.Queue.Push(queue, content, messageId, waitForCommit, null, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<HorseResult> Push(string queue, MemoryStream content, string messageId, bool waitForCommit,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken)
+        => _client.Queue.Push(queue, content, messageId, waitForCommit, messageHeaders, cancellationToken);
 
     /// <inheritdoc />
     public Task<HorseResult> Push(string queue, MemoryStream content, string messageId, bool waitForCommit,
@@ -62,12 +72,22 @@ public class HorseQueueBus : IHorseQueueBus
 
     /// <inheritdoc />
     public Task<HorseResult> Push<T>(T model, bool waitForCommit,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken) where T : class
+        => _client.Queue.Push(model, waitForCommit, messageHeaders, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<HorseResult> Push<T>(T model, bool waitForCommit,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, string partitionLabel, CancellationToken cancellationToken) where T : class
         => _client.Queue.Push(model, waitForCommit, MergePartitionHeader(partitionLabel, messageHeaders), cancellationToken);
 
     /// <inheritdoc />
     public Task<HorseResult> Push<T>(string queue, T model, bool waitForCommit, CancellationToken cancellationToken) where T : class
         => _client.Queue.Push(queue, model, waitForCommit, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<HorseResult> Push<T>(string queue, T model, bool waitForCommit,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken) where T : class
+        => _client.Queue.Push(queue, model, waitForCommit, messageHeaders, cancellationToken);
 
     /// <inheritdoc />
     public Task<HorseResult> Push<T>(string queue, T model, bool waitForCommit,
@@ -80,12 +100,22 @@ public class HorseQueueBus : IHorseQueueBus
 
     /// <inheritdoc />
     public Task<HorseResult> Push<T>(T model, string messageId, bool waitForCommit,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken) where T : class
+        => _client.Queue.Push(model, messageId, waitForCommit, messageHeaders, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<HorseResult> Push<T>(T model, string messageId, bool waitForCommit,
         IEnumerable<KeyValuePair<string, string>> messageHeaders, string partitionLabel, CancellationToken cancellationToken) where T : class
         => _client.Queue.Push(model, messageId, waitForCommit, MergePartitionHeader(partitionLabel, messageHeaders), cancellationToken);
 
     /// <inheritdoc />
     public Task<HorseResult> Push<T>(string queue, T model, string messageId, bool waitForCommit, CancellationToken cancellationToken) where T : class
         => _client.Queue.Push(queue, model, messageId, waitForCommit, null, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<HorseResult> Push<T>(string queue, T model, string messageId, bool waitForCommit,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken) where T : class
+        => _client.Queue.Push(queue, model, messageId, waitForCommit, messageHeaders, cancellationToken);
 
     /// <inheritdoc />
     public Task<HorseResult> Push<T>(string queue, T model, string messageId, bool waitForCommit,

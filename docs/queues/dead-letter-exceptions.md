@@ -420,7 +420,7 @@ q.UsePersistentQueues(db => db.UseInstantFlush(), useRedelivery: true);
 await rider.Queue.Create("orders", o =>
 {
     o.PutBack = PutBackDecision.Regular;
-    o.Acknowledge = QueueAckDecision.waitForAcknowledge;
+    o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
 });
 ```
 
@@ -445,4 +445,3 @@ public class OrderConsumer : IQueueConsumer<OrderModel>
 ```
 
 See also: [Retry & Redelivery](retry-redelivery.md) | [Acknowledgment & Reliability](acknowledgment.md) | [Queue Options](queue-options.md)
-

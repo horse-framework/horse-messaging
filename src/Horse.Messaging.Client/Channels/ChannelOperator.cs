@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -279,12 +279,27 @@ public class ChannelOperator
     /// <summary>
     /// Publishes a model message to a channel. Channel name is resolved from the model's attribute.
     /// </summary>
-    /// <param name="jsonObject">The model object to publish.</param>
-    /// <param name="waitForAcknowledge">If true, waits for server acknowledgement.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="jsonObject">The model object to serialize as JSON and publish.</param>
+    /// <param name="waitForAcknowledge">If <c>true</c>, waits for server acknowledgement. If <c>false</c>, fire-and-forget.</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the pending operation.</param>
+    /// <returns>A <see cref="HorseResult"/> indicating the operation result.</returns>
     public Task<HorseResult> Publish(object jsonObject, bool waitForAcknowledge, CancellationToken cancellationToken = default)
     {
         return Publish(null, jsonObject, waitForAcknowledge, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Publishes a model message with custom headers to a channel. Channel name is resolved from the model's attribute.
+    /// </summary>
+    /// <param name="jsonObject">The model object to serialize as JSON and publish.</param>
+    /// <param name="waitForAcknowledge">If <c>true</c>, waits for server acknowledgement. If <c>false</c>, fire-and-forget.</param>
+    /// <param name="messageHeaders">Additional key-value headers to attach to the message. Pass <c>null</c> if not needed.</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the pending operation.</param>
+    /// <returns>A <see cref="HorseResult"/> indicating the operation result.</returns>
+    public Task<HorseResult> Publish(object jsonObject, bool waitForAcknowledge,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken = default)
+    {
+        return Publish(null, jsonObject, waitForAcknowledge, messageHeaders, cancellationToken);
     }
 
     /// <summary>

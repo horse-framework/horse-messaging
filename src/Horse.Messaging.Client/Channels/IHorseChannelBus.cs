@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -76,9 +76,29 @@ public interface IHorseChannelBus
         => Publish(model, waitForAcknowledge, CancellationToken.None);
 
     /// <summary>
-    /// Publishes a message to a channel
+    /// Publishes a model message to a channel. Channel name is resolved from the model's attribute.
     /// </summary>
+    /// <param name="model">The model object to serialize as JSON and publish.</param>
+    /// <param name="waitForAcknowledge">If <c>true</c>, blocks until the server sends an acknowledgement. If <c>false</c>, fire-and-forget.</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the pending operation.</param>
+    /// <returns>A <see cref="HorseResult"/> indicating the operation result.</returns>
     Task<HorseResult> Publish(object model, bool waitForAcknowledge, CancellationToken cancellationToken);
+
+    /// <inheritdoc cref="Publish(object, bool, IEnumerable{KeyValuePair{string,string}}, CancellationToken)"/>
+    Task<HorseResult> Publish(object model, bool waitForAcknowledge,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders)
+        => Publish(model, waitForAcknowledge, messageHeaders, CancellationToken.None);
+
+    /// <summary>
+    /// Publishes a model message with custom headers to a channel. Channel name is resolved from the model's attribute.
+    /// </summary>
+    /// <param name="model">The model object to serialize as JSON and publish.</param>
+    /// <param name="waitForAcknowledge">If <c>true</c>, blocks until the server sends an acknowledgement. If <c>false</c>, fire-and-forget.</param>
+    /// <param name="messageHeaders">Additional key-value headers to attach to the message. Pass <c>null</c> if not needed.</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the pending operation.</param>
+    /// <returns>A <see cref="HorseResult"/> indicating the operation result.</returns>
+    Task<HorseResult> Publish(object model, bool waitForAcknowledge,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken);
 
     /// <inheritdoc cref="Publish(string, object, bool, CancellationToken)"/>
     Task<HorseResult> Publish(string channel, object model, bool waitForAcknowledge)

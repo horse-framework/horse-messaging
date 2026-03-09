@@ -1504,9 +1504,11 @@ public class CacheClientIntegrationTest
 
         await client.Cache.SetString("ci-tag-1", "a", TimeSpan.FromMinutes(5), ["MyGroup"], false, CancellationToken.None);
         await client.Cache.SetString("ci-tag-2", "b", TimeSpan.FromMinutes(5), CancellationToken.None);
+        await Task.Delay(250);
 
         // Purge with different case
         await client.Cache.PurgeByTag("mygroup", CancellationToken.None);
+        await Task.Delay(100);
 
         Assert.Null(await client.Cache.GetString("ci-tag-1", CancellationToken.None));
         Assert.NotNull(await client.Cache.GetString("ci-tag-2", CancellationToken.None));

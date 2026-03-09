@@ -26,9 +26,9 @@ The queue's `Acknowledge` option controls the server's expectations. See also [Q
 |----------|-----------------|
 | `None` | Message is removed immediately after delivery. No ack expected. |
 | `JustRequest` | Server asks for an ack but continues sending the next message without waiting. Unacked messages are handled by the put-back policy after timeout. |
-| `waitForAcknowledge` | Server waits for acknowledgment before delivering the next message. Behavior varies by queue type — see below. |
+| `WaitForAcknowledge` | Server waits for acknowledgment before delivering the next message. Behavior varies by queue type — see below. |
 
-#### waitForAcknowledge — Behavior by Queue Type
+#### `WaitForAcknowledge` — Behavior by Queue Type
 
 **Push (fan-out):**
 The message is sent to **all** consumers simultaneously. The queue waits until **any one** consumer acknowledges (or the timeout expires) before dispatching the next message. It does **not** wait for all consumers to ack. The remaining consumers still have their own ack deadlines — if they don't ack in time, the put-back decision applies for their delivery.
@@ -177,8 +177,8 @@ In the consumer:
 public Task Consume(HorseMessage message, OrderEvent model, HorseClient client,
     CancellationToken cancellationToken)
 {
-    string countHeader = message.FindHeader("Redelivery-Count");
-    int redeliveryCount = string.IsNullOrEmpty(countHeader) ? 0 : int.Parse(countHeader);
+    string countHeader = message.FindHeader(HorseHeaders.DELIVERY);
+    int redeliveryCount = string.IsNullOrEmpty(countHeader) ? 1 : int.Parse(countHeader);
 
     if (redeliveryCount > 3)
     {
@@ -236,4 +236,3 @@ For full details on retry mechanics, ignored exceptions, and interaction with re
 | **Producer confirmation** | `CommitWhen = AfterReceived` + `Push(model, waitForCommit: true)` |
 
 > **Note:** With `RoundRobin` + `waitForAcknowledge` + multiple consumers, messages are distributed across consumers but strict FIFO ordering is **not** guaranteed. Use a single consumer if ordering matters.
-

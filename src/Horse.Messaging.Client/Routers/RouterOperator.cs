@@ -184,6 +184,10 @@ public class RouterOperator
     /// <summary>
     /// Publishes a serialized model to a router. Router name resolved from attribute.
     /// </summary>
+    /// <typeparam name="T">Message model type.</typeparam>
+    /// <param name="model">The message model to serialize and send.</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the pending operation.</param>
+    /// <returns>A <see cref="HorseResult"/> indicating the operation result.</returns>
     public Task<HorseResult> Publish<T>(T model, CancellationToken cancellationToken = default) where T : class
     {
         return PublishObject(null, model, null, false, null, null, cancellationToken);
@@ -192,9 +196,29 @@ public class RouterOperator
     /// <summary>
     /// Publishes a serialized model to a router. Router name resolved from attribute.
     /// </summary>
+    /// <typeparam name="T">Message model type.</typeparam>
+    /// <param name="model">The message model to serialize and send.</param>
+    /// <param name="waitForAcknowledge">If <c>true</c>, blocks until the server sends an acknowledgement. If <c>false</c>, fire-and-forget.</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the pending operation.</param>
+    /// <returns>A <see cref="HorseResult"/> indicating the operation result.</returns>
     public Task<HorseResult> Publish<T>(T model, bool waitForAcknowledge, CancellationToken cancellationToken = default) where T : class
     {
         return PublishObject(null, model, null, waitForAcknowledge, null, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Publishes a serialized model with custom headers. Router name resolved from attribute.
+    /// </summary>
+    /// <typeparam name="T">Message model type.</typeparam>
+    /// <param name="model">The message model to serialize and send.</param>
+    /// <param name="waitForAcknowledge">If <c>true</c>, blocks until the server sends an acknowledgement. If <c>false</c>, fire-and-forget.</param>
+    /// <param name="messageHeaders">Additional key-value headers to attach to the message. Pass <c>null</c> if not needed.</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the pending operation.</param>
+    /// <returns>A <see cref="HorseResult"/> indicating the operation result.</returns>
+    public Task<HorseResult> Publish<T>(T model, bool waitForAcknowledge,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders, CancellationToken cancellationToken = default) where T : class
+    {
+        return PublishObject(null, model, null, waitForAcknowledge, null, messageHeaders, cancellationToken);
     }
 
     /// <summary>
@@ -241,13 +265,24 @@ public class RouterOperator
     {
         RouterTypeDescriptor descriptor = _descriptorContainer.GetDescriptor(model.GetType());
 
+        string resolvedRouter = descriptor.RouterName;
+        ushort resolvedContentType = descriptor.ContentType;
+
         if (!string.IsNullOrEmpty(routerName))
-            descriptor.RouterName = routerName;
+            resolvedRouter = routerName;
 
         if (contentType.HasValue)
-            descriptor.ContentType = contentType.Value;
+            resolvedContentType = contentType.Value;
 
-        HorseMessage message = descriptor.CreateMessage();
+        HorseMessage message = new HorseMessage(MessageType.Router, resolvedRouter, resolvedContentType);
+        if (descriptor.HighPriority)
+            message.HighPriority = true;
+
+        if (!string.IsNullOrEmpty(descriptor.Topic))
+            message.AddHeader(HorseHeaders.QUEUE_TOPIC, descriptor.Topic);
+
+        foreach (KeyValuePair<string, string> pair in descriptor.Headers)
+            message.AddHeader(pair.Key, pair.Value);
 
         if (!string.IsNullOrEmpty(messageId))
             message.SetMessageId(messageId);
@@ -331,13 +366,25 @@ public class RouterOperator
     {
         RouterTypeDescriptor descriptor = _descriptorContainer.GetDescriptor(request.GetType());
 
+        string resolvedRouter = descriptor.RouterName;
+        ushort resolvedContentType = descriptor.ContentType;
+
         if (!string.IsNullOrEmpty(routerName))
-            descriptor.RouterName = routerName;
+            resolvedRouter = routerName;
 
         if (contentType.HasValue)
-            descriptor.ContentType = contentType.Value;
+            resolvedContentType = contentType.Value;
 
-        HorseMessage message = descriptor.CreateMessage();
+        HorseMessage message = new HorseMessage(MessageType.Router, resolvedRouter, resolvedContentType);
+        if (descriptor.HighPriority)
+            message.HighPriority = true;
+
+        if (!string.IsNullOrEmpty(descriptor.Topic))
+            message.AddHeader(HorseHeaders.QUEUE_TOPIC, descriptor.Topic);
+
+        foreach (KeyValuePair<string, string> pair in descriptor.Headers)
+            message.AddHeader(pair.Key, pair.Value);
+
         message.WaitResponse = true;
         message.Serialize(request, _client.MessageSerializer);
 

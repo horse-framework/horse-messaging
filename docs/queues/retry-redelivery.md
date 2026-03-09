@@ -227,7 +227,7 @@ q.UsePersistentQueues(db => db.UseInstantFlush(), useRedelivery: true);
 await rider.Queue.Create("orders", o =>
 {
     o.PutBack = PutBackDecision.Regular;
-    o.Acknowledge = QueueAckDecision.waitForAcknowledge;
+    o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
 });
 ```
 
@@ -265,4 +265,3 @@ In this setup:
 5. The consumer checks the `Delivery` header to detect poison messages after 5 server-level redeliveries.
 
 See also: [Acknowledgment & Reliability](acknowledgment.md) | [Dead-Letter Queues & Exception Handling](dead-letter-exceptions.md) | [Queue Options](queue-options.md)
-

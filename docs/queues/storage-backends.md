@@ -27,7 +27,7 @@ cfg.UseMemoryQueues("Fast", queue =>
 
 cfg.UseMemoryQueues("Reliable", queue =>
 {
-    queue.Options.Acknowledge = QueueAckDecision.waitForAcknowledge;
+    queue.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
 });
 ```
 
@@ -51,13 +51,14 @@ public class MetricEvent { }
 
 ### 2. Explicit Queue Creation
 
-Pass the `queueManagerName` parameter when creating a queue programmatically via `QueueOperator.Create`:
+Pass the `queueManagerName` parameter when creating a queue programmatically via `QueueOperator.Create`. Note that this callback uses the client-side `Horse.Messaging.Client.Queues.QueueOptions` shape: `Type` is `MessagingQueueType`, while string-backed options such as `Acknowledge` use protocol values like `"wait-for-ack"`:
 
 ```csharp
 await client.Queue.Create("orders", options =>
 {
-    options.Type = QueueType.RoundRobin;
-    options.Acknowledge = QueueAckDecision.waitForAcknowledge;
+    options.Type = MessagingQueueType.RoundRobin;
+    options.Acknowledge = "wait-for-ack";
+    options.MessageLimit = 1000;
 }, queueManagerName: "Persistent");
 ```
 
@@ -138,7 +139,7 @@ cfg.UsePersistentQueues(
     },
     queue =>
     {
-        queue.Options.Acknowledge = QueueAckDecision.waitForAcknowledge;
+        queue.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
         queue.Options.CommitWhen = CommitWhen.AfterReceived;
     }
 );
@@ -180,4 +181,3 @@ cfg.UsePersistentQueues("Persistent", dataConfig =>
 ```
 
 See [Selecting a Queue Manager](#selecting-a-queue-manager) above for how to target a specific backend per queue.
-

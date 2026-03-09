@@ -15,7 +15,7 @@ Horse Messaging provides a powerful, flexible message queue system with support 
 
 3. [Queue Options](queues/queue-options.md)  
    Full reference of every configurable option on a queue.
-   - Acknowledge Decisions (None, JustRequest, waitForAcknowledge)
+   - Acknowledge Decisions (None, JustRequest, WaitForAcknowledge)
    - Commit Strategies (None, AfterReceived, AfterSent, AfterAcknowledge)
    - Acknowledge Timeout
    - Message Timeout & Timeout Policies
@@ -117,4 +117,3 @@ Horse Messaging provides a powerful, flexible message queue system with support 
     - Auto Destroy Rules
     - Destroying Queues Programmatically
     - Queue Configuration Persistence (JSON)
-
