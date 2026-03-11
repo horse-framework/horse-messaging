@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
@@ -19,9 +20,31 @@ internal class RoundRobinQueueState : IQueueState
     /// </summary>
     private int _roundRobinIndex = -1;
 
+    /// <summary>
+    /// Signal used to wake up GetNextAvailableRRClient when a consumer finishes processing (ACK received).
+    /// Replaces the old tight-loop polling with an event-driven wait.
+    /// </summary>
+    private readonly SemaphoreSlim _clientAvailableSignal = new(0, int.MaxValue);
+
     public RoundRobinQueueState(HorseQueue queue)
     {
         _queue = queue;
+    }
+
+    /// <summary>
+    /// Signals that a client has become available (e.g. after ACK).
+    /// Wakes up the GetNextAvailableRRClient loop immediately.
+    /// </summary>
+    internal void SignalClientAvailable()
+    {
+        try
+        {
+            _clientAvailableSignal.Release();
+        }
+        catch (SemaphoreFullException)
+        {
+            // Already at max, ignore
+        }
     }
 
     public Task<PullResult> Pull(QueueClient client, HorseMessage request)
@@ -173,7 +196,8 @@ internal class RoundRobinQueueState : IQueueState
             return new Tuple<QueueClient, int>(null, -1);
 
         DateTime retryExpiration = DateTime.UtcNow.AddSeconds(30);
-        int tryCount = 0;
+        bool firstScan = true;
+
         while (true)
         {
             int index = currentIndex < 0 ? 0 : currentIndex;
@@ -220,27 +244,26 @@ internal class RoundRobinQueueState : IQueueState
                 return new Tuple<QueueClient, int>(client, i + 1);
             }
 
-            tryCount++;
-            if (tryCount > 10)
+            // No available client found after scanning all consumers.
+            // On the first scan we allow one immediate retry (the state may have just changed).
+            // After that, wait for a signal from AcknowledgeDelivered instead of spinning.
+            if (firstScan)
             {
-                int storedMessageCount = _queue.Manager.MessageStore.Count() + _queue.Manager.PriorityMessageStore.Count();
-                if (storedMessageCount < 3)
-                    await Task.Delay(100);
-                else if (storedMessageCount < 8)
-                    await Task.Delay(50);
-                else if (storedMessageCount < 25)
-                    await Task.Delay(25);
-                else
-                    await Task.Delay(5);
+                firstScan = false;
+            }
+            else
+            {
+                // Drain any stale signals so we block properly on the next wait
+                while (_clientAvailableSignal.CurrentCount > 0)
+                    _clientAvailableSignal.Wait(0);
 
-                tryCount = 0;
+                // Block until a consumer becomes available (ACK received) or timeout (safety fallback)
+                await _clientAvailableSignal.WaitAsync(1000);
             }
 
             if (!_queue.HasAnyClient())
                 break;
 
-            //don't try hard so much, wait for next trigger operation of the queue.
-            //it will be triggered in 5 secs, anyway
             if (DateTime.UtcNow > retryExpiration)
                 break;
         }
