@@ -276,8 +276,9 @@ public class HorseClient : IDisposable
 
     /// <summary>
     /// If true, client does not send ping message to server if any message transmitted in the last PingInterval duration.
+    /// Default value is true, matching the server-side SmartHealthCheck default.
     /// </summary>
-    public bool SmartHealthCheck { get; set; }
+    public bool SmartHealthCheck { get; set; } = true;
     
     /// <summary>
     /// 
@@ -1454,13 +1455,13 @@ public class HorseClient : IDisposable
 
             case MessageType.QueueMessage:
                 if (message.WaitResponse && AutoAcknowledge)
-                    await SendAsync(message.CreateAcknowledge(), ConsumeToken);
+                    _ = SendAsync(message.CreateAcknowledge(), ConsumeToken);
                 _ = DispatchQueueMessageAsync(message);
                 break;
 
             case MessageType.DirectMessage:
                 if (message.WaitResponse && AutoAcknowledge)
-                    await SendAsync(message.CreateAcknowledge(), ConsumeToken);
+                    _ = SendAsync(message.CreateAcknowledge(), ConsumeToken);
                 _ = DispatchDirectMessageAsync(message);
                 break;
 

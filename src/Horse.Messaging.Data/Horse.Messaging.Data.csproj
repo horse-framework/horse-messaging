@@ -6,9 +6,9 @@
 		<Product>Horse.Messaging.Data</Product>
 		<Description>Persistant queue message data library for Horse Messaging</Description>
 		<PackageTags>horse,server,messaging,queue,mq,persistent,database,db</PackageTags>
-        <AssemblyVersion>8.0.24</AssemblyVersion>
-        <FileVersion>8.0.24</FileVersion>
-        <PackageVersion>8.0.24</PackageVersion>
+        <AssemblyVersion>8.0.27</AssemblyVersion>
+        <FileVersion>8.0.27</FileVersion>
+        <PackageVersion>8.0.27</PackageVersion>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü; Emre Hızlı</Authors>
 		<PackageProjectUrl>https://github.com/horse-framework/horse-messaging</PackageProjectUrl>
