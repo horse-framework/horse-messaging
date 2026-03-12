@@ -14,7 +14,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Horse.Jockey" Version="8.0.26" />
+      <PackageReference Include="Horse.Jockey" Version="8.0.28" />
     </ItemGroup>
 
 </Project>
