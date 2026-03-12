@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Horse.Jockey;
 using Horse.Messaging.Data;
 using Horse.Messaging.Protocol;
@@ -14,7 +15,7 @@ class Program
 {
     private static HorseRider _rider;
 
-    static void Main(string[] args)
+    static async Task Main(string[] args)
     {
         Console.ForegroundColor = ConsoleColor.Gray;
         Console.Write("[P]ersistent or [M]emory queues?");
@@ -75,6 +76,6 @@ class Program
         server.Options.Hosts = [new HorseHostOptions { Port = 2626 }];
         
         server.UseRider(_rider);
-        server.RunAsync(CancellationToken.None);
+        await server.RunAsync(new CancellationTokenSource().Token);
     }
 }
