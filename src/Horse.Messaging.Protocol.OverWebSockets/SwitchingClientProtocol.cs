@@ -9,6 +9,7 @@ using Horse.Core;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Horse.WebSocket.Protocol;
+using Horse.WebSocket.Protocol.Compressions;
 using Horse.WebSocket.Protocol.Http;
 using PredefinedMessages = Horse.WebSocket.Protocol.PredefinedMessages;
 
@@ -18,8 +19,8 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
 {
     private string _websocketKey;
     private readonly HorseClient _client;
-    private readonly WebSocketReader _reader = new(null);
-    private readonly WebSocketWriter _writer = new(true, null);
+    private readonly WebSocketReader _reader = new(new DeflateCompressor());
+    private readonly WebSocketWriter _writer = new(true, new DeflateCompressor());
     private readonly HorseProtocolReader _horseReader = new();
 
     internal SwitchingClientProtocol(HorseClient client)
