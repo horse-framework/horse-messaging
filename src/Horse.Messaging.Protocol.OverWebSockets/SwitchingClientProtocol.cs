@@ -154,7 +154,7 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
             rng.GetBytes(keyBytes);
 
         _websocketKey = Convert.ToBase64String(keyBytes);
-        
+
         data.Properties.TryGetValue("PATH", out string path);
         if (string.IsNullOrEmpty(path))
             path = "/";
@@ -163,8 +163,7 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
                          HttpHeaders.Create(HttpHeaders.CONNECTION, HttpHeaders.UPGRADE) +
                          HttpHeaders.Create(HttpHeaders.UPGRADE, HttpHeaders.VALUE_WEBSOCKET) +
                          HttpHeaders.Create(HttpHeaders.WEBSOCKET_VERSION, HttpHeaders.VALUE_WEBSOCKET_VERSION) +
-                         HttpHeaders.Create(HttpHeaders.WEBSOCKET_KEY, _websocketKey) +
-                         HttpHeaders.Create(HttpHeaders.WEBSOCKET_EXTENSIONS, HttpHeaders.VALUE_WEBSOCKET_EXTENSIONS);
+                         HttpHeaders.Create(HttpHeaders.WEBSOCKET_KEY, _websocketKey);
 
         foreach (var kv in data.Properties)
             request += HttpHeaders.Create(kv.Key, kv.Value);
