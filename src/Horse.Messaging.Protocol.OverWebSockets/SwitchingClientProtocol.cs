@@ -149,12 +149,12 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
     /// </summary>
     private byte[] CreateRequest(ConnectionData data)
     {
-        using (SHA1 sha1 = SHA1.Create())
-        {
-            byte[] hash = sha1.ComputeHash(Guid.NewGuid().ToByteArray());
-            _websocketKey = Convert.ToBase64String(hash);
-        }
+        byte[] keyBytes = new byte[16];
+        using (var rng = RandomNumberGenerator.Create())
+            rng.GetBytes(keyBytes);
 
+        _websocketKey = Convert.ToBase64String(keyBytes);
+        
         data.Properties.TryGetValue("PATH", out string path);
         if (string.IsNullOrEmpty(path))
             path = "/";
