@@ -70,7 +70,6 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
                 Client.NoDelay = _client.NoDelay.Value;
 
             Client.Connect(host.IPAddress, host.Port);
-            IsConnected = true;
             IsSsl = host.SSL;
 
             //creates SSL Stream or Insecure stream
@@ -105,6 +104,7 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
                 CheckProtocolResponse(buffer, len);
             }
 
+            IsConnected = true;
             _ = Start();
         }
         catch
@@ -132,7 +132,6 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
                 Client.NoDelay = _client.NoDelay.Value;
 
             await Client.ConnectAsync(host.IPAddress, host.Port);
-            IsConnected = true;
             IsSsl = host.SSL;
 
             //creates SSL Stream or Insecure stream
@@ -167,6 +166,7 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
                 CheckProtocolResponse(buffer, len);
             }
 
+            IsConnected = true;
             _ = Start();
         }
         catch
