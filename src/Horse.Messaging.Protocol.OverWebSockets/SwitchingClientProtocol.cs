@@ -16,7 +16,6 @@ namespace Horse.Messaging.Server.OverWebSockets;
 
 internal class SwitchingClientProtocol : ISwitchingProtocol
 {
-    private const int MaxHandshakeResponseLength = 8192;
     private string _websocketKey;
     private readonly HorseClient _client;
     private readonly WebSocketReader _reader = new(null);
@@ -139,28 +138,10 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
         byte[] request = CreateRequest(data);
         stream.Write(request, 0, request.Length);
 
-        using MemoryStream response = new MemoryStream();
-        byte[] singleByte = new byte[1];
-        uint lastFourBytes = 0;
-
-        while (true)
-        {
-            int len = stream.Read(singleByte, 0, 1);
-            if (len < 1)
-                throw new InvalidOperationException("Unexpected server response");
-
-            response.WriteByte(singleByte[0]);
-            lastFourBytes = (lastFourBytes << 8) | singleByte[0];
-
-            if (response.Length > MaxHandshakeResponseLength)
-                throw new InvalidOperationException("Unexpected server response");
-
-            if (response.Length >= 4 && lastFourBytes == 0x0D0A0D0A)
-            {
-                CheckProtocolResponse(response.ToArray(), (int) response.Length);
-                return Task.CompletedTask;
-            }
-        }
+        byte[] buffer = new byte[8192];
+        int len = stream.Read(buffer, 0, buffer.Length);
+        CheckProtocolResponse(buffer, len);
+        return Task.CompletedTask;
     }
 
     /// <summary>

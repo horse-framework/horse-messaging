@@ -260,7 +260,12 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
         HorseMessage message;
 
         if (_client.SwitchingProtocol != null)
+        {
             message = await _client.SwitchingProtocol.Read(Stream);
+            
+            if (message.Type == MessageType.Ping)
+                _client.SwitchingProtocol.Pong();
+        }
         else
             message = await _reader.Read(Stream);
 
