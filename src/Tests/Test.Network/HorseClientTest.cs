@@ -123,7 +123,7 @@ public class HorseClientTest
         Assert.False(client.CatchResponseMessages);
         Assert.False(client.CatchEventMessages);
         Assert.False(client.ThrowExceptions);
-        Assert.False(client.SmartHealthCheck);
+        Assert.True(client.SmartHealthCheck);
         Assert.True(client.AutoDiscardSwitchingProtocol);
         Assert.Equal(TimeSpan.FromSeconds(30), client.ResponseTimeout);
         Assert.Equal(TimeSpan.FromSeconds(15), client.PullTimeout);

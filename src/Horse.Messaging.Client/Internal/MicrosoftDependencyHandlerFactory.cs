@@ -57,7 +57,7 @@ internal class MicrosoftDependencyHandlerFactory(HorseClient client, ServiceLife
         if (lifetime == ServiceLifetime.Scoped)
             return (IHorseInterceptor) _scope.ServiceProvider.GetService(interceptorType);
 
-        object interceptor = _scope.ServiceProvider.GetService(interceptorType);
+        object interceptor = client.Provider.GetService(interceptorType);
         return (IHorseInterceptor) interceptor;
     }
 }

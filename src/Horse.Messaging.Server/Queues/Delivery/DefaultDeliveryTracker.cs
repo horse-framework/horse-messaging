@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Queues.Managers;
+using Horse.Messaging.Server.Queues.States;
 
 namespace Horse.Messaging.Server.Queues.Delivery
 {
@@ -173,7 +174,13 @@ namespace Horse.Messaging.Server.Queues.Delivery
             }
 
             if (atLeastOneRemoved)
+            {
                 _queue.ReleaseAcknowledgeLock(false);
+
+                // RoundRobin: consumer slots freed by timeout — wake up waiting Push loop
+                if (_queue.Type == QueueType.RoundRobin && _queue.State is RoundRobinQueueState rrState)
+                    rrState.SignalClientAvailable();
+            }
         }
 
         /// <summary>

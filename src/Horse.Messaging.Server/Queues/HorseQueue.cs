@@ -481,7 +481,7 @@ public class HorseQueue
             message.IsInQueue = true;
 
         if (added && trigger && State != null && State.TriggerSupported && !_triggering)
-            _ = Trigger();
+            _ = Task.Run(Trigger);
 
         return added ? PushResult.Success : PushResult.Error;
     }
@@ -1262,18 +1262,42 @@ public class HorseQueue
                 QueueClient queueClient = FindClient(from);
                 if (queueClient != null)
                     if (queueClient.CurrentlyProcessing != null && queueClient.CurrentlyProcessing.Message.MessageId == deliveryMessage.MessageId)
+                    {
                         queueClient.CurrentlyProcessing = null;
+
+                        // RoundRobin: consumer is now available, wake up the waiting Push loop
+                        if (Type == QueueType.RoundRobin && State is RoundRobinQueueState rrNullDelivery)
+                            rrNullDelivery.SignalClientAvailable();
+                    }
 
                 return;
             }
 
             if (delivery.Acknowledge == DeliveryAcknowledge.Timeout)
+            {
+                // RoundRobin: even on timeout, consumer slot is freed — signal the loop
+                if (Type == QueueType.RoundRobin && State is RoundRobinQueueState rrTimeout)
+                    rrTimeout.SignalClientAvailable();
+
                 return;
+            }
 
             bool success = !(deliveryMessage.HasHeader && deliveryMessage.Headers.Any(x => x.Key.Equals(HorseHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.OrdinalIgnoreCase)));
 
             delivery.MarkAsAcknowledged(success);
             ReleaseAcknowledgeLock(true);
+
+            // RoundRobin: consumer is now available, wake up the waiting Push loop immediately
+            if (Type == QueueType.RoundRobin && State is RoundRobinQueueState rrState)
+            {
+                rrState.SignalClientAvailable();
+
+                // If ProcessPendingMessages has already exited (e.g. store was momentarily
+                // empty or GetNextAvailableRRClient timed out), pending messages would be
+                // orphaned because no Trigger is scheduled.  Re-trigger so they get delivered.
+                if (Manager.MessageStore.Count() > 0 || Manager.PriorityMessageStore.Count() > 0)
+                    _ = Task.Run(() => Trigger());
+            }
 
             if (success)
                 Info.AddAcknowledge();

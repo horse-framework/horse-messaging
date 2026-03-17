@@ -110,9 +110,9 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
     {
         if (Retry == null)
         {
-            await _interceptorRunner.RunBeforeInterceptors(message, client, cancellationToken);
+            await _interceptorRunner.RunBeforeInterceptors(message, client, handlerFactory, cancellationToken);
             await consumer.Consume(message, model, client, cancellationToken);
-            await _interceptorRunner.RunAfterInterceptors(message, client, cancellationToken);
+            await _interceptorRunner.RunAfterInterceptors(message, client, handlerFactory, cancellationToken);
             return;
         }
 

@@ -70,7 +70,6 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
                 Client.NoDelay = _client.NoDelay.Value;
 
             Client.Connect(host.IPAddress, host.Port);
-            IsConnected = true;
             IsSsl = host.SSL;
 
             //creates SSL Stream or Insecure stream
@@ -92,7 +91,10 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
                 Stream = Client.GetStream();
 
             if (_client.SwitchingProtocol != null)
+            {
                 _client.SwitchingProtocol.ClientProtocolHandshake(Data, Stream).Wait();
+                SendInfoMessage(host).Wait();
+            }
             else
             {
                 Stream.Write(PredefinedMessages.PROTOCOL_BYTES_V4);
@@ -105,6 +107,7 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
                 CheckProtocolResponse(buffer, len);
             }
 
+            IsConnected = true;
             _ = Start();
         }
         catch
@@ -132,7 +135,6 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
                 Client.NoDelay = _client.NoDelay.Value;
 
             await Client.ConnectAsync(host.IPAddress, host.Port);
-            IsConnected = true;
             IsSsl = host.SSL;
 
             //creates SSL Stream or Insecure stream
@@ -154,7 +156,10 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
                 Stream = Client.GetStream();
 
             if (_client.SwitchingProtocol != null)
+            {
                 await _client.SwitchingProtocol.ClientProtocolHandshake(Data, Stream);
+                await SendInfoMessage(host);
+            }
             else
             {
                 await Stream.WriteAsync(PredefinedMessages.PROTOCOL_BYTES_V4);
@@ -167,6 +172,7 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
                 CheckProtocolResponse(buffer, len);
             }
 
+            IsConnected = true;
             _ = Start();
         }
         catch
@@ -260,7 +266,12 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
         HorseMessage message;
 
         if (_client.SwitchingProtocol != null)
+        {
             message = await _client.SwitchingProtocol.Read(Stream);
+            
+            if (message.Type == MessageType.Ping)
+                _client.SwitchingProtocol.Pong();
+        }
         else
             message = await _reader.Read(Stream);
 

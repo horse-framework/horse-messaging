@@ -1,11 +1,9 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
         <LangVersion>default</LangVersion>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>disable</Nullable>
         <IsPackable>false</IsPackable>
+        <TargetFramework>net10.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
@@ -25,6 +23,7 @@
         <ProjectReference Include="..\..\Horse.Messaging.Client\Horse.Messaging.Client.csproj" />
         <ProjectReference Include="..\..\Horse.Messaging.Protocol\Horse.Messaging.Protocol.csproj" />
         <ProjectReference Include="..\..\Horse.Messaging.Server\Horse.Messaging.Server.csproj" />
+        <ProjectReference Include="..\..\Horse.Messaging.Protocol.OverWebSockets\Horse.Messaging.Protocol.OverWebSockets.csproj" />
         <ProjectReference Include="..\Test.Common\Test.Common.csproj" />
     </ItemGroup>
 

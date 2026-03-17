@@ -52,7 +52,10 @@ public class ChannelClient
     internal async Task Run()
     {
         await foreach (byte[] data in _sendQueue.Reader.ReadAllAsync())
-            await Client.SendAsync(data);
+            if (Client.SwitchingProtocol != null)
+                await Client.SwitchingProtocol.SendAsync(data);
+            else
+                await Client.SendAsync(data);
     }
 
     internal void Dispose()

@@ -14,10 +14,10 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Horse.Jockey" Version="7.3.2" />
-      <PackageReference Include="Horse.Messaging.Data" Version="7.3.2" />
-      <PackageReference Include="Horse.Messaging.Protocol.OverWebSockets" Version="7.3.2" />
-      <PackageReference Include="Horse.Messaging.Server" Version="7.3.2" />
+      <PackageReference Include="Horse.Jockey" Version="8.0.36" />
+      <PackageReference Include="Horse.Messaging.Data" Version="8.0.36" />
+      <PackageReference Include="Horse.Messaging.Protocol.OverWebSockets" Version="8.0.36" />
+      <PackageReference Include="Horse.Messaging.Server" Version="8.0.36" />
     </ItemGroup>
 
 </Project>
