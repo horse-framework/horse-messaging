@@ -146,15 +146,122 @@ public class WebSocketMissingHelloTest
 
             // The server should have a MessagingClient matching this stable client ID
             var serverClient = server.Rider.Client.Find(id1);
+            Assert.NotNull(serverClient);
+        }
+        finally
+        {
+            server.Stop();
+        }
+    }
 
-            // Debug: list all known clients on the server
-            if (serverClient == null)
-            {
-                var allClients = server.Rider.Client.Clients.ToList();
-                string info = $"Client thinks its ID is '{id1}'. Server knows {allClients.Count} client(s): "
-                              + string.Join(", ", allClients.Select(c => $"'{c.UniqueId}'"));
-                Assert.Fail(info);
-            }
+    /// <summary>
+    /// Verifies that when a WebSocket client specifies a CLIENT_ID before connecting,
+    /// the server registers the client with THAT exact ID.
+    ///
+    /// ROOT CAUSE of the ID mismatch:
+    ///
+    ///   Normal Horse protocol flow:
+    ///     1. Client sends protocol bytes + HELLO message (contains CLIENT_ID)
+    ///     2. HorseProtocol.ProcessFirstMessage() parses HELLO → extracts CLIENT_ID
+    ///     3. HorseNetworkHandler.Connected(data) is called with CLIENT_ID in data
+    ///     4. Server creates MessagingClient with the client's requested ID
+    ///
+    ///   WebSocket protocol flow:
+    ///     1. HTTP Upgrade handshake completes → no CLIENT_ID available yet
+    ///     2. OverWsHandler.Ready() calls HorseNetworkHandler.Connected(data)
+    ///        but data only has HTTP headers → NO CLIENT_ID
+    ///     3. Server generates a RANDOM ID for the client
+    ///     4. Client sends HELLO (with its requested CLIENT_ID) as a regular message
+    ///     5. ServerMessageHandler has NO CASE for KnownContentTypes.Hello → IGNORED
+    ///     6. Client's requested ID is never used
+    ///
+    /// This test sets a specific CLIENT_ID before connect and verifies the server
+    /// registered the client with that same ID. It will fail because the WebSocket
+    /// path ignores the client's HELLO and uses a server-generated random ID instead.
+    /// </summary>
+    [Fact]
+    public async Task WebSocket_ClientRequestedId_ShouldBeUsedByServer()
+    {
+        WebSocketTestServer server = new WebSocketTestServer();
+        await server.Initialize();
+        var (_, wsPort) = server.Start();
+        Assert.True(wsPort > 0, "Server failed to start");
+
+        try
+        {
+            const string requestedId = "my-explicit-client-id-12345";
+
+            HorseClient client = new HorseClientBuilder()
+                .SetClientId(requestedId)
+                .SetClientName("ws-id-test")
+                .SetClientType("test-type")
+                .UseHorseOverWebSockets()
+                .Build();
+
+            client.AutoSubscribe = false;
+
+            await client.ConnectAsync($"ws://localhost:{wsPort}");
+            await Task.Delay(2000);
+
+            Assert.True(client.IsConnected, "Client should be connected");
+
+            // After Accepted message, client's _clientId is overwritten with the server's ID.
+            // For normal Horse protocol, the server uses the requested ID → client keeps it.
+            // For WebSocket, the server generates a DIFFERENT ID → client's ID changes.
+            string actualClientId = client.ClientId;
+
+            // The server should have registered the client with our requested ID
+            var serverClient = server.Rider.Client.Find(requestedId);
+
+            // BUG: serverClient is null because the server generated a random ID
+            // instead of using the client's requested "my-explicit-client-id-12345".
+            // The server never sees the CLIENT_ID from the HELLO message because
+            // ServerMessageHandler has no case for KnownContentTypes.Hello.
+            Assert.NotNull(serverClient);
+
+            // Also verify the client still thinks it has the requested ID
+            Assert.Equal(requestedId, actualClientId);
+        }
+        finally
+        {
+            server.Stop();
+        }
+    }
+
+    /// <summary>
+    /// Control: Same explicit CLIENT_ID test over normal Horse protocol — works.
+    /// </summary>
+    [Fact]
+    public async Task HorseProtocol_ClientRequestedId_IsUsedByServer()
+    {
+        WebSocketTestServer server = new WebSocketTestServer();
+        await server.Initialize();
+        var (horsePort, _) = server.Start();
+        Assert.True(horsePort > 0, "Server failed to start");
+
+        try
+        {
+            const string requestedId = "my-explicit-client-id-67890";
+
+            HorseClient client = new HorseClientBuilder()
+                .SetClientId(requestedId)
+                .SetClientName("horse-id-test")
+                .SetClientType("test-type")
+                .Build();
+
+            client.AutoSubscribe = false;
+
+            await client.ConnectAsync($"horse://localhost:{horsePort}");
+            await Task.Delay(2000);
+
+            Assert.True(client.IsConnected, "Client should be connected");
+
+            // Normal Horse protocol: HELLO sends CLIENT_ID → server uses it → Accepted returns it
+            string actualClientId = client.ClientId;
+            Assert.Equal(requestedId, actualClientId);
+
+            var serverClient = server.Rider.Client.Find(requestedId);
+            Assert.NotNull(serverClient);
         }
         finally
         {
