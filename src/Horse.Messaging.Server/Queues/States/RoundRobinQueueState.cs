@@ -253,11 +253,11 @@ internal class RoundRobinQueueState : IQueueState
             }
             else
             {
-                // Drain any stale signals so we block properly on the next wait
-                while (_clientAvailableSignal.CurrentCount > 0)
-                    _clientAvailableSignal.Wait(0);
-
-                // Block until a consumer becomes available (ACK received) or timeout (safety fallback)
+                // Block until a consumer becomes available (ACK received) or timeout (safety fallback).
+                // Do NOT drain stale signals before waiting — draining introduces a race where
+                // a signal released between the scan and the drain is lost, causing a full
+                // timeout delay (up to 1 000 ms) even though the consumer is already free.
+                // SemaphoreSlim handles this correctly: if count > 0, WaitAsync returns immediately.
                 await _clientAvailableSignal.WaitAsync(1000);
             }
 

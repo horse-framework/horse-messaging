@@ -91,7 +91,10 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
                 Stream = Client.GetStream();
 
             if (_client.SwitchingProtocol != null)
+            {
                 _client.SwitchingProtocol.ClientProtocolHandshake(Data, Stream).Wait();
+                SendInfoMessage(host).Wait();
+            }
             else
             {
                 Stream.Write(PredefinedMessages.PROTOCOL_BYTES_V4);
@@ -153,7 +156,10 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
                 Stream = Client.GetStream();
 
             if (_client.SwitchingProtocol != null)
+            {
                 await _client.SwitchingProtocol.ClientProtocolHandshake(Data, Stream);
+                await SendInfoMessage(host);
+            }
             else
             {
                 await Stream.WriteAsync(PredefinedMessages.PROTOCOL_BYTES_V4);

@@ -481,7 +481,7 @@ public class HorseQueue
             message.IsInQueue = true;
 
         if (added && trigger && State != null && State.TriggerSupported && !_triggering)
-            _ = Trigger();
+            _ = Task.Run(Trigger);
 
         return added ? PushResult.Success : PushResult.Error;
     }
@@ -1289,7 +1289,15 @@ public class HorseQueue
 
             // RoundRobin: consumer is now available, wake up the waiting Push loop immediately
             if (Type == QueueType.RoundRobin && State is RoundRobinQueueState rrState)
+            {
                 rrState.SignalClientAvailable();
+
+                // If ProcessPendingMessages has already exited (e.g. store was momentarily
+                // empty or GetNextAvailableRRClient timed out), pending messages would be
+                // orphaned because no Trigger is scheduled.  Re-trigger so they get delivered.
+                if (Manager.MessageStore.Count() > 0 || Manager.PriorityMessageStore.Count() > 0)
+                    _ = Task.Run(() => Trigger());
+            }
 
             if (success)
                 Info.AddAcknowledge();
