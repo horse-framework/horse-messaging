@@ -5,6 +5,7 @@ using Horse.Jockey;
 using Horse.Messaging.Data;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
+using Horse.Messaging.Server.OverWebSockets;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Server;
@@ -36,6 +37,7 @@ class Program
             {
                 cfg.Options.AutoChannelCreation = true;
                 cfg.Options.AutoDestroy = false;
+                cfg.Options.SendLastMessageAsInitial = true;
             })
             .ConfigureQueues(cfg =>
             {
@@ -74,8 +76,10 @@ class Program
 
         HorseServer server = new HorseServer();
         server.Options.Hosts = [new HorseHostOptions { Port = 2626 }];
-        
+
         server.UseRider(_rider);
+        server.UseHorseOverWebsockets(o => o.Port = 2680);
+        
         await server.RunAsync(new CancellationTokenSource().Token);
     }
 }
