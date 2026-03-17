@@ -192,8 +192,9 @@ public class IdleProducerDisconnectTest
         try
         {
             HorseClient client = new HorseClient();
-            // Explicitly verify defaults
-            Assert.False(client.SmartHealthCheck, "HorseClient.SmartHealthCheck should default to false");
+            // SmartHealthCheck defaults to true (matching server default). Override to false for this test.
+            Assert.True(client.SmartHealthCheck, "HorseClient.SmartHealthCheck should default to true");
+            client.SmartHealthCheck = false;
             Assert.Equal(TimeSpan.FromSeconds(15), client.PingInterval);
 
             bool disconnected = false;

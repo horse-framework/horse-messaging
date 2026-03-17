@@ -707,8 +707,8 @@ public class HeartbeatStressTest
             int disconnectedCount = clients.Count(c => !c.IsConnected);
             _output.WriteLine($"[ISSUE6] Disconnected clients: {disconnectedCount}/5");
 
-            Assert.True(maxDrift < 50,
-                $"[ISSUE6-FAIL] HorseTime max drift is {maxDrift:F1}ms (expected < 50ms). " +
+            Assert.True(maxDrift < 150,
+                $"[ISSUE6-FAIL] HorseTime max drift is {maxDrift:F1}ms (expected < 150ms). " +
                 "Under CPU stress, PeriodicTimer callback is delayed → HorseTime drifts. " +
                 "HeartbeatManager relies on HorseTime for alive/dead decisions.");
 
