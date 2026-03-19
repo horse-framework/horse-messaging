@@ -1,3 +1,4 @@
+using System.Threading;
 using Horse.Messaging.Client.Routers.Annotations;
 
 namespace HostedServiceSample.Producer;

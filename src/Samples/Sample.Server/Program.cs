@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Client.Queues.Annotations;
@@ -18,7 +19,8 @@ public class Model
 
 public class ModelConsumer : IQueueConsumer<Model>
 {
-    public Task Consume(HorseMessage message, Model model, HorseClient client)
+    public Task Consume(HorseMessage message, Model model, HorseClient client,
+        CancellationToken cancellationToken = default)
     {
         throw new System.NotImplementedException();
     }
@@ -65,8 +67,9 @@ namespace Sample.Server
             HorseServer server = new HorseServer();
             server.UseRider(rider);
             server.Options.PingInterval = 10;
+            server.Options.Hosts = [new HorseHostOptions { Port = 2626 }];
             //await rider.Cache.Set("TestCache1", new MemoryStream("Hello World"u8.ToArray()), TimeSpan.FromHours(4), null, null, true);
-            server.Run(2626);
+            await server.StartAsync();
         }
     }
 }

@@ -1,9 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
-using Horse.Messaging.Client.Annotations;
 using Horse.Messaging.Client.Direct.Annotations;
 using Horse.Messaging.Client.Interceptors;
 using Horse.Messaging.Client.Internal;
@@ -48,7 +47,8 @@ internal class DirectHandlerExecutor<TModel> : ExecutorBase
         NegativeReason = responseAttribute.Error;
     }
 
-    public override async Task Execute(HorseClient client, HorseMessage message, object model)
+    public override async Task Execute(HorseClient client, HorseMessage message, object model,
+        CancellationToken cancellationToken)
     {
         TModel t = (TModel) model;
         ProvidedHandler providedHandler = null;
@@ -57,29 +57,26 @@ internal class DirectHandlerExecutor<TModel> : ExecutorBase
         {
             if (_messageHandler != null)
             {
-                await _interceptorRunner.RunBeforeInterceptors(message, client);
-                await Handle(_messageHandler, message, t, client);
-                await _interceptorRunner.RunAfterInterceptors(message, client);
+                await Handle(_messageHandler, message, t, client, null, cancellationToken);
+                
             }
             else if (_consumerFactoryCreator != null)
             {
                 IHandlerFactory handlerFactory = _consumerFactoryCreator();
                 providedHandler = handlerFactory.CreateHandler(_consumerType);
                 IDirectMessageHandler<TModel> messageHandler = (IDirectMessageHandler<TModel>) providedHandler.Service;
-                await _interceptorRunner.RunBeforeInterceptors(message, client, handlerFactory);
-                await Handle(messageHandler, message, t, client);
-                await  _interceptorRunner.RunAfterInterceptors(message, client, handlerFactory);
+                await Handle(messageHandler, message, t, client, handlerFactory, cancellationToken);
             }
             else
                 throw new InvalidOperationException("There is no handler defined");
 
             if (SendPositiveResponse)
-                await client.SendAck(message);
+                await client.SendAck(message, cancellationToken);
         }
         catch (Exception e)
         {
             if (SendNegativeResponse)
-                await SendNegativeAck(message, client, e);
+                await SendNegativeAck(message, client, e, cancellationToken);
 
             await SendExceptions(message, client, e);
         }
@@ -89,11 +86,14 @@ internal class DirectHandlerExecutor<TModel> : ExecutorBase
         }
     }
 
-    private async Task Handle(IDirectMessageHandler<TModel> messageHandler, HorseMessage message, TModel model, HorseClient client)
+    private async Task Handle(IDirectMessageHandler<TModel> messageHandler, HorseMessage message, TModel model,
+        HorseClient client, IHandlerFactory handlerFactory, CancellationToken cancellationToken)
     {
         if (Retry == null)
         {
-            await messageHandler.Handle(message, model, client);
+            await _interceptorRunner.RunBeforeInterceptors(message, client, handlerFactory, cancellationToken);
+            await messageHandler.Handle(message, model, client, cancellationToken);
+            await _interceptorRunner.RunAfterInterceptors(message, client, handlerFactory, cancellationToken);
             return;
         }
 
@@ -101,7 +101,9 @@ internal class DirectHandlerExecutor<TModel> : ExecutorBase
         for (int i = 0; i < count; i++)
             try
             {
-                await messageHandler.Handle(message, model, client);
+                await _interceptorRunner.RunBeforeInterceptors(message, client, handlerFactory, cancellationToken);
+                await messageHandler.Handle(message, model, client, cancellationToken);
+                await _interceptorRunner.RunAfterInterceptors(message, client, handlerFactory, cancellationToken);
                 return;
             }
             catch (Exception e)
@@ -112,7 +114,7 @@ internal class DirectHandlerExecutor<TModel> : ExecutorBase
                         throw;
 
                 if (Retry.DelayBetweenRetries > 0)
-                    await Task.Delay(Retry.DelayBetweenRetries);
+                    await Task.Delay(Retry.DelayBetweenRetries, cancellationToken);
             }
     }
 }

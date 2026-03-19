@@ -1,4 +1,5 @@
-﻿// See https://aka.ms/new-console-template for more information
+using System.Threading;
+// See https://aka.ms/new-console-template for more information
 
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -20,8 +21,9 @@ HorseRider rider = HorseRiderBuilder.Create()
 
 HorseServer server = new HorseServer();
 server.Options.PingInterval = 10;
+server.Options.Hosts = [new HorseHostOptions { Port = 2626 }];
 server.UseRider(rider);
-server.Start(2626);
+server.StartAsync();
 
 await Task.Delay(250);
 HorseClient client = new HorseClient();
@@ -35,7 +37,7 @@ while (true)
 
     HorseMessage msg = new HorseMessage(MessageType.Plugin, pluginName);
     msg.SetStringContent("This is a sample plugin request message");
-    HorseResult result = await client.SendAndGetAck(msg);
+    HorseResult result = await client.SendAsync(msg, true, CancellationToken.None);
     Console.WriteLine($"Result code is {result.Code}");
     if (result.Message != null)
         Console.WriteLine($"Response message is: {result.Message.GetStringContent()}");

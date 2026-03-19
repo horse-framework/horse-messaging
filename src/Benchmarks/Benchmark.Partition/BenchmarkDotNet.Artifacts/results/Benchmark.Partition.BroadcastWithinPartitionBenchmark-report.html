@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>Benchmark.Partition.BroadcastWithinPartitionBenchmark-20260228-092739</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, macOS 26.2 (25C56) [Darwin 25.2.0]
+Apple M1 Max, 1 CPU, 10 logical and 10 physical cores
+.NET SDK 10.0.102
+  [Host]     : .NET 10.0.2 (10.0.225.61305), Arm64 RyuJIT AdvSIMD
+  Job-EXAVUY : .NET 10.0.2 (10.0.225.61305), Arm64 RyuJIT AdvSIMD
+</code></pre>
+<pre><code>IterationCount=5  LaunchCount=1  WarmupCount=2  
+</code></pre>
+
+<table>
+<thead><tr><th>Method               </th><th>FanOut</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Rank</th><th>Gen0</th><th>Gen1</th><th>Gen2</th><th>Allocated</th>
+</tr>
+</thead><tbody><tr><td>Broadcast_Push_PerPartition</td><td>1</td><td>82.38 ms</td><td>2.506 ms</td><td>0.388 ms</td><td>1</td><td>2687.5000</td><td>1375.0000</td><td>-</td><td>15.95 MB</td>
+</tr><tr><td>Broadcast_Push_PerPartition</td><td>2</td><td>110.28 ms</td><td>1.440 ms</td><td>0.223 ms</td><td>2</td><td>3375.0000</td><td>1687.5000</td><td>-</td><td>19.9 MB</td>
+</tr><tr><td>Broadcast_Push_PerPartition</td><td>5</td><td>194.87 ms</td><td>5.300 ms</td><td>1.376 ms</td><td>3</td><td>5250.0000</td><td>2625.0000</td><td>62.5000</td><td>31.19 MB</td>
+</tr></tbody></table>
+</body>
+</html>

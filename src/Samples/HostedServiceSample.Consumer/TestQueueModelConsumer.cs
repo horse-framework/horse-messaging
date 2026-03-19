@@ -1,5 +1,6 @@
 using System;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Queues;
@@ -13,12 +14,10 @@ namespace HostedServiceSample.Consumer;
 [AutoNack(NegativeReason.Error)]
 internal class TestQueueModelConsumer : IQueueConsumer<TestQueueModel>
 {
-    readonly JsonSerializerOptions _options = new()
-    {
-        WriteIndented = true
-    };
+    readonly JsonSerializerOptions _options = new() { WriteIndented = true };
 
-    public Task Consume(HorseMessage message, TestQueueModel model, HorseClient client)
+    public Task Consume(HorseMessage message, TestQueueModel model, HorseClient client,
+        CancellationToken cancellationToken = default)
     {
         _ = Console.Out.WriteLineAsync("Consumed!!!");
         _ = Console.Out.WriteLineAsync(JsonSerializer.Serialize(model));
@@ -30,12 +29,10 @@ internal class TestQueueModelConsumer : IQueueConsumer<TestQueueModel>
 [AutoNack(NegativeReason.Error)]
 internal class TestQueueModel2Consumer : IQueueConsumer<TestQueueModel2>
 {
-    readonly JsonSerializerOptions _options = new()
-    {
-        WriteIndented = true
-    };
+    readonly JsonSerializerOptions _options = new() { WriteIndented = true };
 
-    public Task Consume(HorseMessage message, TestQueueModel2 model, HorseClient client)
+    public Task Consume(HorseMessage message, TestQueueModel2 model, HorseClient client,
+        CancellationToken cancellationToken = default)
     {
         _ = Console.Out.WriteLineAsync("Consumed!!!");
         _ = Console.Out.WriteLineAsync(JsonSerializer.Serialize(model));

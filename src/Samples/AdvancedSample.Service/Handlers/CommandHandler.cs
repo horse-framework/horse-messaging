@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using AdvancedSample.Service.Interceptors;
 using Horse.Messaging.Client;
@@ -15,7 +16,8 @@ public abstract class CommandHandler<T> : IDirectMessageHandler<T>
 {
     protected abstract Task Execute(T command, HorseClient client);
 
-    public async Task Handle(HorseMessage message, T model, HorseClient client)
+    public async Task Handle(HorseMessage message, T model, HorseClient client,
+        CancellationToken cancellationToken = default)
     {
         await Execute(model, client);
     }

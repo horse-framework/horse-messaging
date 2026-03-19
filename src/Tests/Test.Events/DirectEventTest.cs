@@ -1,3 +1,4 @@
+using System.Threading;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -27,7 +28,7 @@ public class DirectEventTest
 
         await client.ConnectAsync($"horse://localhost:{port}");
 
-        HorseResult directResult = await client.Direct.SendByName("test-client", 0, new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!")), false);
+        HorseResult directResult = await client.Direct.SendByName("test-client", 0, new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!")), false, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, directResult.Code);
 
         await Task.Delay(250);
@@ -48,14 +49,14 @@ public class DirectEventTest
         client.CatchEventMessages = false;
         client.MessageReceived += (c, m) =>
         {
-            c.SendAsync(m.CreateResponse(HorseResultCode.Ok));
+            c.SendAsync(m.CreateResponse(HorseResultCode.Ok), CancellationToken.None);
         };
 
         EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
         registrar.RegisterHandler<DirectResponseHandler>();
 
         await client.ConnectAsync($"horse://localhost:{port}");
-        await client.Direct.Request("@name:test-client", 0, new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!")));
+        await client.Direct.Request("@name:test-client", 0, new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!")), CancellationToken.None);
 
         await Task.Delay(250);
         Assert.Equal(1, DirectResponseHandler.Count);

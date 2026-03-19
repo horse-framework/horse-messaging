@@ -70,7 +70,7 @@ public class OptionsBuilder
             string replicaHost = hostTemplate.Replace("INDEX", index.ToString());
 
             index++;
-            if (replicaHost.Equals(hostname, StringComparison.InvariantCultureIgnoreCase))
+            if (replicaHost.Equals(hostname, StringComparison.OrdinalIgnoreCase))
                 continue;
 
             _options.OtherNodes.Add(new NodeOptions { Name = replicaHost, Host = replicaHost });
@@ -106,10 +106,10 @@ public class OptionsBuilder
     {
         _options.QueueType = Enums.Parse<QueueType>(Environment.GetEnvironmentVariable("HORSE_QUEUE_TYPE") ?? "RoundRobin", true, EnumFormat.Name);
         _options.QueueAutoCreate = bool.Parse(Environment.GetEnvironmentVariable("HORSE_QUEUE_AUTO_CREATE") ?? "true");
-        _options.QueueAck = Enums.Parse<QueueAckDecision>(Environment.GetEnvironmentVariable("HORSE_QUEUE_ACK") ?? "WaitForAcknowledge");
-        _options.QueueDestroy = Enums.Parse<QueueDestroy>(Environment.GetEnvironmentVariable("HORSE_QUEUE_AUTO_DESTROY") ?? "Disabled");
-        _options.QueueCommitWhen = Enums.Parse<CommitWhen>(Environment.GetEnvironmentVariable("HORSE_QUEUE_COMMIT_WHEN") ?? "AfterReceived");
-        _options.QueuePutback = Enums.Parse<PutBackDecision>(Environment.GetEnvironmentVariable("HORSE_QUEUE_PUTBACK") ?? "Regular");
+        _options.QueueAck = Enums.Parse<QueueAckDecision>(Environment.GetEnvironmentVariable("HORSE_QUEUE_ACK") ?? "WaitForAcknowledge", true, EnumFormat.Name);
+        _options.QueueDestroy = Enums.Parse<QueueDestroy>(Environment.GetEnvironmentVariable("HORSE_QUEUE_AUTO_DESTROY") ?? "Disabled", true);
+        _options.QueueCommitWhen = Enums.Parse<CommitWhen>(Environment.GetEnvironmentVariable("HORSE_QUEUE_COMMIT_WHEN") ?? "AfterReceived", true);
+        _options.QueuePutback = Enums.Parse<PutBackDecision>(Environment.GetEnvironmentVariable("HORSE_QUEUE_PUTBACK") ?? "Regular", true);
         _options.QueueMsgExceedStrategy = Enums.Parse<MessageLimitExceededStrategy>(Environment.GetEnvironmentVariable("HORSE_QUEUE_MSG_EXCEED_STRATEGY") ?? "RejectNewMessage", true, EnumFormat.Name);
 
         _options.QueueAckTimeout = TimeSpan.FromSeconds(Convert.ToInt32(Environment.GetEnvironmentVariable("HORSE_QUEUE_ACK_TIMEOUT") ?? "30"));
@@ -133,7 +133,7 @@ public class OptionsBuilder
         _options.QueueUseMemory = bool.Parse(Environment.GetEnvironmentVariable("HORSE_QUEUE_USE_MEMORY") ?? "true");
 
         string defaultManager = Environment.GetEnvironmentVariable("HORSE_QUEUE_DEFAULT_MANAGER") ?? "Persistent";
-        _options.QueueUsePersistentManagerAsDefault = defaultManager.Equals("Persistent", StringComparison.InvariantCultureIgnoreCase);
+        _options.QueueUsePersistentManagerAsDefault = defaultManager.Equals("Persistent", StringComparison.OrdinalIgnoreCase);
     }
 
     public AppOptions Build()

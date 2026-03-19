@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using Horse.Messaging.Plugins;
 using Horse.Messaging.Plugins.Cache;
 using Horse.Messaging.Server.Cache;
 
@@ -16,16 +15,18 @@ internal class PluginCacheRider : IPluginCacheRider
         _rider = rider;
     }
 
-    public async Task<PluginCacheOperation> Set(string key, string value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null, bool persistent = false)
+    public Task<PluginCacheOperation> Set(string key, string value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null, bool persistent = false)
     {
-        CacheOperation result = await _rider.Cache.Set(key, value, duration, expirationWarning, tags, persistent);
-        return new PluginCacheOperation((PluginCacheResult)result.Result, GetCacheItem(result.Item));
+        CacheOperation result = _rider.Cache.Set(key, value, duration, expirationWarning, tags, persistent);
+        PluginCacheOperation operation = new PluginCacheOperation((PluginCacheResult)result.Result, GetCacheItem(result.Item));
+        return Task.FromResult(operation);
     }
 
-    public async Task<PluginCacheOperation> Set(string key, MemoryStream value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null, bool persistent = false)
+    public Task<PluginCacheOperation> Set(string key, MemoryStream value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null, bool persistent = false)
     {
-        CacheOperation result = await _rider.Cache.Set(key, value, duration, expirationWarning, tags, persistent);
-        return new PluginCacheOperation((PluginCacheResult)result.Result, GetCacheItem(result.Item));
+        CacheOperation result = _rider.Cache.Set(key, value, duration, expirationWarning, tags, persistent);
+        PluginCacheOperation operation = new PluginCacheOperation((PluginCacheResult)result.Result, GetCacheItem(result.Item));
+        return Task.FromResult(operation); 
     }
 
     public async Task<PluginCacheItemResult> Get(string key)
@@ -37,28 +38,32 @@ internal class PluginCacheRider : IPluginCacheRider
         return new PluginCacheItemResult(result.IsFirstWarningReceiver, GetCacheItem(result.Item));
     }
 
-    public async Task<PluginCacheItemResult> GetIncremental(string key, TimeSpan duration, int incrementValue = 1, string[] tags = null)
+    public Task<PluginCacheItemResult> GetIncremental(string key, TimeSpan duration, int incrementValue = 1, string[] tags = null)
     {
-        var result = await _rider.Cache.GetIncremental(key, duration, incrementValue, tags);
+        var result = _rider.Cache.GetIncremental(key, duration, incrementValue, tags);
         if (result == null)
             return null;
 
-        return new PluginCacheItemResult(result.IsFirstWarningReceiver, GetCacheItem(result.Item));
+        var itemResult = new PluginCacheItemResult(result.IsFirstWarningReceiver, GetCacheItem(result.Item));
+        return Task.FromResult(itemResult);
     }
 
     public Task Remove(string key)
     {
-        return _rider.Cache.Remove(key);
+        _rider.Cache.Remove(key);
+        return Task.CompletedTask;
     }
 
     public Task PurgeByTag(string tagName)
     {
-        return _rider.Cache.PurgeByTag(tagName);
+        _rider.Cache.PurgeByTag(tagName);
+        return Task.CompletedTask;
     }
 
     public Task Purge()
     {
-        return _rider.Cache.Purge();
+        _rider.Cache.Purge();
+        return Task.CompletedTask;
     }
 
     private static PluginCacheItem GetCacheItem(HorseCacheItem item)

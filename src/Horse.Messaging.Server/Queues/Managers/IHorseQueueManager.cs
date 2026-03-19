@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Messaging.Server.Queues.Store;
 using Horse.Messaging.Server.Queues.Sync;

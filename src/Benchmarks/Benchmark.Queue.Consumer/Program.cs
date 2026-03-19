@@ -1,3 +1,4 @@
+using System.Threading;
 ﻿using System;
 using Benchmark.Helper;
 using Horse.Messaging.Client;
@@ -44,6 +45,6 @@ class Program
         client.SetClientType("Benchmark");
         client.AutoAcknowledge = true;
         client.Connect("horse://localhost:2626");
-        _ = client.Queue.Subscribe("TestQueue", true);
+        _ = client.Queue.Subscribe("TestQueue", true, CancellationToken.None);
     }
 }

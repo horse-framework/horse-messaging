@@ -1,14 +1,11 @@
+using System.Threading;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Channels;
 using Horse.Messaging.Server.OverWebSockets;
 using Horse.Server;
-using HostOptions = Horse.Server.HostOptions;
 
 HorseServer server = new HorseServer();
-server.Options.Hosts = new List<HostOptions>
-{
-    new HostOptions {Port = 2626}
-};
+server.Options.Hosts = [new HorseHostOptions() { Port = 2626 }];
 HorseRider rider = HorseRiderBuilder
     .Create()
     .ConfigureQueues(cfg => cfg.UseMemoryQueues())
@@ -33,4 +30,4 @@ Task.Run(async () =>
     }
 });
 
-server.Run();
+await server.RunAsync(CancellationToken.None);

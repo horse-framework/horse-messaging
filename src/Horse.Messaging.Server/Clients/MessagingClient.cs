@@ -25,9 +25,19 @@ public class MessagingClient : HorseServerSocket, ISwitchingProtocolClient
     private readonly List<QueueClient> _queues = new();
 
     /// <summary>
+    /// Snapshot of subscribed queues for lock-free reads
+    /// </summary>
+    private volatile QueueClient[] _queuesSnapshot = [];
+
+    /// <summary>
     /// Channels that client subscribed
     /// </summary>
     private readonly List<ChannelClient> _channels = new();
+
+    /// <summary>
+    /// Snapshot of subscribed channels for lock-free reads
+    /// </summary>
+    private volatile ChannelClient[] _channelsSnapshot = [];
 
     /// <summary>
     /// Connection data of the client.
@@ -163,12 +173,7 @@ public class MessagingClient : HorseServerSocket, ISwitchingProtocolClient
     /// </summary>
     public IEnumerable<QueueClient> GetQueues()
     {
-        List<QueueClient> list;
-
-        lock (_queues)
-            list = new List<QueueClient>(_queues);
-
-        return list;
+        return _queuesSnapshot;
     }
 
     /// <summary>
@@ -176,12 +181,7 @@ public class MessagingClient : HorseServerSocket, ISwitchingProtocolClient
     /// </summary>
     public IEnumerable<ChannelClient> GetChannels()
     {
-        List<ChannelClient> list;
-
-        lock (_channels)
-            list = new List<ChannelClient>(_channels);
-
-        return list;
+        return _channelsSnapshot;
     }
 
     /// <summary>
@@ -190,7 +190,10 @@ public class MessagingClient : HorseServerSocket, ISwitchingProtocolClient
     internal void AddSubscription(QueueClient queue)
     {
         lock (_queues)
+        {
             _queues.Add(queue);
+            _queuesSnapshot = _queues.ToArray();
+        }
     }
 
     /// <summary>
@@ -199,7 +202,10 @@ public class MessagingClient : HorseServerSocket, ISwitchingProtocolClient
     internal void AddSubscription(ChannelClient channel)
     {
         lock (_channels)
+        {
             _channels.Add(channel);
+            _channelsSnapshot = _channels.ToArray();
+        }
     }
 
     /// <summary>
@@ -208,7 +214,10 @@ public class MessagingClient : HorseServerSocket, ISwitchingProtocolClient
     internal void RemoveSubscription(QueueClient queue)
     {
         lock (_queues)
+        {
             _queues.Remove(queue);
+            _queuesSnapshot = _queues.ToArray();
+        }
     }
 
     /// <summary>
@@ -217,7 +226,10 @@ public class MessagingClient : HorseServerSocket, ISwitchingProtocolClient
     internal void RemoveSubscription(ChannelClient channel)
     {
         lock (_channels)
+        {
             _channels.Remove(channel);
+            _channelsSnapshot = _channels.ToArray();
+        }
     }
 
     /// <summary>
@@ -230,6 +242,7 @@ public class MessagingClient : HorseServerSocket, ISwitchingProtocolClient
         {
             list = new List<QueueClient>(_queues);
             _queues.Clear();
+            _queuesSnapshot = [];
         }
 
         foreach (QueueClient cc in list)
@@ -246,6 +259,7 @@ public class MessagingClient : HorseServerSocket, ISwitchingProtocolClient
         {
             list = new List<ChannelClient>(_channels);
             _channels.Clear();
+            _channelsSnapshot = [];
         }
 
         foreach (ChannelClient cc in list)

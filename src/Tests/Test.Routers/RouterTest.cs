@@ -1,3 +1,5 @@
+using System.Threading;
+using System.Text;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -45,7 +47,7 @@ public class RouterTest
 
         for (int i = 0; i < 4; i++)
         {
-            HorseResult result = await producer.Router.Publish("router", "Hello, World!", true);
+            HorseResult result = await producer.Router.Publish("router", Encoding.UTF8.GetBytes("Hello, World!"), true, CancellationToken.None);
             Assert.Equal(HorseResultCode.Ok, result.Code);
         }
 
@@ -97,7 +99,7 @@ public class RouterTest
 
         for (int i = 0; i < 5; i++)
         {
-            HorseResult result = await producer.Router.Publish("router", "Hello, World!", true);
+            HorseResult result = await producer.Router.Publish("router", Encoding.UTF8.GetBytes("Hello, World!"), true, CancellationToken.None);
             Assert.Equal(HorseResultCode.Ok, result.Code);
         }
 
@@ -149,7 +151,7 @@ public class RouterTest
 
         for (int i = 0; i < 4; i++)
         {
-            HorseResult result = await producer.Router.Publish("router", "Hello, World!", true);
+            HorseResult result = await producer.Router.Publish("router", Encoding.UTF8.GetBytes("Hello, World!"), true, CancellationToken.None);
             Assert.Equal(HorseResultCode.Ok, result.Code);
         }
 
@@ -182,7 +184,7 @@ public class RouterTest
         await producer.ConnectAsync("horse://localhost:" + port);
         Assert.True(producer.IsConnected);
 
-        HorseResult result = await producer.Router.Publish("router", "Hello, World!", true);
+        HorseResult result = await producer.Router.Publish("router", Encoding.UTF8.GetBytes("Hello, World!"), true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, result.Code);
 
         HorseQueue queue1 = server.Rider.Queue.Find("push-a");
@@ -224,7 +226,7 @@ public class RouterTest
         client1.MessageReceived += (c, m) => client1Received = true;
         client2.MessageReceived += (c, m) => client2Received = true;
 
-        HorseResult result = await producer.Router.Publish("router", "Hello, World!", true);
+        HorseResult result = await producer.Router.Publish("router", Encoding.UTF8.GetBytes("Hello, World!"), true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, result.Code);
         await Task.Delay(500);
 
@@ -249,7 +251,7 @@ public class RouterTest
         await producer.ConnectAsync("horse://localhost:" + port);
         Assert.True(producer.IsConnected);
 
-        HorseResult result = await producer.Router.Publish("router", "Hello, World!", true);
+        HorseResult result = await producer.Router.Publish("router", Encoding.UTF8.GetBytes("Hello, World!"), true, CancellationToken.None);
         Assert.Equal(HorseResultCode.NotFound, result.Code);
         server.Stop();
     }
@@ -277,7 +279,7 @@ public class RouterTest
         client1.MessageReceived += (c, m) => client1Received = true;
         Assert.True(client1.IsConnected);
 
-        HorseResult result = await producer.Router.Publish("router", "Hello, World!", true);
+        HorseResult result = await producer.Router.Publish("router", Encoding.UTF8.GetBytes("Hello, World!"), true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, result.Code);
         await Task.Delay(500);
 
@@ -321,7 +323,7 @@ public class RouterTest
         client1.MessageReceived += (c, m) => client1Received = true;
         client2.MessageReceived += (c, m) => client2Received = true;
 
-        HorseResult result = await producer.Router.Publish("router", "Hello, World!", true);
+        HorseResult result = await producer.Router.Publish("router", Encoding.UTF8.GetBytes("Hello, World!"), true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, result.Code);
         await Task.Delay(500);
 
@@ -362,7 +364,7 @@ public class RouterTest
 
         HorseQueue queue1 = server.Rider.Queue.Find("push-a");
 
-        HorseResult result = await producer.Router.Publish("router", "Hello, World!", true);
+        HorseResult result = await producer.Router.Publish("router", Encoding.UTF8.GetBytes("Hello, World!"), true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, result.Code);
 
         await Task.Delay(500);
@@ -394,13 +396,13 @@ public class RouterTest
         {
             HorseMessage response = m.CreateResponse(HorseResultCode.Ok);
             response.SetStringContent("Response");
-            client1.SendAsync(response);
+            client1.SendAsync(response, CancellationToken.None);
         };
         Assert.True(client1.IsConnected);
 
         HorseQueue queue1 = server.Rider.Queue.Find("push-a");
 
-        HorseMessage message = await producer.Router.PublishRequest("router", "Hello, World!");
+        HorseMessage message = await producer.Router.PublishRequest("router", "Hello, World!", CancellationToken.None);
         Assert.NotNull(message);
         Assert.Equal("Response", message.GetStringContent());
         Assert.Equal(1, queue1.Manager.MessageStore.Count());

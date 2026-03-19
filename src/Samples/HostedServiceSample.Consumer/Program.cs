@@ -1,3 +1,4 @@
+using System.Threading;
 ﻿using HostedServiceSample.Client;
 using HostedServiceSample.Consumer;
 

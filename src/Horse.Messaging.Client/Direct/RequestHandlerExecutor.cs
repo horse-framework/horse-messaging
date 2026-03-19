@@ -1,6 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client.Interceptors;
 using Horse.Messaging.Client.Internal;
@@ -30,7 +30,8 @@ internal class RequestHandlerExecutor<TRequest, TResponse>: ExecutorBase
         ResolveAttributes(_registration!.HandlerType);
     }
 
-    public override async Task Execute(HorseClient client, HorseMessage message, object model)
+    public override async Task Execute(HorseClient client, HorseMessage message, object model,
+        CancellationToken cancellationToken)
     {
         bool respond = false;
         ProvidedHandler providedHandler = null;
@@ -53,8 +54,7 @@ internal class RequestHandlerExecutor<TRequest, TResponse>: ExecutorBase
 
             try
             {
-                await _interceptorRunner.RunBeforeInterceptors(message, client, handlerFactory);
-                TResponse responseModel = await Handle(handler, requestModel, message, client);
+                TResponse responseModel = await Handle(handler, requestModel, message, client, handlerFactory, cancellationToken);
                 HorseResultCode code = responseModel is null ? HorseResultCode.NoContent : HorseResultCode.Ok;
                 HorseMessage responseMessage = message.CreateResponse(code);
 
@@ -62,25 +62,20 @@ internal class RequestHandlerExecutor<TRequest, TResponse>: ExecutorBase
                     responseMessage.Serialize(responseModel, client.MessageSerializer);
 
                 respond = true;
-                await client.SendAsync(responseMessage);
-                await  _interceptorRunner.RunAfterInterceptors(message, client, handlerFactory);
+                await client.SendAsync(responseMessage, cancellationToken);
             }
             catch (Exception e)
             {
                 Exception throwBack = e;
                 ErrorResponse errorModel;
-                /*
-                *	If any error thrown from there we should think try to send exceptions process.
-                *	So we trying twice for this. 
-                */
                 try
                 {
-                    errorModel = await handler.OnError(e, requestModel, message, client);
+                    errorModel = await handler.OnError(e, requestModel, message, client, cancellationToken);
                 }
                 catch (Exception exception)
                 {
                     throwBack = exception;
-                    errorModel = await handler.OnError(exception, requestModel, message, client);
+                    errorModel = await handler.OnError(exception, requestModel, message, client, cancellationToken);
                 }
 
                 if (errorModel.ResultCode == HorseResultCode.Ok)
@@ -92,7 +87,7 @@ internal class RequestHandlerExecutor<TRequest, TResponse>: ExecutorBase
                     responseMessage.SetStringContent(errorModel.Reason);
 
                 respond = true;
-                await client.SendAsync(responseMessage);
+                await client.SendAsync(responseMessage, cancellationToken);
                 throw throwBack;
             }
         }
@@ -104,11 +99,11 @@ internal class RequestHandlerExecutor<TRequest, TResponse>: ExecutorBase
                 {
                     HorseMessage response = message.CreateResponse(HorseResultCode.InternalServerError);
                     response.SetStringContent(e.Message);
-                    await client.SendAsync(response);
+                    await client.SendAsync(response, cancellationToken);
                 }
                 catch
                 {
-                    // Ignored. Because we cant return response. Client will be timeout. Maybe we can retry mechanism to here.
+                    // Ignored. Because we cant return response. Client will be timeout.
                 }
             }
 
@@ -120,17 +115,27 @@ internal class RequestHandlerExecutor<TRequest, TResponse>: ExecutorBase
         }
     }
 
-    private async Task<TResponse> Handle(IHorseRequestHandler<TRequest, TResponse> handler, TRequest request, HorseMessage message, HorseClient client)
+    private async Task<TResponse> Handle(IHorseRequestHandler<TRequest, TResponse> handler, TRequest request,
+        HorseMessage message, HorseClient client, IHandlerFactory handlerFactory,
+        CancellationToken cancellationToken)
     {
         if (Retry == null)
-            return await handler.Handle(request, message, client);
+        {
+            await _interceptorRunner.RunBeforeInterceptors(message, client, handlerFactory, cancellationToken);
+            TResponse response = await handler.Handle(request, message, client, cancellationToken);
+            await _interceptorRunner.RunAfterInterceptors(message, client, handlerFactory, cancellationToken);
+            return response;
+        }
 
         int count = Retry.Count == 0 ? 100 : Retry.Count;
         for (int i = 0; i < count; i++)
         {
             try
             {
-                return await handler.Handle(request, message, client);
+                await _interceptorRunner.RunBeforeInterceptors(message, client, handlerFactory, cancellationToken);
+                TResponse response = await handler.Handle(request, message, client, cancellationToken);
+                await _interceptorRunner.RunAfterInterceptors(message, client, handlerFactory, cancellationToken);
+                return response;
             }
             catch (Exception e)
             {
@@ -142,10 +147,10 @@ internal class RequestHandlerExecutor<TRequest, TResponse>: ExecutorBase
                 }
 
                 if (Retry.DelayBetweenRetries > 0)
-                    await Task.Delay(Retry.DelayBetweenRetries);
+                    await Task.Delay(Retry.DelayBetweenRetries, cancellationToken);
             }
         }
 
-        throw new OperationCanceledException("Reached to maximum retry count and execution could not be completed");
+        throw new OperationCanceledException("Reached maximum retry count and execution could not be completed");
     }
 }

@@ -1,3 +1,4 @@
+using System.Threading;
 namespace AdvancedSample.Messaging.Common.ContentTypes;
 
 public partial class ServiceContentTypes

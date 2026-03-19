@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
-using Horse.Messaging.Protocol;
-using Sample.Consumer;
 
 namespace Sample.Producer;
 
@@ -65,22 +63,22 @@ class Program
 
             Stopwatch sw = Stopwatch.StartNew();
             for (int i = 0; i < 10; i++)
-                await client.Queue.PushJson(a, true);
+                await client.Queue.Push(a, true, CancellationToken.None);
 
             sw.Stop();
 
             Console.WriteLine($"Push: in {sw.ElapsedTicks} ticks ({sw.ElapsedMilliseconds} ms)");
 
-            // HorseResult result = await client.Router.PublishRequestJson<TestQuery, TestQueryResult>("test-service-route", query, 1);
+            // HorseResult result = await client.Router.PublishRequest<TestQuery, TestQueryResult>("test-service-route", query, 1);
             // Console.WriteLine($"Push: {result.Code}");
 
-            //HorseResult result = await client.Router.PublishJson("test-service-route", command, null, true, 2);
+            //HorseResult result = await client.Router.Publish("test-service-route", command, null, true, 2);
             // Console.WriteLine($"Push: {result.Code}");
 
-            // var result = await client.Direct.RequestJson<ResponseModel>(new RequestModel());
+            // var result = await client.Direct.Request<ResponseModel>(new RequestModel());
             // Console.WriteLine($"Push: {result.Code} ${JsonSerializer.Serialize(result.Model)}");
 /*
-                var result = await client.Queue.PushJson("SampleTestEvent", new TestEvent(), true);
+                var result = await client.Queue.Push("SampleTestEvent", new TestEvent(), true, CancellationToken.None);
 
                 Console.WriteLine($"Push: {result.Code} {result.Reason} ${JsonSerializer.Serialize(result)}");*/
             Console.ReadLine();

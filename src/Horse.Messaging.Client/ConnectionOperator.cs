@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Protocol;
@@ -23,7 +24,7 @@ public class ConnectionOperator
     /// <summary>
     ///     Gets all instances connected to server
     /// </summary>
-    public Task<HorseModelResult<List<NodeInformation>>> GetInstances()
+    public Task<HorseModelResult<List<NodeInformation>>> GetInstances(CancellationToken cancellationToken = default)
     {
         HorseMessage message = new()
         {
@@ -31,13 +32,21 @@ public class ConnectionOperator
             ContentType = KnownContentTypes.NodeList
         };
 
-        return _client.SendAndGetJson<List<NodeInformation>>(message);
+        return _client.SendAsync<List<NodeInformation>>(message, cancellationToken);
     }
 
     /// <summary>
     ///     Gets all consumers of queue
     /// </summary>
-    public Task<HorseModelResult<List<ClientInformation>>> GetConnectedClients(string typeFilter = null)
+    public Task<HorseModelResult<List<ClientInformation>>> GetConnectedClients(CancellationToken cancellationToken = default)
+    {
+        return GetConnectedClients(null, cancellationToken);
+    }
+
+    /// <summary>
+    ///     Gets all consumers of queue
+    /// </summary>
+    public Task<HorseModelResult<List<ClientInformation>>> GetConnectedClients(string typeFilter, CancellationToken cancellationToken = default)
     {
         HorseMessage message = new()
         {
@@ -46,7 +55,7 @@ public class ConnectionOperator
         };
         message.SetTarget(typeFilter);
 
-        return _client.SendAndGetJson<List<ClientInformation>>(message);
+        return _client.SendAsync<List<ClientInformation>>(message, cancellationToken);
     }
 
     #endregion

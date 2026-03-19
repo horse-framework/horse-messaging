@@ -55,13 +55,13 @@ internal class PullQueueState : IQueueState
 
         clearStr = clearStr.Trim();
 
-        if (clearStr.Equals("all", StringComparison.InvariantCultureIgnoreCase))
+        if (clearStr.Equals("all", StringComparison.OrdinalIgnoreCase))
             return ClearDecision.All;
 
-        if (clearStr.Equals("high-priority", StringComparison.InvariantCultureIgnoreCase))
+        if (clearStr.Equals("high-priority", StringComparison.OrdinalIgnoreCase))
             return ClearDecision.Priority;
 
-        if (clearStr.Equals("default-priority", StringComparison.InvariantCultureIgnoreCase))
+        if (clearStr.Equals("default-priority", StringComparison.OrdinalIgnoreCase))
             return ClearDecision.Regular;
 
         return ClearDecision.None;
@@ -73,7 +73,16 @@ internal class PullQueueState : IQueueState
     private static bool FindInfoRequest(HorseMessage request)
     {
         string infoStr = request.FindHeader(HorseHeaders.INFO);
-        return !string.IsNullOrEmpty(infoStr) && infoStr.Trim().Equals("Yes", StringComparison.InvariantCultureIgnoreCase);
+        return !string.IsNullOrEmpty(infoStr) && infoStr.Trim().Equals("Yes", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Reads Order header and returns true if LIFO is requested
+    /// </summary>
+    private static bool FindLifoOrder(HorseMessage request)
+    {
+        string orderStr = request.FindHeader(HorseHeaders.ORDER);
+        return !string.IsNullOrEmpty(orderStr) && orderStr.Trim().Equals(HorseHeaders.LIFO, StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task<PullResult> Pull(QueueClient client, HorseMessage request)
@@ -104,9 +113,10 @@ internal class PullQueueState : IQueueState
 
         ClearDecision clear = FindClearDecision(request);
         bool sendInfo = FindInfoRequest(request);
+        bool lifo = FindLifoOrder(request);
 
         if (_queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
-            await _queue.WaitForAcknowledge();
+            await _queue.waitForAcknowledge();
 
         if (_queue.Rider.Cluster.Options.Mode == ClusterMode.Reliable)
             try
@@ -118,7 +128,7 @@ internal class PullQueueState : IQueueState
                 _queue.QueueLock.Release();
             }
 
-        Tuple<QueueMessage, int, int> messageTuple = DequeueMessage(sendInfo, count == index ? clear : ClearDecision.None);
+        Tuple<QueueMessage, int, int> messageTuple = DequeueMessage(sendInfo, count == index ? clear : ClearDecision.None, lifo);
 
         //there is no pullable message
         if (messageTuple.Item1 == null)
@@ -157,7 +167,7 @@ internal class PullQueueState : IQueueState
                 if (index > count)
                     break;
 
-                messageTuple = DequeueMessage(sendInfo, count == index ? clear : ClearDecision.None);
+                messageTuple = DequeueMessage(sendInfo, count == index ? clear : ClearDecision.None, lifo);
                 headers.Clear();
             }
             catch (Exception ex)
@@ -182,15 +192,25 @@ internal class PullQueueState : IQueueState
     /// Finds and dequeues a message from the queue.
     /// If there is not message, returns null
     /// </summary>
-    private Tuple<QueueMessage, int, int> DequeueMessage(bool getInfo, ClearDecision clear)
+    private Tuple<QueueMessage, int, int> DequeueMessage(bool getInfo, ClearDecision clear, bool lifo)
     {
         int prioMessageCount = 0;
         int messageCount = 0;
 
-        QueueMessage message = _queue.Manager.PriorityMessageStore.ConsumeFirst();
+        QueueMessage message;
 
-        if (message == null)
-            message = _queue.Manager.MessageStore.ConsumeFirst();
+        if (lifo)
+        {
+            message = _queue.Manager.PriorityMessageStore.ConsumeLast();
+            if (message == null)
+                message = _queue.Manager.MessageStore.ConsumeLast();
+        }
+        else
+        {
+            message = _queue.Manager.PriorityMessageStore.ConsumeFirst();
+            if (message == null)
+                message = _queue.Manager.MessageStore.ConsumeFirst();
+        }
 
         if (getInfo)
         {

@@ -1,3 +1,4 @@
+using System.Threading;
 ﻿using Horse.Messaging.Client.Direct.Annotations;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Client.Queues.Annotations;
@@ -10,7 +11,7 @@ namespace RoutingSample.Models
 	[QueueName("SAMPLE-MESSAGE-QUEUE")] // FOR QUEUE PUSH
 	[DirectContentType(1001)]                 // FOR DIRECT PUSH
 	[QueueType(MessagingQueueType.Push)]
-	[Acknowledge(QueueAckDecision.WaitForAcknowledge)]
+	[Acknowledge(QueueAckDecision.waitForAcknowledge)]
 	public class SampleMessage
 	{
 		public string Content { get; set; }

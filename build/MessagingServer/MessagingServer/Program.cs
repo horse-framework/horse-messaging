@@ -1,6 +1,6 @@
 ﻿using MessagingServer;
 
-ServiceBuilder.Create()
+await ServiceBuilder.Create()
     .SetOptions(OptionsBuilder
         .Create()
         .LoadFromEnvironment()
@@ -9,4 +9,4 @@ ServiceBuilder.Create()
     .InitializeClusterOptions()
     .InitializeJockey()
     .Build()
-    .Run();
+    .RunAsync(new CancellationTokenSource().Token);

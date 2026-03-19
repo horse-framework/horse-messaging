@@ -7,51 +7,21 @@ using Microsoft.Extensions.Hosting;
 
 namespace Horse.Messaging.Extensions.Client;
 
-internal class GracefulShutdownService : IHostedService
+/// <summary>
+/// Hosted service that performs a graceful shutdown of the <see cref="HorseClient"/>
+/// when the host stops. Delegates to the client's internal graceful shutdown logic,
+/// passing the host's cancellation token so the host shutdown timeout is respected.
+/// </summary>
+internal sealed class GracefulShutdownService(IServiceProvider provider, string serviceKey) : IHostedService
 {
-    private readonly TimeSpan _minWait;
-    private readonly TimeSpan _maxWait;
-    private readonly IServiceProvider _provider;
-    private readonly Func<Task> _shuttingDownAction;
-
-    public GracefulShutdownService(IServiceProvider provider, TimeSpan minWait, TimeSpan maxWait, Func<Task> shuttingDownAction)
-    {
-        _provider = provider;
-        _minWait = minWait;
-        _maxWait = maxWait;
-        _shuttingDownAction = shuttingDownAction;
-    }
-
-    public Task StartAsync(CancellationToken cancellationToken)
-    {
-        return Task.CompletedTask;
-    }
+    public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        HorseClient client = _provider.GetService<HorseClient>();
+        HorseClient client = string.IsNullOrWhiteSpace(serviceKey)
+            ? provider.GetRequiredService<HorseClient>()
+            : provider.GetRequiredKeyedService<HorseClient>(serviceKey);
 
-        _ = client.Queue.UnsubscribeFromAllQueues();
-        int min = Convert.ToInt32(_minWait.TotalMilliseconds);
-        int max = Convert.ToInt32(_minWait.TotalMilliseconds);
-
-        try
-        {
-            await _shuttingDownAction?.Invoke();
-        }
-        catch
-        {
-        }
-
-        await Task.Delay(min, cancellationToken);
-
-        while (min < max)
-        {
-            if (client.Queue.ActiveConsumeOperations == 0)
-                return;
-
-            await Task.Delay(250, cancellationToken);
-            min += 250;
-        }
+        await client.GracefulShutdownAsync(cancellationToken);
     }
 }

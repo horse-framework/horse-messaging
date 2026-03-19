@@ -1,6 +1,6 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
-using Horse.Core;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Queues.Delivery;
@@ -8,18 +8,6 @@ using Horse.Server;
 
 namespace Sample.Cluster;
 
-public class ConsoleLogger : ILogger
-{
-    public void LogException(string hint, Exception exception)
-    {
-        Console.WriteLine("ERROR: " + hint + " - " + exception);
-    }
-
-    public void LogEvent(string hint, string message)
-    {
-        Console.WriteLine(hint + "\t" + message);
-    }
-}
 
 class Program
 {
@@ -80,9 +68,9 @@ class Program
         });
 
         HorseServer server = new HorseServer();
-        server.Logger = new ConsoleLogger();
+        server.Options.Hosts = [new HorseHostOptions { Port = 26101 }];
         server.UseRider(rider);
-        server.Start(26101);
+        server.StartAsync();
         return rider;
     }
 
@@ -112,9 +100,9 @@ class Program
         });
 
         HorseServer server = new HorseServer();
-        server.Logger = new ConsoleLogger();
         server.UseRider(rider);
-        server.Start(26102);
+        server.Options.Hosts = [new HorseHostOptions { Port = 26102 }];
+        server.StartAsync();
         return rider;
     }
 
@@ -144,9 +132,9 @@ class Program
         });
 
         HorseServer server = new HorseServer();
-        server.Logger = new ConsoleLogger();
         server.UseRider(rider);
-        server.Start(26103);
+        server.Options.Hosts = [new HorseHostOptions { Port = 26102 }];
+        server.StartAsync();
         return rider;
     }
 }

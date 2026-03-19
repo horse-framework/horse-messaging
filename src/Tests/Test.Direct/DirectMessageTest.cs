@@ -1,3 +1,4 @@
+using System.Threading;
 using System;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
@@ -37,7 +38,7 @@ public class DirectMessageTest
         HorseMessage message = new HorseMessage(MessageType.DirectMessage, "client-2");
         message.SetStringContent("Hello, World!");
 
-        HorseResult sent = await client1.SendAsync(message);
+        HorseResult sent = await client1.SendAsync(message, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, sent.Code);
         await Task.Delay(1000);
         Assert.True(received);
@@ -74,7 +75,7 @@ public class DirectMessageTest
         HorseMessage message = new HorseMessage(MessageType.DirectMessage, "client-2");
         message.SetStringContent("Hello, World!");
 
-        HorseResult sent = await client1.SendAndGetAck(message);
+        HorseResult sent = await client1.SendAsync(message, true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, sent.Code);
         Assert.True(received);
         server.Stop();
@@ -109,14 +110,14 @@ public class DirectMessageTest
             {
                 HorseMessage rmsg = m.CreateResponse(HorseResultCode.Ok);
                 rmsg.SetStringContent("Hello, World Response!");
-                await ((HorseClient) c).SendAsync(rmsg);
+                await ((HorseClient) c).SendAsync(rmsg, CancellationToken.None);
             }
         };
 
         HorseMessage message = new HorseMessage(MessageType.DirectMessage, "client-2");
         message.SetStringContent("Hello, World!");
 
-        HorseMessage response = await client1.Request(message);
+        HorseMessage response = await client1.Request(message, CancellationToken.None);
         Assert.NotNull(response);
         Assert.Equal(0, response.ContentType);
         server.Stop();

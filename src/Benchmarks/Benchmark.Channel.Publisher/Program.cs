@@ -35,7 +35,7 @@ class Program
 
         ChannelModel model = new ChannelModel { Foo = "123" };
 
-        HorseResult result = await client.Channel.Publish("channel", model, false);
+        HorseResult result = await client.Channel.Publish("channel", model, false, CancellationToken.None);
         Console.WriteLine($"First publish result: {result.Code}");
         Console.Write("Enter client count (1-100): ");
         int count = Math.Max(1, Math.Min(100, Convert.ToInt32(Console.ReadLine())));
@@ -71,12 +71,12 @@ class Program
             HorseResult result;
             if (i == 100)
             {
-                await client.Channel.PublishString(name, demoString, waitForAck);
+                await client.Channel.PublishString(name, demoString, waitForAck, CancellationToken.None);
             }
             else
             {
                 i++;
-                _ = client.Channel.PublishString(name, demoString, waitForAck);
+                _ = client.Channel.PublishString(name, demoString, waitForAck, CancellationToken.None);
             }
 
             Interlocked.Increment(ref total);

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Cache;
@@ -30,7 +31,7 @@ class Program
             try
             {
                 Console.ReadLine();
-                incrementalData = await client.Cache.GetIncrementalValue("IncrementalTestKey");
+                incrementalData = await client.Cache.GetIncrementalValue("IncrementalTestKey", CancellationToken.None);
                 Console.WriteLine($"Incremental value: {incrementalData.Value}");
             }
             catch { }
@@ -47,8 +48,9 @@ class Program
         HorseRider rider = HorseRiderBuilder.Create().Build();
 
         HorseServer server = new HorseServer();
+        server.Options.Hosts = [new HorseHostOptions { Port = 26223 }];
         server.UseRider(rider);
-        server.Start(26223);
+        server.StartAsync();
         return rider;
     }
 }

@@ -1,3 +1,4 @@
+using System.Threading;
 namespace HostedServiceSample.Client;
 
 internal sealed class HorseService<T>: HorseServiceBase

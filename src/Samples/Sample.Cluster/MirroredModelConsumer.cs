@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Queues;
@@ -8,7 +9,8 @@ namespace Sample.Cluster;
 
 public class MirroredModelConsumer : IQueueConsumer<MirroredModel>
 {
-    public Task Consume(HorseMessage message, MirroredModel model, HorseClient client)
+    public Task Consume(HorseMessage message, MirroredModel model, HorseClient client,
+        CancellationToken cancellationToken = default)
     {
         Console.WriteLine($"Consumed {model.Foo}");
         return Task.CompletedTask;

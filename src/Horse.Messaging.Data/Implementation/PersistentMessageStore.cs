@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Queues;
@@ -80,14 +80,26 @@ public class PersistentMessageStore : LinkedMessageStore
     /// <inheritdoc />
     public override async Task Clear()
     {
-        await Database.Clear();
-        await base.Clear();
+        try
+        {
+            await Database.Clear();
+        }
+        finally
+        {
+            await base.Clear();
+        }
     }
 
     /// <inheritdoc />
     public override async Task Destroy()
     {
-        await Database.RemoveDatabase();
-        await base.Destroy();
+        try
+        {
+            await Database.RemoveDatabase();
+        }
+        finally
+        {
+            await base.Destroy();
+        }
     }
 }

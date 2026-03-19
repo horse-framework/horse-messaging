@@ -14,9 +14,9 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Horse.Core" Version="7.4.3" />
-      <PackageReference Include="Horse.Server" Version="7.4.3" />
-      <PackageReference Include="Horse.Jockey" Version="7.3.0" />
+      <PackageReference Include="Horse.Core" Version="8.0.28" />
+      <PackageReference Include="Horse.Server" Version="8.0.28" />
+      <PackageReference Include="Horse.Jockey" Version="8.0.28" />
     </ItemGroup>
 
 </Project>

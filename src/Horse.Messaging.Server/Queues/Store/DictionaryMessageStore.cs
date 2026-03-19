@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Queues.Managers;
@@ -9,7 +8,8 @@ using Horse.Messaging.Server.Queues.Managers;
 namespace Horse.Messaging.Server.Queues.Store;
 
 /// <summary>
-/// Dictionary based message store
+/// Dictionary based message store with guaranteed insertion order.
+/// Uses OrderedDictionary&lt;TKey,TValue&gt; (.NET 9+) for O(1) indexed access.
 /// </summary>
 public class DictionaryMessageStore : IQueueMessageStore
 {
@@ -29,7 +29,7 @@ public class DictionaryMessageStore : IQueueMessageStore
         }
     }
 
-    private readonly Dictionary<string, QueueMessage> _messages = new();
+    private readonly OrderedDictionary<string, QueueMessage> _messages = new();
 
     /// <summary>
     /// Creates new dictionary based message store
@@ -74,7 +74,7 @@ public class DictionaryMessageStore : IQueueMessageStore
             if (_messages.Count == 0)
                 return null;
 
-            return _messages.FirstOrDefault().Value;
+            return _messages.GetAt(0).Value;
         }
     }
 
@@ -86,10 +86,25 @@ public class DictionaryMessageStore : IQueueMessageStore
             if (_messages.Count == 0)
                 return null;
 
-            var keyValue = _messages.FirstOrDefault();
-            QueueMessage message = keyValue.Value;
+            QueueMessage message = _messages.GetAt(0).Value;
             message.IsInQueue = false;
-            _messages.Remove(keyValue.Key);
+            _messages.RemoveAt(0);
+            return message;
+        }
+    }
+
+    /// <inheritdoc />
+    public QueueMessage ConsumeLast()
+    {
+        lock (_messages)
+        {
+            if (_messages.Count == 0)
+                return null;
+
+            int lastIndex = _messages.Count - 1;
+            QueueMessage message = _messages.GetAt(lastIndex).Value;
+            message.IsInQueue = false;
+            _messages.RemoveAt(lastIndex);
             return message;
         }
     }
@@ -97,12 +112,11 @@ public class DictionaryMessageStore : IQueueMessageStore
     /// <inheritdoc />
     public QueueMessage Find(string messageId)
     {
-        QueueMessage msg;
-
         lock (_messages)
-            _messages.TryGetValue(messageId, out msg);
-
-        return msg;
+        {
+            _messages.TryGetValue(messageId, out QueueMessage msg);
+            return msg;
+        }
     }
 
     /// <inheritdoc />
@@ -112,19 +126,13 @@ public class DictionaryMessageStore : IQueueMessageStore
 
         lock (_messages)
         {
-            for (int i = 0; i < count; i++)
+            int toConsume = Math.Min(count, _messages.Count);
+            for (int i = 0; i < toConsume; i++)
             {
-                if (_messages.Count == 0)
-                    break;
-
-                QueueMessage message = _messages.FirstOrDefault().Value;
-                if (message == null)
-                    continue;
-
+                QueueMessage message = _messages.GetAt(0).Value;
                 message.IsInQueue = false;
-                
                 list.Add(message);
-                _messages.Remove(message.Message.MessageId);
+                _messages.RemoveAt(0);
             }
         }
 
@@ -142,9 +150,7 @@ public class DictionaryMessageStore : IQueueMessageStore
     public virtual bool Remove(string messageId)
     {
         lock (_messages)
-            _messages.Remove(messageId);
-
-        return true;
+            return _messages.Remove(messageId);
     }
 
     /// <inheritdoc />

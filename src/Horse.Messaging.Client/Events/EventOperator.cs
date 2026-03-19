@@ -1,6 +1,7 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
@@ -31,7 +32,7 @@ public class EventOperator
         try
         {
             HorseEvent horseEvent = (HorseEvent) Client.MessageSerializer.Deserialize(message, typeof(HorseEvent));
-            await reg.Executer.Execute(Client, message, horseEvent);
+            await reg.Executer.Execute(Client, message, horseEvent, Client.ConsumeToken);
         }
         catch (Exception ex)
         {
@@ -40,9 +41,24 @@ public class EventOperator
     }
 
     /// <summary>
-    /// Subscribes to an event
+    /// Subscribes to an event.
     /// </summary>
-    public Task<HorseResult> Subscribe(HorseEventType eventType, string target, bool verifyResponse = false)
+    /// <param name="eventType">Type of event to subscribe to.</param>
+    /// <param name="target">Event target (e.g. queue name, channel name).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public Task<HorseResult> Subscribe(HorseEventType eventType, string target, CancellationToken cancellationToken = default)
+    {
+        return Subscribe(eventType, target, false, cancellationToken);
+    }
+
+    /// <summary>
+    /// Subscribes to an event with response verification.
+    /// </summary>
+    /// <param name="eventType">Type of event to subscribe to.</param>
+    /// <param name="target">Event target (e.g. queue name, channel name).</param>
+    /// <param name="verifyResponse">If true, waits for the server to confirm the subscription.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public Task<HorseResult> Subscribe(HorseEventType eventType, string target, bool verifyResponse, CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Event;
@@ -53,13 +69,28 @@ public class EventOperator
         if (verifyResponse)
             message.SetMessageId(Client.UniqueIdGenerator.Create());
 
-        return Client.WaitResponse(message, verifyResponse);
+        return Client.WaitResponse(message, verifyResponse, cancellationToken);
     }
 
     /// <summary>
-    /// Unsubscribes from an event
+    /// Unsubscribes from an event.
     /// </summary>
-    public Task<HorseResult> Unsubscribe(HorseEventType eventType, string target, bool verifyResponse = false)
+    /// <param name="eventType">Type of event to unsubscribe from.</param>
+    /// <param name="target">Event target (e.g. queue name, channel name).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public Task<HorseResult> Unsubscribe(HorseEventType eventType, string target, CancellationToken cancellationToken = default)
+    {
+        return Unsubscribe(eventType, target, false, cancellationToken);
+    }
+
+    /// <summary>
+    /// Unsubscribes from an event with response verification.
+    /// </summary>
+    /// <param name="eventType">Type of event to unsubscribe from.</param>
+    /// <param name="target">Event target (e.g. queue name, channel name).</param>
+    /// <param name="verifyResponse">If true, waits for the server to confirm the unsubscription.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public Task<HorseResult> Unsubscribe(HorseEventType eventType, string target, bool verifyResponse, CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Event;
@@ -71,6 +102,6 @@ public class EventOperator
         if (verifyResponse)
             message.SetMessageId(Client.UniqueIdGenerator.Create());
 
-        return Client.WaitResponse(message, verifyResponse);
+        return Client.WaitResponse(message, verifyResponse, cancellationToken);
     }
 }

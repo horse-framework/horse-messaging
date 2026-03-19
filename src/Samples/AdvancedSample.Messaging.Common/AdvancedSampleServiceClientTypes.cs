@@ -1,3 +1,4 @@
+using System.Threading;
 namespace AdvancedSample.Messaging.Common;
 
 public sealed class AdvancedSampleServiceClientTypes

@@ -5,6 +5,37 @@ using Horse.Messaging.Protocol;
 namespace Horse.Messaging.Server.Queues;
 
 /// <summary>
+/// Persistent partition configuration data stored inside QueueConfiguration.
+/// </summary>
+public class PartitionConfigurationData
+{
+    public bool   Enabled                 { get; set; }
+    public int    MaxPartitionCount       { get; set; }
+    public int    SubscribersPerPartition { get; set; }
+    public string AutoDestroy             { get; set; }
+    public int    AutoDestroyIdleSeconds  { get; set; }
+    public bool   AutoAssignWorkers       { get; set; }
+    public int    MaxPartitionsPerWorker  { get; set; }
+}
+
+/// <summary>
+/// Sub-queue partition metadata stored inside QueueConfiguration.
+/// Persisted when IsPartitionQueue = true so the queue can be re-attached to its
+/// parent's PartitionManager on restart.
+/// </summary>
+public class SubPartitionData
+{
+    /// <summary>Parent queue name.</summary>
+    public string ParentQueueName { get; set; }
+
+    /// <summary>Partition id (base-62).</summary>
+    public string PartitionId { get; set; }
+
+    /// <summary>Worker routing label. Null for label-less partitions.</summary>
+    public string Label { get; set; }
+}
+
+/// <summary>
 /// Persistent queue configuration data
 /// </summary>
 public class QueueConfiguration
@@ -113,10 +144,33 @@ public class QueueConfiguration
     public bool MessageIdUniqueCheck { get; set; }
 
     /// <summary>
+    /// Serialized partition options. Null when partitioning is disabled.
+    /// </summary>
+    public PartitionConfigurationData Partition { get; set; }
+
+    /// <summary>
+    /// Non-null when this queue is a partition sub-queue (IsPartitionQueue = true).
+    /// Carries the parent queue name, partition id and label so that
+    /// the PartitionManager can re-attach this queue on server restart.
+    /// </summary>
+    public SubPartitionData SubPartition { get; set; }
+
+    /// <summary>
     /// Creates new queue configuration from queue
     /// </summary>
     public static QueueConfiguration Create(HorseQueue queue)
     {
+        SubPartitionData subPartData = null;
+        if (queue.IsPartitionQueue && queue.PartitionMeta != null)
+        {
+            subPartData = new SubPartitionData
+            {
+                ParentQueueName = queue.PartitionMeta.ParentQueueName,
+                PartitionId     = queue.PartitionMeta.PartitionId,
+                Label           = queue.PartitionMeta.Label
+            };
+        }
+
         return new QueueConfiguration
         {
             Name = queue.Name,
@@ -137,7 +191,18 @@ public class QueueConfiguration
             PutBackDelay = queue.Options.PutBackDelay,
             MessageSizeLimit = queue.Options.MessageSizeLimit,
             MessageTimeout = new MessageTimeoutStrategyInfo(queue.Options.MessageTimeout.MessageDuration, queue.Options.MessageTimeout.Policy.AsString(EnumFormat.Description), queue.Options.MessageTimeout.TargetName),
-            MessageIdUniqueCheck = queue.Options.MessageIdUniqueCheck
+            MessageIdUniqueCheck = queue.Options.MessageIdUniqueCheck,
+            Partition = queue.Options.Partition == null ? null : new PartitionConfigurationData
+            {
+                Enabled                 = queue.Options.Partition.Enabled,
+                MaxPartitionCount       = queue.Options.Partition.MaxPartitionCount,
+                SubscribersPerPartition = queue.Options.Partition.SubscribersPerPartition,
+                AutoDestroy             = queue.Options.Partition.AutoDestroy.ToString(),
+                AutoDestroyIdleSeconds  = queue.Options.Partition.AutoDestroyIdleSeconds,
+                AutoAssignWorkers       = queue.Options.Partition.AutoAssignWorkers,
+                MaxPartitionsPerWorker  = queue.Options.Partition.MaxPartitionsPerWorker
+            },
+            SubPartition = subPartData
         };
     }
 }

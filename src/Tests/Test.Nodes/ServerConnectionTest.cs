@@ -112,7 +112,15 @@ public class ServerConnectionTest
     }
 
     /// <summary>
-    /// Connects to Horse Server and stays alive until PING time out (does not send PONG message)
+    /// Connects to Horse Server and stays alive until PING time out (does not send PONG message).
+    ///
+    /// HeartbeatManager tick interval is now derived from PingInterval:
+    ///   tickInterval = Clamp(PingInterval / 2, 1s, 5s)
+    /// With PingInterval=3s, tickInterval = 1.5s.
+    /// Ping timeout requires 2 ticks to disconnect a client:
+    ///   Tick 1: sends PING, sets PongRequired = true
+    ///   Tick 2: checks PongRequired, calls Disconnect()
+    /// Expected disconnect within ~3-6 seconds (2 × 1.5s ticks + PingInterval window).
     /// </summary>
     [Fact]
     public async Task DisconnectDueToPingTimeout()
@@ -149,6 +157,11 @@ public class ServerConnectionTest
             }
         }, stream, false);
 
+        // HeartbeatManager tick interval = Clamp(PingInterval / 2, 1s, 5s).
+        // With PingInterval=3s, tickInterval = 1.5s.
+        // Tick 1 (~1.5s + 3s window): sends PING, sets PongRequired = true
+        // Tick 2 (~next tick): PongRequired still true → Disconnect()
+        // Expected disconnect within ~6s. We allow 15s margin.
         await Task.Delay(15000);
 
         Assert.False(client.Connected);
@@ -227,7 +240,7 @@ public class ServerConnectionTest
         client.SetClientName("client-test");
         await client.ConnectAsync("horse://localhost:" + port);
 
-        var result = await client.Connection.GetConnectedClients(filter);
+        var result = await client.Connection.GetConnectedClients(filter, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, result.Result.Code);
         Assert.NotNull(result.Model);
         var c = result.Model.FirstOrDefault();

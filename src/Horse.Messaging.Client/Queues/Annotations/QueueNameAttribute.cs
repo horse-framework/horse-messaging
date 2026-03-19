@@ -5,7 +5,7 @@ namespace Horse.Messaging.Client.Queues.Annotations;
 /// <summary>
 /// Queue Name attribute for queue messages
 /// </summary>
-[AttributeUsage(AttributeTargets.Class)]
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface)]
 public class QueueNameAttribute : Attribute
 {
     /// <summary>

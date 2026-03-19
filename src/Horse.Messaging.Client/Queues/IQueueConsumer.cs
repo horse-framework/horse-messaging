@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 
@@ -15,5 +16,10 @@ public interface IQueueConsumer<in TModel>
     /// <param name="message">Raw Horse message</param>
     /// <param name="model">Deserialized model</param>
     /// <param name="client">Connection client object</param>
-    Task Consume(HorseMessage message, TModel model, HorseClient client);
+    /// <param name="cancellationToken">
+    /// Cancelled when the client disconnects or shuts down gracefully.
+    /// Pass this token to any async I/O calls (HttpClient, EF Core, etc.) inside the handler.
+    /// </param>
+    Task Consume(HorseMessage message, TModel model, HorseClient client,
+        CancellationToken cancellationToken);
 }

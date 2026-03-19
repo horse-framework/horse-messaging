@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Queues.Managers;
+using Horse.Messaging.Server.Queues.States;
 
 namespace Horse.Messaging.Server.Queues.Delivery
 {
@@ -20,7 +21,8 @@ namespace Horse.Messaging.Server.Queues.Delivery
 
         private readonly IHorseQueueManager _manager;
         private readonly HorseQueue _queue;
-        private Thread _timer;
+        private PeriodicTimer _periodicTimer;
+        private CancellationTokenSource _cts;
         private bool _destroyed;
 
         /// <summary>
@@ -37,15 +39,23 @@ namespace Horse.Messaging.Server.Queues.Delivery
         /// </summary>
         public void Start()
         {
-            _timer = new Thread(() =>
+            _cts = new CancellationTokenSource();
+            _periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+            _ = RunTimerLoop(_cts.Token);
+        }
+
+        private async Task RunTimerLoop(CancellationToken cancellationToken)
+        {
+            Task currentDeliveryTask = null;
+            try
             {
-                Task currentDeliveryTask = null;
-                while (!_destroyed)
+                while (await _periodicTimer.WaitForNextTickAsync(cancellationToken))
                 {
+                    if (_destroyed)
+                        break;
+
                     try
                     {
-                        Thread.Sleep(1000);
-
                         if (_queue.Status == QueueStatus.NotInitialized)
                             continue;
 
@@ -59,17 +69,14 @@ namespace Horse.Messaging.Server.Queues.Delivery
 
                         currentDeliveryTask = ProcessDeliveries();
                     }
-                    catch (Exception e)
+                    catch
                     {
                     }
                 }
-            })
+            }
+            catch (OperationCanceledException)
             {
-                IsBackground = true,
-                Priority = ThreadPriority.BelowNormal
-            };
-
-            _timer.Start();
+            }
         }
 
         /// <summary>
@@ -87,6 +94,9 @@ namespace Horse.Messaging.Server.Queues.Delivery
         {
             Reset();
             _destroyed = true;
+            _cts?.Cancel();
+            _periodicTimer?.Dispose();
+            _cts?.Dispose();
             await Task.CompletedTask;
         }
 
@@ -164,7 +174,13 @@ namespace Horse.Messaging.Server.Queues.Delivery
             }
 
             if (atLeastOneRemoved)
+            {
                 _queue.ReleaseAcknowledgeLock(false);
+
+                // RoundRobin: consumer slots freed by timeout — wake up waiting Push loop
+                if (_queue.Type == QueueType.RoundRobin && _queue.State is RoundRobinQueueState rrState)
+                    rrState.SignalClientAvailable();
+            }
         }
 
         /// <summary>

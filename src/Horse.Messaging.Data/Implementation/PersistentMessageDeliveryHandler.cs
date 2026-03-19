@@ -82,6 +82,9 @@ public class PersistentMessageDeliveryHandler : IQueueDeliveryHandler
         if (message.SendCount == 0)
             return Task.FromResult(Decision.PutBackMessage(false));
 
+        if (_manager.Queue.Options.CommitWhen == CommitWhen.AfterSent)
+            return Task.FromResult(Decision.TransmitToProducer(DecisionTransmission.Commit));
+
         if (_manager.Queue.Options.Acknowledge == QueueAckDecision.None)
             return Task.FromResult(Decision.DeleteMessage());
 

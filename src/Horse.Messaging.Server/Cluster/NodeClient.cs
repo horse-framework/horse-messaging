@@ -1,7 +1,8 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using EnumsNET;
 using Horse.Core;
@@ -111,7 +112,6 @@ public class NodeClient
             ConnectedDate = DateTime.UtcNow;
 
         _connectedToRemote = true;
-        Rider.Server.Logger?.LogEvent("CLUSTER", $"Connected to remote client: {Info.Name}");
     }
 
     internal void IncomingClientConnected(MessagingClient incomingClient, ConnectionData data)
@@ -162,17 +162,12 @@ public class NodeClient
                 });
             }
         }
-
-        Rider.Server.Logger?.LogEvent("CLUSTER", $"Remote client is connected: {Info.Name}");
     }
 
     private void OutgoingClientOnDisconnected(HorseClient client)
     {
         if (_incomingClient == null || !_incomingClient.IsConnected)
             _ = ProcessDisconnection();
-
-        if (_connectedToRemote)
-            Rider.Server.Logger?.LogEvent("CLUSTER", $"Disconnected from remote client: {Info.Name}");
 
         _connectedToRemote = false;
     }
@@ -181,8 +176,6 @@ public class NodeClient
     {
         if (_outgoingClient == null || !_outgoingClient.IsConnected)
             _ = ProcessDisconnection();
-
-        Rider.Server.Logger?.LogEvent("CLUSTER", $"Remote client is disconnected: {Info.Name}");
     }
 
     private async Task ProcessDisconnection()
@@ -565,16 +558,16 @@ public class NodeClient
 
             case KnownContentTypes.RemoveCache:
             {
-                _ = Rider.Cache.Remove(null, message.Target, false);
+                Rider.Cache.Remove(null, message.Target, false);
                 break;
             }
 
             case KnownContentTypes.PurgeCache:
             {
                 if (string.IsNullOrEmpty(message.Target))
-                    _ = Rider.Cache.Purge(null, false);
+                    Rider.Cache.Purge(null, false);
                 else
-                    _ = Rider.Cache.PurgeByTag(message.Target, null, false);
+                    Rider.Cache.PurgeByTag(message.Target, null, false);
                 break;
             }
 
@@ -596,7 +589,7 @@ public class NodeClient
     {
         if (_outgoingClient != null && _outgoingClient.IsConnected)
         {
-            HorseResult result = await _outgoingClient.SendAsync(message);
+            HorseResult result = await _outgoingClient.SendAsync(message, CancellationToken.None);
             return result.Code == HorseResultCode.Ok;
         }
 

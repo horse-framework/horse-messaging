@@ -25,7 +25,7 @@ internal class ResponseMessageDescriptor : MessageDescriptor
         SourceCompleted = true;
             
         if (!successful || value == null)
-            Source.SetResult(default);
+            Source.SetResult(null);
         else
             Source.SetResult(value as HorseMessage);
     }

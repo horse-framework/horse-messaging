@@ -147,8 +147,8 @@ public class ServiceBuilder
 
     public HorseServer Build()
     {
-        _server.Options.Hosts = new List<HostOptions>();
-        _server.Options.Hosts.Add(new HostOptions { Port = _options.Port });
+        _server.Options.Hosts = new List<HorseHostOptions>();
+        _server.Options.Hosts.Add(new HorseHostOptions { Port = _options.Port });
 
         _server.UseRider(_rider);
 

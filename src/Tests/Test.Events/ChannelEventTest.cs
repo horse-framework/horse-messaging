@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Events;
@@ -24,7 +25,7 @@ public class ChannelEventTest
 
         await client.ConnectAsync($"horse://localhost:{port}");
 
-        HorseResult createResult = await client.Channel.Create("channel", null, true);
+        HorseResult createResult = await client.Channel.Create("channel", true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, createResult.Code);
 
         await Task.Delay(250);
@@ -46,10 +47,10 @@ public class ChannelEventTest
 
         await client.ConnectAsync($"horse://localhost:{port}");
 
-        HorseResult createResult = await client.Channel.Create("channel", null, true);
+        HorseResult createResult = await client.Channel.Create("channel", true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, createResult.Code);
 
-        HorseResult removeResult = await client.Channel.Delete("channel", true);
+        HorseResult removeResult = await client.Channel.Delete("channel", true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, removeResult.Code);
 
         await Task.Delay(250);
@@ -71,7 +72,7 @@ public class ChannelEventTest
 
         await client.ConnectAsync($"horse://localhost:{port}");
 
-        HorseResult subscribeResult = await client.Channel.Subscribe("channel", true);
+        HorseResult subscribeResult = await client.Channel.Subscribe("channel", true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, subscribeResult.Code);
 
         await Task.Delay(250);
@@ -93,13 +94,13 @@ public class ChannelEventTest
 
         await client.ConnectAsync($"horse://localhost:{port}");
 
-        HorseResult subscribeResult = await client.Channel.Subscribe("channel", true);
+        HorseResult subscribeResult = await client.Channel.Subscribe("channel", true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, subscribeResult.Code);
 
         await Task.Delay(250);
         Assert.Equal(0, ChannelUnsubscribeHandler.Count);
 
-        HorseResult unsubscribeResult = await client.Channel.Unsubscribe("channel", true);
+        HorseResult unsubscribeResult = await client.Channel.Unsubscribe("channel", true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, unsubscribeResult.Code);
 
         await Task.Delay(250);
@@ -121,7 +122,7 @@ public class ChannelEventTest
 
         await client.ConnectAsync($"horse://localhost:{port}");
 
-        HorseResult subscribeResult = await client.Channel.PublishString("channel", "Hello, World!", true);
+        HorseResult subscribeResult = await client.Channel.PublishString("channel", "Hello, World!", true, CancellationToken.None);
         Assert.Equal(HorseResultCode.Ok, subscribeResult.Code);
 
         await Task.Delay(250);

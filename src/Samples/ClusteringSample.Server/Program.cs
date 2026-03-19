@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Data;
 using Horse.Messaging.Protocol;
@@ -83,8 +84,8 @@ class Program
         });
 
         HorseServer server = new HorseServer();
-        server.Logger = new ConsoleLogger();
+        server.Options.Hosts = [new HorseHostOptions { Port = port }];
         server.UseRider(rider);
-        server.Run(port);
+        server.StartAsync();
     }
 }

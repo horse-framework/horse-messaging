@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
@@ -247,6 +246,13 @@ internal class EventMessageHandler : INetworkMessageHandler
                     _rider.Queue.StatusChangeEvent.Subscribers.Add(client, c => c == client);
                 else
                     _rider.Queue.StatusChangeEvent.Subscribers.Remove(client);
+                break;
+
+            case HorseEventType.QueuePartitionCreated:
+                if (subscribe)
+                    _rider.Queue.PartitionCreatedEvent.Subscribers.Add(client, c => c == client);
+                else
+                    _rider.Queue.PartitionCreatedEvent.Subscribers.Remove(client);
                 break;
 
             case HorseEventType.QueueMessageAck:

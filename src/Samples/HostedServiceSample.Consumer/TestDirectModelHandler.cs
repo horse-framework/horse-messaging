@@ -1,5 +1,6 @@
 using System;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Direct;
@@ -11,12 +12,10 @@ namespace HostedServiceSample.Consumer;
 [DirectContentType(1)]
 public class TestDirectModelHandler : IDirectMessageHandler<TestDirectModel>
 {
-    readonly JsonSerializerOptions _options = new()
-    {
-        WriteIndented = true
-    };
+    readonly JsonSerializerOptions _options = new() { WriteIndented = true };
 
-    public Task Handle(HorseMessage message, TestDirectModel model, HorseClient client)
+    public Task Handle(HorseMessage message, TestDirectModel model, HorseClient client,
+        CancellationToken cancellationToken = default)
     {
         _ = Console.Out.WriteLineAsync("Consumed!!!");
         _ = Console.Out.WriteLineAsync(JsonSerializer.Serialize(model, _options));

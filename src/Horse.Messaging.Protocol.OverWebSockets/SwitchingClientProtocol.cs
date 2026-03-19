@@ -9,6 +9,7 @@ using Horse.Core;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Horse.WebSocket.Protocol;
+using Horse.WebSocket.Protocol.Compressions;
 using Horse.WebSocket.Protocol.Http;
 using PredefinedMessages = Horse.WebSocket.Protocol.PredefinedMessages;
 
@@ -149,11 +150,11 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
     /// </summary>
     private byte[] CreateRequest(ConnectionData data)
     {
-        using (SHA1 sha1 = SHA1.Create())
-        {
-            byte[] hash = sha1.ComputeHash(Guid.NewGuid().ToByteArray());
-            _websocketKey = Convert.ToBase64String(hash);
-        }
+        byte[] keyBytes = new byte[16];
+        using (var rng = RandomNumberGenerator.Create())
+            rng.GetBytes(keyBytes);
+
+        _websocketKey = Convert.ToBase64String(keyBytes);
 
         data.Properties.TryGetValue("PATH", out string path);
         if (string.IsNullOrEmpty(path))
@@ -163,8 +164,7 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
                          HttpHeaders.Create(HttpHeaders.CONNECTION, HttpHeaders.UPGRADE) +
                          HttpHeaders.Create(HttpHeaders.UPGRADE, HttpHeaders.VALUE_WEBSOCKET) +
                          HttpHeaders.Create(HttpHeaders.WEBSOCKET_VERSION, HttpHeaders.VALUE_WEBSOCKET_VERSION) +
-                         HttpHeaders.Create(HttpHeaders.WEBSOCKET_KEY, _websocketKey) +
-                         HttpHeaders.Create(HttpHeaders.WEBSOCKET_EXTENSIONS, HttpHeaders.VALUE_WEBSOCKET_EXTENSIONS);
+                         HttpHeaders.Create(HttpHeaders.WEBSOCKET_KEY, _websocketKey);
 
         foreach (var kv in data.Properties)
             request += HttpHeaders.Create(kv.Key, kv.Value);
@@ -194,7 +194,7 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
             throw new InvalidOperationException("Connection Error: " + statusCode);
 
         string[] responseLines = response.Split(["\r\n"], StringSplitOptions.RemoveEmptyEntries);
-        string acceptLine = responseLines.FirstOrDefault(x => x.StartsWith(HttpHeaders.WEBSOCKET_ACCEPT, StringComparison.InvariantCultureIgnoreCase));
+        string acceptLine = responseLines.FirstOrDefault(x => x.StartsWith(HttpHeaders.WEBSOCKET_ACCEPT, StringComparison.OrdinalIgnoreCase));
 
         if (acceptLine == null)
             throw new InvalidOperationException("Handshaking error, server didn't response Sec-WebSocket-Accept");

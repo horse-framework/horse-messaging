@@ -84,7 +84,7 @@ public static class Extensions
         if (string.IsNullOrEmpty(managerName))
             managerName = "Persistent";
 
-        cfg.Rider.Queue.QueueManagerFactories.Add(managerName, dh =>
+        cfg.Rider.Queue.QueueManagerFactoriesMutable.Add(managerName, dh =>
         {
             DatabaseOptions databaseOptions = dataConfigurationBuilder.CreateOptions(dh.Queue);
             PersistentQueueManager manager = new PersistentQueueManager(dh.Queue, databaseOptions, useRedelivery);
@@ -93,7 +93,7 @@ public static class Extensions
             return Task.FromResult<IHorseQueueManager>(manager);
         });
 
-        cfg.Rider.Queue.QueueManagerFactories.TryAdd("Default", cfg.Rider.Queue.QueueManagerFactories["Persistent"]);
+        cfg.Rider.Queue.QueueManagerFactoriesMutable.TryAdd("Default", cfg.Rider.Queue.QueueManagerFactoriesMutable["Persistent"]);
 
         return cfg;
     }

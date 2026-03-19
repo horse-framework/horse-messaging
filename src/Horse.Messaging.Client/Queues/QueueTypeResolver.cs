@@ -25,12 +25,15 @@ internal class QueueTypeResolver : ITypeDescriptorResolver<QueueTypeDescriptor>
         if (defaultDescriptor != null)
             ResolveDefaults(type, descriptor, defaultDescriptor);
 
+        ResolveDescriptor(type, descriptor);
+
         if (_client.Queue.NameHandler != null && !IsConsumerType(type))
         {
             string queueName = _client.Queue.NameHandler.Invoke(new QueueNameHandlerContext
             {
                 Type = type,
-                Client = _client
+                Client = _client,
+                QueueName = descriptor.QueueName
             });
 
             if (!string.IsNullOrEmpty(queueName))
@@ -40,7 +43,6 @@ internal class QueueTypeResolver : ITypeDescriptorResolver<QueueTypeDescriptor>
             }
         }
 
-        ResolveDescriptor(type, descriptor);
 
         return descriptor;
     }
@@ -152,5 +154,14 @@ internal class QueueTypeResolver : ITypeDescriptorResolver<QueueTypeDescriptor>
         IEnumerable<MessageHeaderAttribute> headerAttributes = type.GetCustomAttributes<MessageHeaderAttribute>(true);
         foreach (MessageHeaderAttribute headerAttribute in headerAttributes)
             descriptor.Headers.Add(new KeyValuePair<string, string>(headerAttribute.Key, headerAttribute.Value));
+
+        // ── Partition attribute ───────────────────────────────────────────────
+        PartitionedQueueAttribute partAttr = type.GetCustomAttribute<PartitionedQueueAttribute>(true);
+        if (partAttr != null)
+        {
+            descriptor.PartitionLabel = partAttr.Label ?? string.Empty;
+            descriptor.MaxPartitions = partAttr.MaxPartitions >= 0 ? partAttr.MaxPartitions : null;
+            descriptor.SubscribersPerPartition = partAttr.SubscribersPerPartition >= 0 ? partAttr.SubscribersPerPartition : null;
+        }
     }
 }

@@ -11,6 +11,7 @@ using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Helpers;
 using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Queues.Partitions;
 using Horse.Messaging.Server.Routing;
 using Horse.Messaging.Server.Security;
 
@@ -146,6 +147,25 @@ internal class ServerMessageHandler : INetworkMessageHandler
         if (queue == null && _rider.Queue.Options.AutoQueueCreation)
         {
             QueueOptions options = QueueOptions.CloneFrom(_rider.Queue.Options);
+
+            // Apply partition options from subscribe headers if provided
+            string partitionLimitHeader = message.FindHeader(HorseHeaders.PARTITION_LIMIT);
+            string partitionSubscribersHeader = message.FindHeader(HorseHeaders.PARTITION_SUBSCRIBERS);
+
+            if (!string.IsNullOrEmpty(partitionLimitHeader) && int.TryParse(partitionLimitHeader, out int partitionLimit) && partitionLimit >= 0)
+            {
+                options.Partition ??= new PartitionOptions();
+                options.Partition.Enabled = true;
+                options.Partition.MaxPartitionCount = partitionLimit;
+            }
+
+            if (!string.IsNullOrEmpty(partitionSubscribersHeader) && int.TryParse(partitionSubscribersHeader, out int partitionSubscribers) && partitionSubscribers > 0)
+            {
+                options.Partition ??= new PartitionOptions();
+                options.Partition.Enabled = true;
+                options.Partition.SubscribersPerPartition = partitionSubscribers;
+            }
+
             queue = await _rider.Queue.Create(message.Target, options, message, true, true, client);
         }
 
@@ -162,6 +182,29 @@ internal class ServerMessageHandler : INetworkMessageHandler
         {
             if (message.WaitResponse)
                 await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
+
+            return;
+        }
+
+        // Partition intercept: delegate subscribe to PartitionManager
+        if (queue.IsPartitioned)
+        {
+            string partitionLabel = message.FindHeader(HorseHeaders.PARTITION_LABEL);
+            PartitionEntry entry = await queue.PartitionManager.SubscribeClient(client, partitionLabel);
+
+            if (message.WaitResponse)
+            {
+                if (entry != null)
+                {
+                    HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
+                    response.AddHeader(HorseHeaders.PARTITION_ID, entry.PartitionId);
+                    if (entry.Queue != null)
+                        response.AddHeader(HorseHeaders.QUEUE_NAME, entry.Queue.Name);
+                    await client.SendAsync(response);
+                }
+                else
+                    await client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
+            }
 
             return;
         }
@@ -394,8 +437,8 @@ internal class ServerMessageHandler : INetworkMessageHandler
 
         string prio = message.FindHeader(HorseHeaders.PRIORITY_MESSAGES);
         string msgs = message.FindHeader(HorseHeaders.MESSAGES);
-        bool clearPrio = !string.IsNullOrEmpty(prio) && prio.Equals("yes", StringComparison.InvariantCultureIgnoreCase);
-        bool clearMsgs = !string.IsNullOrEmpty(msgs) && msgs.Equals("yes", StringComparison.InvariantCultureIgnoreCase);
+        bool clearPrio = !string.IsNullOrEmpty(prio) && prio.Equals("yes", StringComparison.OrdinalIgnoreCase);
+        bool clearMsgs = !string.IsNullOrEmpty(msgs) && msgs.Equals("yes", StringComparison.OrdinalIgnoreCase);
 
         foreach (IAdminAuthorization authorization in _rider.Client.AdminAuthorizations.All())
         {

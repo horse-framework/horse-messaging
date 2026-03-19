@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client.Annotations;
 using Horse.Messaging.Client.Queues;
@@ -62,12 +63,13 @@ public abstract class ExecutorBase
     /// <summary>
     /// Executes the message
     /// </summary>
-    public abstract Task Execute(HorseClient client, HorseMessage message, object model);
+    public abstract Task Execute(HorseClient client, HorseMessage message, object model,
+        CancellationToken cancellationToken);
 
     /// <summary>
     /// Sends negative ack
     /// </summary>
-    protected Task SendNegativeAck(HorseMessage message, HorseClient client, Exception exception)
+    protected Task SendNegativeAck(HorseMessage message, HorseClient client, Exception exception, CancellationToken cancellationToken)
     {
         string reason = NegativeReason switch
         {
@@ -77,7 +79,7 @@ public abstract class ExecutorBase
             _                               => HorseHeaders.NACK_REASON_NONE
         };
 
-        return client.SendNegativeAck(message, reason);
+        return client.SendNegativeAck(message, reason, cancellationToken);
     }
 
     /// <summary>
@@ -165,7 +167,7 @@ public abstract class ExecutorBase
             ConsumingMessage = consumingMessage
         });
 
-        return client.Queue.PushJson(transportable, false);
+        return client.Queue.PushObject(transportable, false, null, client.ConsumeToken);
     }
 
     private Task TransportToRouter(HorseClient client, TransportExceptionDescriptor item, Exception exception, HorseMessage consumingMessage)
@@ -181,7 +183,7 @@ public abstract class ExecutorBase
             ConsumingMessage = consumingMessage
         });
 
-        return client.Router.PublishJson(transportable);
+        return client.Router.PublishObject(null, transportable, null, false, null, null, client.ConsumeToken);
     }
 
     #endregion
