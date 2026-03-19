@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -288,6 +288,8 @@ public class DirectOperator
 
         if (message == null)
             return new HorseResult<TResponse>(HorseResultCode.SendError, "Message target is not specified");
+
+        if (contentType.HasValue)
             message.ContentType = contentType.Value;
 
         message.Serialize(model, _client.MessageSerializer);
@@ -381,4 +383,3 @@ public class DirectOperator
 
     #endregion
 }
-
