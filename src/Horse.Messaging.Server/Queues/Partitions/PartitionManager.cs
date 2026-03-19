@@ -91,13 +91,13 @@ public class PartitionManager
     /// </para>
     /// Returns null when no partition slot is available (label partition full or max partitions reached).
     /// </summary>
-    public async Task<PartitionEntry> SubscribeClient(MessagingClient client, string partitionLabel)
+    public async Task<PartitionEntry> SubscribeClient(MessagingClient client, string partitionLabel, int? subscribersOverride = null)
     {
         PartitionEntry entry;
 
         if (!string.IsNullOrEmpty(partitionLabel))
         {
-            entry = await GetOrCreateLabelPartition(partitionLabel);
+            entry = await GetOrCreateLabelPartition(partitionLabel, subscribersOverride);
             if (entry == null)
                 return null;
 
@@ -270,7 +270,7 @@ public class PartitionManager
     /// </para>
     /// </summary>
     /// <param name="label">Routing label, or null for label-less partitions.</param>
-    public async Task<PartitionEntry> CreatePartition(string label)
+    public async Task<PartitionEntry> CreatePartition(string label, int? subscribersOverride = null)
     {
         await _createLock.WaitAsync();
         try
@@ -302,7 +302,10 @@ public class PartitionManager
             }
 
             QueueOptions partitionOptions = QueueOptions.CloneFrom(_parentQueue.Options);
-            partitionOptions.ClientLimit = _options.SubscribersPerPartition;
+            int effectiveSubscribers = subscribersOverride.HasValue && subscribersOverride.Value >= 0
+                ? subscribersOverride.Value
+                : _options.SubscribersPerPartition;
+            partitionOptions.ClientLimit = effectiveSubscribers;
             partitionOptions.AutoQueueCreation = false;
             partitionOptions.Partition = null; // Prevent recursive partitioning
 
@@ -457,11 +460,11 @@ public class PartitionManager
             });
     }
 
-    private async Task<PartitionEntry> GetOrCreateLabelPartition(string label)
+    private async Task<PartitionEntry> GetOrCreateLabelPartition(string label, int? subscribersOverride = null)
     {
         if (_labelIndex.TryGetValue(label, out PartitionEntry entry))
             return entry;
-        return await CreatePartition(label);
+        return await CreatePartition(label, subscribersOverride);
     }
 
     private string GetPartitionIdFromQueue(HorseQueue queue)
