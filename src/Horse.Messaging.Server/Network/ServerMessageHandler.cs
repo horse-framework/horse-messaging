@@ -190,7 +190,9 @@ internal class ServerMessageHandler : INetworkMessageHandler
         if (queue.IsPartitioned)
         {
             string partitionLabel = message.FindHeader(HorseHeaders.PARTITION_LABEL);
-            PartitionEntry entry = await queue.PartitionManager.SubscribeClient(client, partitionLabel);
+            string partitionSubscribersHeader = message.FindHeader(HorseHeaders.PARTITION_SUBSCRIBERS);
+            int? clientSubscribersOverride = !string.IsNullOrEmpty(partitionSubscribersHeader) && int.TryParse(partitionSubscribersHeader, out int ps) ? ps : null;
+            PartitionEntry entry = await queue.PartitionManager.SubscribeClient(client, partitionLabel, clientSubscribersOverride);
 
             if (message.WaitResponse)
             {
