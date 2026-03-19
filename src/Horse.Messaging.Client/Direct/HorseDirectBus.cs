@@ -151,6 +151,10 @@ public class HorseDirectBus : IHorseDirectBus
         => _client.Direct.Request<TResponse>(request, messageHeaders, cancellationToken);
 
     /// <inheritdoc />
+    public Task<HorseResult<TResponse>> Request<TResponse>(string target, object request, CancellationToken cancellationToken)
+        => _client.Direct.Request<TResponse>(target, null, request, cancellationToken);
+    
+    /// <inheritdoc />
     public Task<HorseResult<TResponse>> Request<TResponse>(string target, ushort? contentType, object request, CancellationToken cancellationToken)
         => _client.Direct.Request<TResponse>(target, contentType, request, cancellationToken);
 

@@ -294,6 +294,11 @@ public interface IHorseDirectBus : IHorseConnection
     /// <summary>
     /// Sends a model-based request to a specific target and waits for a typed response.
     /// </summary>
+    public Task<HorseResult<TResponse>> Request<TResponse>(string target, object request, CancellationToken cancellationToken);
+    
+    /// <summary>
+    /// Sends a model-based request to a specific target and waits for a typed response.
+    /// </summary>
     Task<HorseResult<TResponse>> Request<TResponse>(string target, ushort? contentType, object request, CancellationToken cancellationToken);
 
     /// <inheritdoc cref="Request{TResponse}(string, ushort?, object, IEnumerable{KeyValuePair{string,string}}, CancellationToken)"/>
