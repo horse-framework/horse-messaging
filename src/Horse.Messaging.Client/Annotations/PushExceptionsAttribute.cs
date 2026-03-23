@@ -1,10 +1,34 @@
 using System;
+using Horse.Messaging.Client.Queues;
 
 namespace Horse.Messaging.Client.Annotations;
 
 /// <summary>
 /// Pushes exceptions to queues when thrown by consumer objects
 /// </summary>
+[AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
+public class PushExceptionsAttribute<T> : PushExceptionsAttribute
+    where T : ITransportableException, new()
+{
+    /// <summary>
+    /// Pushes all exceptions
+    /// </summary>
+    public PushExceptionsAttribute() : base(typeof(T))
+    {
+    }
+
+    /// <summary>
+    /// Pushes specified type of exceptions
+    /// </summary>
+    public PushExceptionsAttribute(Type exceptionType) : base(typeof(T), exceptionType)
+    {
+    }
+}
+
+/// <summary>
+/// Pushes exceptions to queues when thrown by consumer objects
+/// </summary>
+[Obsolete("Use PushExceptionsAttribute<T> instead")]
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public class PushExceptionsAttribute : Attribute
 {

@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
-using System.Threading;
 using Horse.Messaging.Client.Annotations;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Client.Queues.Annotations;
@@ -127,7 +126,7 @@ public class Retry1Consumer(RetryTrackerAccessor accessor) : IQueueConsumer<Retr
 [AutoAck]
 [AutoNack(NegativeReason.Error)]
 [Retry(3, 50)]
-[PushExceptions(typeof(ExceptionLogModel))]
+[PushExceptions<ExceptionLogModel>]
 public class Retry3WithPushExceptionConsumer(RetryTrackerAccessor accessor) : IQueueConsumer<RetryModel>
 {
     public Task Consume(HorseMessage message, RetryModel model, HorseClient client, CancellationToken cancellationToken = default)

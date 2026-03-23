@@ -75,12 +75,16 @@ public class RetrySourceModel
 
 public class CustomBusinessException : Exception
 {
-    public CustomBusinessException(string message) : base(message) { }
+    public CustomBusinessException(string message) : base(message)
+    {
+    }
 }
 
 public class AnotherException : Exception
 {
-    public AnotherException(string message) : base(message) { }
+    public AnotherException(string message) : base(message)
+    {
+    }
 }
 
 #endregion
@@ -142,7 +146,7 @@ public class MoveOnErrorConsumer(ExceptionTrackerAccessor accessor) : IQueueCons
 /// </summary>
 [AutoAck]
 [AutoNack(NegativeReason.ExceptionType)]
-[PushExceptions(typeof(ExceptionLogModel))]
+[PushExceptions<ExceptionLogModel>]
 public class PushExceptionConsumer(ExceptionTrackerAccessor accessor) : IQueueConsumer<SourceModel>
 {
     public Task Consume(HorseMessage message, SourceModel model, HorseClient client, CancellationToken cancellationToken = default)
@@ -167,8 +171,8 @@ public class PushExceptionConsumer(ExceptionTrackerAccessor accessor) : IQueueCo
 /// </summary>
 [AutoAck]
 [AutoNack(NegativeReason.ExceptionMessage)]
-[PushExceptions(typeof(ExceptionLogModel))]
-[PushExceptions(typeof(SpecificExceptionLogModel), typeof(CustomBusinessException))]
+[PushExceptions<ExceptionLogModel>]
+[PushExceptions<SpecificExceptionLogModel>(typeof(CustomBusinessException))]
 public class MultiPushExceptionConsumer(ExceptionTrackerAccessor accessor) : IQueueConsumer<SourceModel>
 {
     public Task Consume(HorseMessage message, SourceModel model, HorseClient client, CancellationToken cancellationToken = default)
@@ -193,7 +197,7 @@ public class MultiPushExceptionConsumer(ExceptionTrackerAccessor accessor) : IQu
 [AutoAck]
 [AutoNack(NegativeReason.Error)]
 [MoveOnError("error-q")]
-[PushExceptions(typeof(ExceptionLogModel))]
+[PushExceptions<ExceptionLogModel>]
 public class MoveOnErrorAndPushExceptionConsumer(ExceptionTrackerAccessor accessor) : IQueueConsumer<SourceModel>
 {
     public Task Consume(HorseMessage message, SourceModel model, HorseClient client, CancellationToken cancellationToken = default)
@@ -241,7 +245,7 @@ public class AutoNackOnlyConsumer(ExceptionTrackerAccessor accessor) : IQueueCon
 [AutoAck]
 [AutoNack(NegativeReason.Error)]
 [Retry(3, 50)]
-[PushExceptions(typeof(ExceptionLogModel))]
+[PushExceptions<ExceptionLogModel>]
 public class RetryThenPushExceptionConsumer(ExceptionTrackerAccessor accessor) : IQueueConsumer<SourceModel>
 {
     public Task Consume(HorseMessage message, SourceModel model, HorseClient client, CancellationToken cancellationToken = default)
@@ -264,8 +268,8 @@ public class RetryThenPushExceptionConsumer(ExceptionTrackerAccessor accessor) :
 /// </summary>
 [AutoAck]
 [AutoNack(NegativeReason.ExceptionType)]
-[PushExceptions(typeof(SpecificExceptionLogModel), typeof(CustomBusinessException))]
-[PushExceptions(typeof(ExceptionLogModel))]
+[PushExceptions<SpecificExceptionLogModel>(typeof(CustomBusinessException))]
+[PushExceptions<ExceptionLogModel>]
 public class SpecificExceptionConsumer(ExceptionTrackerAccessor accessor) : IQueueConsumer<SourceModel>
 {
     public Task Consume(HorseMessage message, SourceModel model, HorseClient client, CancellationToken cancellationToken = default)
@@ -376,10 +380,7 @@ public class ExceptionHandlingTest
         // Subscribe a raw consumer to error-q to capture moved messages
         ConcurrentBag<string> errorMessages = new();
         HorseClient errorConsumer = await ConnectRaw(ctx.Port);
-        errorConsumer.MessageReceived += (_, msg) =>
-        {
-            errorMessages.Add(msg.Target);
-        };
+        errorConsumer.MessageReceived += (_, msg) => { errorMessages.Add(msg.Target); };
         await errorConsumer.Queue.Subscribe("error-q", true, CancellationToken.None);
         await Task.Delay(200);
 
@@ -440,20 +441,14 @@ public class ExceptionHandlingTest
         // Track what actually arrives at error-q
         ConcurrentBag<HorseMessage> errorQueueMsgs = new();
         HorseClient errorConsumer = await ConnectRaw(ctx.Port);
-        errorConsumer.MessageReceived += (_, msg) =>
-        {
-            errorQueueMsgs.Add(msg);
-        };
+        errorConsumer.MessageReceived += (_, msg) => { errorQueueMsgs.Add(msg); };
         await errorConsumer.Queue.Subscribe("error-q", true, CancellationToken.None);
         await Task.Delay(200);
 
         // Track what arrives at source-q (the original queue)
         ConcurrentBag<HorseMessage> sourceQueueMsgs = new();
         HorseClient sourceWatcher = await ConnectRaw(ctx.Port);
-        sourceWatcher.MessageReceived += (_, msg) =>
-        {
-            sourceQueueMsgs.Add(msg);
-        };
+        sourceWatcher.MessageReceived += (_, msg) => { sourceQueueMsgs.Add(msg); };
         await sourceWatcher.Queue.Subscribe("source-q", true, CancellationToken.None);
         await Task.Delay(200);
 
@@ -510,10 +505,7 @@ public class ExceptionHandlingTest
         // Listen on exception-log-q
         ConcurrentBag<HorseMessage> logMessages = new();
         HorseClient logConsumer = await ConnectRaw(ctx.Port);
-        logConsumer.MessageReceived += (_, msg) =>
-        {
-            logMessages.Add(msg);
-        };
+        logConsumer.MessageReceived += (_, msg) => { logMessages.Add(msg); };
         await logConsumer.Queue.Subscribe("exception-log-q", true, CancellationToken.None);
         await Task.Delay(200);
 
@@ -1077,7 +1069,3 @@ public class ExceptionHandlingTest
 
     #endregion
 }
-
-
-
-
