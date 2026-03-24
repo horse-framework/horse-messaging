@@ -543,13 +543,13 @@ public class HorseQueue
 
             else if (pair.Key.Equals(HorseHeaders.MESSAGE_TIMEOUT, StringComparison.OrdinalIgnoreCase))
             {
-                string[] timeoutValues = pair.Value.Split(';', StringSplitOptions.RemoveEmptyEntries);
-                if (timeoutValues.Length == 3)
+                string[] timeoutValues = pair.Value.Split(';');
+                if (timeoutValues.Length >= 2)
                     Options.MessageTimeout = new MessageTimeoutStrategy
                     {
                         MessageDuration = Convert.ToInt32(timeoutValues[0]),
                         Policy = Enums.Parse<MessageTimeoutPolicy>(timeoutValues[1], true, EnumFormat.Description),
-                        TargetName = timeoutValues[2]
+                        TargetName = timeoutValues.Length > 2 ? timeoutValues[2] : string.Empty
                     };
             }
 

@@ -77,11 +77,29 @@ internal class QueueTypeResolver : ITypeDescriptorResolver<QueueTypeDescriptor>
     /// </summary>
     private void ResolveDefaults(Type type, QueueTypeDescriptor descriptor, QueueTypeDescriptor defaultConfigurator)
     {
+        if (defaultConfigurator.HighPriority)
+            descriptor.HighPriority = true;
+
+        if (defaultConfigurator.PartitionLabel != null)
+            descriptor.PartitionLabel = defaultConfigurator.PartitionLabel;
+
+        if (defaultConfigurator.MaxPartitions.HasValue)
+            descriptor.MaxPartitions = defaultConfigurator.MaxPartitions.Value;
+
+        if (defaultConfigurator.SubscribersPerPartition.HasValue)
+            descriptor.SubscribersPerPartition = defaultConfigurator.SubscribersPerPartition.Value;
+
         if (defaultConfigurator.QueueType.HasValue)
             descriptor.QueueType = defaultConfigurator.QueueType.Value;
 
         if (!string.IsNullOrEmpty(defaultConfigurator.Topic))
             descriptor.Topic = defaultConfigurator.Topic;
+
+        if (!string.IsNullOrEmpty(defaultConfigurator.QueueName))
+        {
+            descriptor.QueueName = defaultConfigurator.QueueName;
+            descriptor.HasQueueName = true;
+        }
 
         if (defaultConfigurator.PutBackDecision.HasValue)
             descriptor.PutBackDecision = defaultConfigurator.PutBackDecision.Value;
@@ -94,6 +112,36 @@ internal class QueueTypeResolver : ITypeDescriptorResolver<QueueTypeDescriptor>
 
         if (defaultConfigurator.Acknowledge.HasValue)
             descriptor.Acknowledge = defaultConfigurator.Acknowledge.Value;
+
+        if (defaultConfigurator.MessageTimeout != null)
+            descriptor.MessageTimeout = defaultConfigurator.MessageTimeout;
+
+        if (defaultConfigurator.AcknowledgeTimeout.HasValue)
+            descriptor.AcknowledgeTimeout = defaultConfigurator.AcknowledgeTimeout.Value;
+
+        if (defaultConfigurator.UniqueIdCheck.HasValue)
+            descriptor.UniqueIdCheck = defaultConfigurator.UniqueIdCheck.Value;
+
+        if (!string.IsNullOrEmpty(defaultConfigurator.MoveOnErrorQueueName))
+        {
+            descriptor.MoveOnErrorQueueName = defaultConfigurator.MoveOnErrorQueueName;
+            descriptor.MoveOnErrorQueueTopic = defaultConfigurator.MoveOnErrorQueueTopic;
+        }
+
+        if (defaultConfigurator.DefaultPushException != null)
+            descriptor.DefaultPushException = defaultConfigurator.DefaultPushException;
+
+        if (defaultConfigurator.PushExceptions.Count > 0)
+            descriptor.PushExceptions.AddRange(defaultConfigurator.PushExceptions);
+
+        if (defaultConfigurator.DefaultPublishException != null)
+            descriptor.DefaultPublishException = defaultConfigurator.DefaultPublishException;
+
+        if (defaultConfigurator.PublishExceptions.Count > 0)
+            descriptor.PublishExceptions.AddRange(defaultConfigurator.PublishExceptions);
+
+        if (defaultConfigurator.Headers.Count > 0)
+            descriptor.Headers.AddRange(defaultConfigurator.Headers);
     }
 
     /// <summary>
@@ -149,6 +197,13 @@ internal class QueueTypeResolver : ITypeDescriptorResolver<QueueTypeDescriptor>
         {
             descriptor.PutBackDecision = putbackAttr.Value;
             descriptor.PutBackDelay = putbackAttr.Delay;
+        }
+
+        MoveOnErrorAttribute moveOnErrorAttr = type.GetCustomAttribute<MoveOnErrorAttribute>(true);
+        if (moveOnErrorAttr != null)
+        {
+            descriptor.MoveOnErrorQueueName = moveOnErrorAttr.QueueName;
+            descriptor.MoveOnErrorQueueTopic = moveOnErrorAttr.QueueTopic;
         }
 
         IEnumerable<MessageHeaderAttribute> headerAttributes = type.GetCustomAttributes<MessageHeaderAttribute>(true);

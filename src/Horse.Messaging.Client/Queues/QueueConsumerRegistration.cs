@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Horse.Messaging.Client.Annotations;
 using Horse.Messaging.Client.Internal;
+using Horse.Messaging.Client.Queues.Annotations;
 
 namespace Horse.Messaging.Client.Queues;
 
@@ -26,6 +27,36 @@ internal class QueueConsumerRegistration
     /// Interceptor descriptors
     /// </summary>
     internal List<InterceptorTypeDescriptor> InterceptorDescriptors { get; } = new();
+
+    /// <summary>
+    /// Headers used during queue subscribe / auto-create.
+    /// </summary>
+    internal List<KeyValuePair<string, string>> SubscriptionHeaders { get; } = new();
+
+    /// <summary>
+    /// Move-on-error configuration resolved from builder or attributes.
+    /// </summary>
+    internal MoveOnErrorAttribute MoveOnError { get; set; }
+
+    /// <summary>
+    /// Default push-exception transport descriptor.
+    /// </summary>
+    internal TransportExceptionDescriptor DefaultPushException { get; set; }
+
+    /// <summary>
+    /// Additional push-exception descriptors.
+    /// </summary>
+    internal List<TransportExceptionDescriptor> PushExceptions { get; } = new();
+
+    /// <summary>
+    /// Default publish-exception transport descriptor.
+    /// </summary>
+    internal TransportExceptionDescriptor DefaultPublishException { get; set; }
+
+    /// <summary>
+    /// Additional publish-exception descriptors.
+    /// </summary>
+    internal List<TransportExceptionDescriptor> PublishExceptions { get; } = new();
 
     /// <summary>
     /// Consumer executor

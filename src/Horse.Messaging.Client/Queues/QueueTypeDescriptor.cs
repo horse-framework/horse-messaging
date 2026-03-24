@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using EnumsNET;
+using Horse.Messaging.Client.Annotations;
 using Horse.Messaging.Client.Internal;
 using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Protocol;
@@ -15,7 +16,7 @@ public class QueueTypeDescriptor : ITypeDescriptor
     /// <summary>
     /// Message model type
     /// </summary>
-    public Type Type { get; set; }
+    internal Type Type { get; set; }
 
     /// <summary>
     /// If true, message is sent as high priority
@@ -82,7 +83,7 @@ public class QueueTypeDescriptor : ITypeDescriptor
     /// <summary>
     /// True if type has QueueNameAttribute
     /// </summary>
-    public bool HasQueueName { get; set; }
+    internal bool HasQueueName { get; set; }
 
     /// <summary>
     /// Message timeout in seconds
@@ -99,6 +100,38 @@ public class QueueTypeDescriptor : ITypeDescriptor
     /// Enabling that feature has performance penalty about 0.03 ms for each message. 
     /// </summary>
     public bool? UniqueIdCheck { get; set; }
+
+    /// <summary>
+    /// Error queue name used when a consumer fails.
+    /// </summary>
+    internal string MoveOnErrorQueueName { get; set; }
+
+    /// <summary>
+    /// Optional topic used when the error queue is auto-created.
+    /// </summary>
+    internal string MoveOnErrorQueueTopic { get; set; }
+
+    /// <summary>
+    /// Default push-exception transport descriptor.
+    /// </summary>
+    internal TransportExceptionDescriptor DefaultPushException { get; set; }
+
+    /// <summary>
+    /// Additional push-exception transport descriptors.
+    /// </summary>
+    internal List<TransportExceptionDescriptor> PushExceptions { get; } = new List<TransportExceptionDescriptor>();
+
+    /// <summary>
+    /// Default publish-exception transport descriptor.
+    /// </summary>
+    internal TransportExceptionDescriptor DefaultPublishException { get; set; }
+
+    /// <summary>
+    /// Additional publish-exception transport descriptors.
+    /// </summary>
+    internal List<TransportExceptionDescriptor> PublishExceptions { get; } = new List<TransportExceptionDescriptor>();
+
+    internal List<InterceptorTypeDescriptor> Interceptors { get; } = new List<InterceptorTypeDescriptor>();
 
     /// <summary>
     /// Creates new type delivery descriptor

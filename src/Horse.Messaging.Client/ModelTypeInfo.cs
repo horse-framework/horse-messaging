@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using Horse.Messaging.Client.Annotations;
 using Horse.Messaging.Client.Internal;
 
 namespace Horse.Messaging.Client;

@@ -4,6 +4,8 @@ using System.Linq;
 using System.Reflection;
 using Horse.Messaging.Client.Annotations;
 using Horse.Messaging.Client.Internal;
+using Horse.Messaging.Client.Queues.Annotations;
+using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client.Queues;
 
@@ -44,6 +46,14 @@ public class QueueConsumerRegistrar
     }
 
     /// <summary>
+    /// Registers a single consumer with a per-registration descriptor override.
+    /// </summary>
+    public void RegisterConsumer<TConsumer>(QueueTypeDescriptor descriptor, Func<IHandlerFactory> consumerFactoryBuilder = null)
+    {
+        RegisterConsumer(typeof(TConsumer), descriptor, consumerFactoryBuilder);
+    }
+
+    /// <summary>
     /// Registers a single consumer with explicit partition options.
     /// The <paramref name="partitionLabel"/> overrides any
     /// <see cref="Annotations.PartitionedQueueAttribute"/> present on the consumer or model type.
@@ -77,7 +87,7 @@ public class QueueConsumerRegistrar
                 List<ModelTypeInfo> types = FindModelTypes(type);
                 foreach (ModelTypeInfo typeInfo in types)
                 {
-                    QueueConsumerRegistration registration = CreateConsumerRegistration(typeInfo, consumerFactoryBuilder);
+                    QueueConsumerRegistration registration = CreateConsumerRegistration(typeInfo, consumerFactoryBuilder, DefaultDescriptor);
                     if (registration == null)
                         continue;
 
@@ -98,7 +108,15 @@ public class QueueConsumerRegistrar
     /// </summary>
     public void RegisterConsumer(Type consumerType, Func<IHandlerFactory> consumerFactoryBuilder = null)
     {
-        RegisterConsumer(consumerType, consumerFactoryBuilder, queueName: null, partitionLabel: null, null, null, overridePartition: false);
+        RegisterConsumer(consumerType, DefaultDescriptor, consumerFactoryBuilder, queueName: null, partitionLabel: null, null, null, overridePartition: false);
+    }
+
+    /// <summary>
+    /// Registers a single consumer with a per-registration descriptor override.
+    /// </summary>
+    public void RegisterConsumer(Type consumerType, QueueTypeDescriptor descriptor, Func<IHandlerFactory> consumerFactoryBuilder = null)
+    {
+        RegisterConsumer(consumerType, descriptor, consumerFactoryBuilder, queueName: null, partitionLabel: null, null, null, overridePartition: false);
     }
 
     /// <summary>
@@ -107,7 +125,7 @@ public class QueueConsumerRegistrar
     public void RegisterConsumer(Type consumerType, Func<IHandlerFactory> consumerFactoryBuilder,
         string partitionLabel, int? maxPartitions = null, int? subscribersPerPartition = null)
     {
-        RegisterConsumer(consumerType, consumerFactoryBuilder, queueName: null, partitionLabel, maxPartitions, subscribersPerPartition, overridePartition: true);
+        RegisterConsumer(consumerType, DefaultDescriptor, consumerFactoryBuilder, queueName: null, partitionLabel, maxPartitions, subscribersPerPartition, overridePartition: true);
     }
 
     /// <summary>
@@ -116,7 +134,7 @@ public class QueueConsumerRegistrar
     public void RegisterConsumer(Type consumerType, Func<IHandlerFactory> consumerFactoryBuilder,
         string queueName, string partitionLabel, int? maxPartitions = null, int? subscribersPerPartition = null)
     {
-        RegisterConsumer(consumerType, consumerFactoryBuilder, queueName, partitionLabel, maxPartitions, subscribersPerPartition, overridePartition: partitionLabel != null);
+        RegisterConsumer(consumerType, DefaultDescriptor, consumerFactoryBuilder, queueName, partitionLabel, maxPartitions, subscribersPerPartition, overridePartition: partitionLabel != null);
     }
 
     /// <summary>
@@ -139,7 +157,7 @@ public class QueueConsumerRegistrar
 
         foreach (ModelTypeInfo typeInfo in types)
         {
-            QueueConsumerRegistration registration = CreateConsumerRegistration(typeInfo, consumerFactoryBuilder);
+            QueueConsumerRegistration registration = CreateConsumerRegistration(typeInfo, consumerFactoryBuilder, DefaultDescriptor);
             if (registration == null)
                 throw new TypeLoadException("Cant resolve consumer type");
 
@@ -169,7 +187,7 @@ public class QueueConsumerRegistrar
 
         foreach (ModelTypeInfo typeInfo in types)
         {
-            QueueConsumerRegistration registration = CreateConsumerRegistration(typeInfo, consumerFactoryBuilder);
+            QueueConsumerRegistration registration = CreateConsumerRegistration(typeInfo, consumerFactoryBuilder, DefaultDescriptor);
             if (registration == null)
                 throw new TypeLoadException("Cant resolve consumer type");
 
@@ -189,14 +207,14 @@ public class QueueConsumerRegistrar
         }
     }
 
-    private void RegisterConsumer(Type consumerType, Func<IHandlerFactory> consumerFactoryBuilder,
+    private void RegisterConsumer(Type consumerType, QueueTypeDescriptor descriptor, Func<IHandlerFactory> consumerFactoryBuilder,
         string queueName, string partitionLabel, int? maxPartitions, int? subscribersPerPartition, bool overridePartition)
     {
         List<ModelTypeInfo> types = FindModelTypes(consumerType);
 
         foreach (ModelTypeInfo typeInfo in types)
         {
-            QueueConsumerRegistration registration = CreateConsumerRegistration(typeInfo, consumerFactoryBuilder);
+            QueueConsumerRegistration registration = CreateConsumerRegistration(typeInfo, consumerFactoryBuilder, descriptor);
             if (registration == null)
                 throw new TypeLoadException("Cant resolve consumer type");
 
@@ -236,20 +254,21 @@ public class QueueConsumerRegistrar
         return result;
     }
 
-    private QueueConsumerRegistration CreateConsumerRegistration(ModelTypeInfo typeInfo, Func<IHandlerFactory> consumerFactoryBuilder)
+    private QueueConsumerRegistration CreateConsumerRegistration(ModelTypeInfo typeInfo,
+        Func<IHandlerFactory> consumerFactoryBuilder,
+        QueueTypeDescriptor descriptorOverride)
     {
         bool useConsumerFactory = consumerFactoryBuilder != null;
 
         QueueTypeResolver resolver = new QueueTypeResolver(_operator.Client);
         QueueTypeDescriptor consumerDescriptor = resolver.Resolve(typeInfo.ConsumerType, null);
-        QueueTypeDescriptor modelDescriptor = resolver.Resolve(typeInfo.ModelType, DefaultDescriptor);
+        QueueTypeDescriptor modelDescriptor = resolver.Resolve(typeInfo.ModelType, descriptorOverride);
 
         object consumerInstance = useConsumerFactory ? null : Activator.CreateInstance(typeInfo.ConsumerType);
 
-
         Type executorType = typeof(QueueConsumerExecutor<>);
         Type executorGenericType = executorType.MakeGenericType(typeInfo.ModelType);
-        ExecutorBase executor = (ExecutorBase) Activator.CreateInstance(executorGenericType,
+        ExecutorBase executor = (ExecutorBase)Activator.CreateInstance(executorGenericType,
             typeInfo.ConsumerType,
             consumerInstance,
             consumerFactoryBuilder);
@@ -267,6 +286,13 @@ public class QueueConsumerRegistrar
             ConsumerExecuter = executor
         };
 
+        registration.SubscriptionHeaders.AddRange(BuildSubscriptionHeaders(modelDescriptor, consumerDescriptor));
+        registration.MoveOnError = BuildMoveOnError(modelDescriptor, consumerDescriptor);
+        registration.DefaultPushException = modelDescriptor.DefaultPushException;
+        registration.PushExceptions.AddRange(modelDescriptor.PushExceptions);
+        registration.DefaultPublishException = modelDescriptor.DefaultPublishException;
+        registration.PublishExceptions.AddRange(modelDescriptor.PublishExceptions);
+
         // ── Partition metadata from consumer-level attributes ─────────────────
         // PartitionLabel: consumer descriptor wins, fall back to model descriptor
         if (consumerDescriptor.PartitionLabel != null)
@@ -282,7 +308,12 @@ public class QueueConsumerRegistrar
             registration.SubscribersPerPartition = modelDescriptor.SubscribersPerPartition;
         }
 
-        registration.InterceptorDescriptors.AddRange(ResolveInterceptorAttributes(typeInfo, !useConsumerFactory));
+        if (descriptorOverride != null)
+            registration.InterceptorDescriptors.AddRange(descriptorOverride.Interceptors.Select(m => InterceptorTypeDescriptor.Clone(m, !useConsumerFactory)));
+
+        var resolvedInterceptors = ResolveInterceptorAttributes(typeInfo, !useConsumerFactory);
+        registration.InterceptorDescriptors.AddRange(resolvedInterceptors);
+        registration.InterceptorDescriptors.Sort((left, right) => left.Order.CompareTo(right.Order));
 
         executor?.Resolve(registration);
 
@@ -302,5 +333,41 @@ public class QueueConsumerRegistrar
         }
 
         return consumerInterceptors.OrderBy(m => m.Order).Select(m => InterceptorTypeDescriptor.Create(m, createInstance));
+    }
+
+    private static List<KeyValuePair<string, string>> BuildSubscriptionHeaders(QueueTypeDescriptor modelDescriptor,
+        QueueTypeDescriptor consumerDescriptor)
+    {
+        List<KeyValuePair<string, string>> headers = new();
+        MergeDescriptorHeaders(headers, modelDescriptor);
+        MergeDescriptorHeaders(headers, consumerDescriptor);
+        return headers;
+    }
+
+    private static void MergeDescriptorHeaders(List<KeyValuePair<string, string>> headers, QueueTypeDescriptor descriptor)
+    {
+        if (descriptor == null)
+            return;
+
+        HorseMessage message = descriptor.CreateMessage();
+        if (!message.HasHeader)
+            return;
+
+        foreach (KeyValuePair<string, string> pair in message.Headers)
+        {
+            headers.RemoveAll(x => x.Key == pair.Key);
+            headers.Add(pair);
+        }
+    }
+
+    private static MoveOnErrorAttribute BuildMoveOnError(QueueTypeDescriptor modelDescriptor, QueueTypeDescriptor consumerDescriptor)
+    {
+        if (!string.IsNullOrEmpty(modelDescriptor?.MoveOnErrorQueueName))
+            return new MoveOnErrorAttribute(modelDescriptor.MoveOnErrorQueueName, modelDescriptor.MoveOnErrorQueueTopic);
+
+        if (!string.IsNullOrEmpty(consumerDescriptor?.MoveOnErrorQueueName))
+            return new MoveOnErrorAttribute(consumerDescriptor.MoveOnErrorQueueName, consumerDescriptor.MoveOnErrorQueueTopic);
+
+        return null;
     }
 }

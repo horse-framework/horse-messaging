@@ -122,6 +122,28 @@ public abstract class ExecutorBase
     }
 
     /// <summary>
+    /// Merges programmatic exception transport configuration into attribute-based defaults.
+    /// Builder configuration wins over matching attribute configuration.
+    /// </summary>
+    protected void MergeSendExceptions(TransportExceptionDescriptor defaultPushException,
+        IEnumerable<TransportExceptionDescriptor> pushExceptions,
+        TransportExceptionDescriptor defaultPublishException,
+        IEnumerable<TransportExceptionDescriptor> publishExceptions)
+    {
+        if (defaultPushException != null)
+            DefaultPushException = defaultPushException;
+
+        if (pushExceptions != null)
+            MergeTransportDescriptors(PushExceptions, pushExceptions);
+
+        if (defaultPublishException != null)
+            DefaultPublishException = defaultPublishException;
+
+        if (publishExceptions != null)
+            MergeTransportDescriptors(PublishExceptions, publishExceptions);
+    }
+
+    /// <summary>
     /// Sends exceptions to the server
     /// </summary>
     protected async Task SendExceptions(HorseMessage consumingMessage, HorseClient client, Exception exception)
@@ -184,6 +206,16 @@ public abstract class ExecutorBase
         });
 
         return client.Router.PublishObject(null, transportable, null, false, null, null, client.ConsumeToken);
+    }
+
+    private static void MergeTransportDescriptors(List<TransportExceptionDescriptor> target,
+        IEnumerable<TransportExceptionDescriptor> source)
+    {
+        foreach (TransportExceptionDescriptor descriptor in source)
+        {
+            target.RemoveAll(x => x.ExceptionType == descriptor.ExceptionType);
+            target.Add(descriptor);
+        }
     }
 
     #endregion

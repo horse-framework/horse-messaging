@@ -112,8 +112,8 @@ public class OptionsBuilder
         _options.QueuePutback = Enums.Parse<PutBackDecision>(Environment.GetEnvironmentVariable("HORSE_QUEUE_PUTBACK") ?? "Regular", true);
         _options.QueueMsgExceedStrategy = Enums.Parse<MessageLimitExceededStrategy>(Environment.GetEnvironmentVariable("HORSE_QUEUE_MSG_EXCEED_STRATEGY") ?? "RejectNewMessage", true, EnumFormat.Name);
 
-        _options.QueueAckTimeout = TimeSpan.FromSeconds(Convert.ToInt32(Environment.GetEnvironmentVariable("HORSE_QUEUE_ACK_TIMEOUT") ?? "30"));
-        _options.QueuePutbackDelay = TimeSpan.FromMilliseconds(Convert.ToInt32(Environment.GetEnvironmentVariable("HORSE_QUEUE_ACK_TIMEOUT") ?? "0"));
+        _options.QueueAckTimeout = TimeSpan.FromSeconds(Convert.ToInt32(Environment.GetEnvironmentVariable("HORSE_QUEUE_ACK_TIMEOUT") ?? "90"));
+        _options.QueuePutbackDelay = TimeSpan.FromMilliseconds(Convert.ToInt32(Environment.GetEnvironmentVariable("HORSE_QUEUE_PUTBACK_DELAY") ?? "500"));
 
         _options.QueueConsumerLimit = Convert.ToInt32(Environment.GetEnvironmentVariable("HORSE_QUEUE_CONSUMER_LIMIT") ?? "0");
         _options.QueueMessageLimit = Convert.ToInt32(Environment.GetEnvironmentVariable("HORSE_QUEUE_MESSAGE_LIMIT") ?? "0");

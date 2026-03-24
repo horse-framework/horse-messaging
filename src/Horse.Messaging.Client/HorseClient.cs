@@ -1604,30 +1604,8 @@ public class HorseClient : IDisposable
 
         foreach (QueueConsumerRegistration registration in Queue.Registrations)
         {
-            QueueTypeDescriptor modelDescriptor = Queue.DescriptorContainer.GetDescriptor(registration.MessageType);
-            QueueTypeDescriptor consumerDescriptor = Queue.DescriptorContainer.GetDescriptor(registration.ConsumerType);
-
-            List<KeyValuePair<string, string>> descriptorHeaders = new List<KeyValuePair<string, string>>();
-
-            if (modelDescriptor != null)
-            {
-                HorseMessage modelMessage = modelDescriptor.CreateMessage();
-                if (modelMessage.HasHeader)
-                    descriptorHeaders.AddRange(modelMessage.Headers);
-            }
-
-            if (consumerDescriptor != null)
-            {
-                HorseMessage consumerMessage = consumerDescriptor.CreateMessage();
-                if (consumerMessage.HasHeader)
-                {
-                    foreach (KeyValuePair<string, string> pair in consumerMessage.Headers)
-                    {
-                        descriptorHeaders.RemoveAll(x => x.Key == pair.Key);
-                        descriptorHeaders.Add(pair);
-                    }
-                }
-            }
+            IEnumerable<KeyValuePair<string, string>> descriptorHeaders =
+                registration.SubscriptionHeaders.Count > 0 ? registration.SubscriptionHeaders : null;
 
             HorseResult joinResult;
             if (registration.IsPartitioned)
@@ -1640,7 +1618,7 @@ public class HorseClient : IDisposable
                     verifyResponse: true,
                     maxPartitions: registration.MaxPartitions,
                     subscribersPerPartition: registration.SubscribersPerPartition,
-                    additionalHeaders: descriptorHeaders.Count > 0 ? descriptorHeaders : null,
+                    additionalHeaders: descriptorHeaders,
                     cancellationToken: ConsumeToken);
             }
             else

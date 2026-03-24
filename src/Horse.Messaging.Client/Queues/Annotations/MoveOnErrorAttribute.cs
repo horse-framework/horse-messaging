@@ -13,10 +13,18 @@ public class MoveOnErrorAttribute : Attribute
     public string QueueName { get; }
 
     /// <summary>
+    /// Topic name for the queue.
+    /// If queue is not created, it will be created with specified topic
+    /// </summary>
+    public string QueueTopic { get; }
+
+
+    /// <summary>
     /// Creates new move to error queue attribute
     /// </summary>
-    public MoveOnErrorAttribute(string errorQueueName)
+    public MoveOnErrorAttribute(string errorQueueName, string topicName = null)
     {
         QueueName = errorQueueName;
+        QueueTopic = topicName;
     }
 }

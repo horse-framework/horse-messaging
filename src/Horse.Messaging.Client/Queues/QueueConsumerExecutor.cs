@@ -32,12 +32,16 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
         _registration = registration as QueueConsumerRegistration;
         _interceptorRunner = new InterceptorRunner(_registration!.InterceptorDescriptors);
         ResolveAttributes(_registration!.ConsumerType);
+        MergeSendExceptions(_registration.DefaultPushException,
+            _registration.PushExceptions,
+            _registration.DefaultPublishException,
+            _registration.PublishExceptions);
         ResolveQueueAttributes();
     }
 
     private void ResolveQueueAttributes()
     {
-        _moveOnError = _consumerType.GetCustomAttribute<MoveOnErrorAttribute>();
+        _moveOnError = _registration?.MoveOnError ?? _consumerType.GetCustomAttribute<MoveOnErrorAttribute>();
 
         if (!SendPositiveResponse)
         {
@@ -85,6 +89,10 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
                 HorseMessage clone = message.Clone(true, true, client.UniqueIdGenerator.Create());
                 clone.SetStringAdditionalContent(System.Text.Json.JsonSerializer.Serialize(ExceptionDescription.Create(e)));
                 clone.Type = MessageType.QueueMessage;
+
+                if (!string.IsNullOrEmpty(_moveOnError.QueueTopic))
+                    clone.SetOrAddHeader(HorseHeaders.QUEUE_TOPIC, _moveOnError.QueueTopic);
+
                 clone.SetTarget(_moveOnError.QueueName);
 
                 var ack = await client.SendAsync(clone, true, cancellationToken);

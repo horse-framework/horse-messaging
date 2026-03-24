@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Horse.Messaging.Client.Annotations;
 using Horse.Messaging.Client.Channels;
 using Horse.Messaging.Client.Direct;
 using Horse.Messaging.Client.Events;
@@ -12,8 +13,10 @@ using Horse.Messaging.Client.Internal;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Protocol;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 [assembly: InternalsVisibleTo("Horse.Messaging.Extensions.Client")]
+
 namespace Horse.Messaging.Client;
 
 /// <inheritdoc />
@@ -38,7 +41,7 @@ public class HorseClientBuilder<TIdentifier> : HorseClientBuilder
     /// </summary>
     public override HorseClient<TIdentifier> Build()
     {
-        return (HorseClient<TIdentifier>) base.Build();
+        return (HorseClient<TIdentifier>)base.Build();
     }
 }
 
@@ -52,16 +55,17 @@ public class HorseClientBuilder
 
     private readonly HorseClient _client;
     private readonly IServiceCollection _services;
+
     /// <summary>
     /// Service collection
     /// </summary>
     internal IServiceCollection Services => _services;
-    
+
     /// <summary>
     /// Service key for keyed services. Null if not using keyed services.
     /// </summary>
     internal string ServiceKey { get; set; }
-    
+
     /// <summary>
     /// Creates Horse Connector Builder without IOC implementation
     /// </summary>
@@ -70,7 +74,7 @@ public class HorseClientBuilder
         _services = new ServiceCollection();
         _client = new HorseClient();
     }
-    
+
     /// <summary>
     /// Creates Horse Connector Builder with IOC implementation
     /// </summary>
@@ -85,7 +89,7 @@ public class HorseClientBuilder
         _services = new ServiceCollection();
         _client = client;
     }
-    
+
     internal HorseClientBuilder(IServiceCollection services, HorseClient client)
     {
         _services = services;
@@ -102,6 +106,7 @@ public class HorseClientBuilder
 
         return _client;
     }
+
     #endregion
 
     #region Client Info
@@ -229,7 +234,7 @@ public class HorseClientBuilder
         _client.SwitchingProtocol = protocol;
         return this;
     }
-    
+
     /// <summary>
     /// 
     /// </summary>
@@ -247,7 +252,7 @@ public class HorseClientBuilder
         };
         return this;
     }
-    
+
     /// <summary>
     /// 
     /// </summary>
@@ -265,7 +270,6 @@ public class HorseClientBuilder
         };
         return this;
     }
-
 
     #endregion
 
@@ -437,7 +441,7 @@ public class HorseClientBuilder
                                             "Build HorseClient with IServiceCollection");
 
         ChannelConsumerRegistrar registrar = new ChannelConsumerRegistrar(_client.Channel);
-        registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient), (h, m) => filter(h, (TModel) m));
+        registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient), (h, m) => filter(h, (TModel)m));
         _services.AddTransient<THandler>();
         return this;
     }
@@ -471,7 +475,7 @@ public class HorseClientBuilder
                                             "Build HorseClient with IServiceCollection");
 
         ChannelConsumerRegistrar registrar = new ChannelConsumerRegistrar(_client.Channel);
-        registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped), (h, m) => filter(h, (TModel) m));
+        registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped), (h, m) => filter(h, (TModel)m));
         _services.AddScoped<THandler>();
         return this;
     }
@@ -505,7 +509,7 @@ public class HorseClientBuilder
             registrar.RegisterHandler(typeof(THandler));
         else
         {
-            registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), (h, m) => filter(h, (TModel) m));
+            registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), (h, m) => filter(h, (TModel)m));
             _services.AddSingleton<THandler>();
         }
 
@@ -568,7 +572,7 @@ public class HorseClientBuilder
     /// <summary>
     /// Adds a queue consumer with transient life time
     /// </summary>
-    public HorseClientBuilder AddTransientConsumer<TConsumer>() where TConsumer : class
+    public HorseClientBuilder AddTransientConsumer<TConsumer>(Action<QueueConfigBuilder> builder = null) where TConsumer : class
     {
         if (_services == null)
             throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
@@ -576,7 +580,8 @@ public class HorseClientBuilder
                                             "Build HorseClient with IServiceCollection");
 
         QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
-        registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient));
+        QueueTypeDescriptor descriptor = BuildConsumerDescriptor(builder, ServiceLifetime.Transient);
+        registrar.RegisterConsumer(typeof(TConsumer), descriptor, () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient));
         _services.AddTransient<TConsumer>();
         return this;
     }
@@ -681,7 +686,7 @@ public class HorseClientBuilder
     /// <summary>
     /// Adds a queue consumer with scoped life time
     /// </summary>
-    public HorseClientBuilder AddScopedConsumer<TConsumer>() where TConsumer : class
+    public HorseClientBuilder AddScopedConsumer<TConsumer>(Action<QueueConfigBuilder> builder = null) where TConsumer : class
     {
         if (_services == null)
             throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
@@ -689,7 +694,8 @@ public class HorseClientBuilder
                                             "Build HorseClient with IServiceCollection");
 
         QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
-        registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped));
+        QueueTypeDescriptor descriptor = BuildConsumerDescriptor(builder, ServiceLifetime.Scoped);
+        registrar.RegisterConsumer(typeof(TConsumer), descriptor, () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped));
         _services.AddScoped<TConsumer>();
         return this;
     }
@@ -789,18 +795,40 @@ public class HorseClientBuilder
     /// <summary>
     /// Adds a queue consumer with singleton life time
     /// </summary>
-    public HorseClientBuilder AddSingletonConsumer<TConsumer>() where TConsumer : class
+    public HorseClientBuilder AddSingletonConsumer<TConsumer>(Action<QueueConfigBuilder> builder = null) where TConsumer : class
     {
         QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+        QueueTypeDescriptor descriptor = BuildConsumerDescriptor(builder, ServiceLifetime.Singleton);
+
         if (_services == null)
-            registrar.RegisterConsumer(typeof(TConsumer));
+            registrar.RegisterConsumer(typeof(TConsumer), descriptor);
         else
         {
-            registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton));
+            registrar.RegisterConsumer(typeof(TConsumer), descriptor, () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton));
             _services.AddSingleton<TConsumer>();
         }
 
         return this;
+    }
+
+    private QueueTypeDescriptor BuildConsumerDescriptor(Action<QueueConfigBuilder> builder, ServiceLifetime lifetime)
+    {
+        if (builder == null)
+            return null;
+
+        QueueConfigBuilder config = new QueueConfigBuilder();
+        builder(config);
+        RegisterBuilderInterceptors(config, lifetime);
+        return config.Build();
+    }
+
+    private void RegisterBuilderInterceptors(QueueConfigBuilder config, ServiceLifetime lifetime)
+    {
+        if (_services == null || config.Interceptors.Count == 0)
+            return;
+
+        foreach (Type interceptorType in config.Interceptors.Select(x => x.InterceptorType).Distinct())
+            _services.TryAdd(new ServiceDescriptor(interceptorType, interceptorType, lifetime));
     }
 
     /// <summary>
@@ -1214,7 +1242,7 @@ public class HorseClientBuilder
         using var shutdownCts = new CancellationTokenSource(maxWait);
         _ = client.Queue.UnsubscribeFromAllQueues(shutdownCts.Token);
         _ = client.Channel.UnsubscribeFromAllChannels(shutdownCts.Token);
-        
+
         int min = Convert.ToInt32(minWait.TotalMilliseconds);
         int max = Convert.ToInt32(maxWait.TotalMilliseconds);
 

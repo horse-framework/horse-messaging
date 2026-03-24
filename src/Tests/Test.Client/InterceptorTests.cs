@@ -12,6 +12,9 @@ using Horse.Messaging.Client.Interceptors;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Queues.Delivery;
+using Microsoft.Extensions.DependencyInjection;
 using Test.Common;
 using Xunit;
 
@@ -267,6 +270,88 @@ internal class ThrowingInterceptorQueueConsumer : IQueueConsumer<SimpleQueueMode
         CancellationToken cancellationToken)
     {
         Interlocked.Increment(ref ConsumeCount);
+        return Task.CompletedTask;
+    }
+}
+
+internal static class QueueConfigBuilderInterceptorState
+{
+    public static readonly ConcurrentQueue<string> Calls = new();
+
+    public static void Reset()
+    {
+        while (Calls.TryDequeue(out _))
+        {
+        }
+    }
+}
+
+internal class QueueConfigBuilderBeforeInterceptor : IHorseInterceptor
+{
+    public Task Intercept(HorseMessage message, HorseClient client, CancellationToken cancellationToken)
+    {
+        QueueConfigBuilderInterceptorState.Calls.Enqueue("before");
+        return Task.CompletedTask;
+    }
+}
+
+internal class QueueConfigBuilderAfterInterceptor : IHorseInterceptor
+{
+    public Task Intercept(HorseMessage message, HorseClient client, CancellationToken cancellationToken)
+    {
+        QueueConfigBuilderInterceptorState.Calls.Enqueue("after");
+        return Task.CompletedTask;
+    }
+}
+
+internal class QueueConfigBuilderDependency
+{
+    public string Value { get; } = "dependency";
+}
+
+internal class QueueConfigBuilderDependencyInterceptor : IHorseInterceptor
+{
+    private readonly QueueConfigBuilderDependency _dependency;
+
+    public QueueConfigBuilderDependencyInterceptor(QueueConfigBuilderDependency dependency)
+    {
+        _dependency = dependency;
+    }
+
+    public Task Intercept(HorseMessage message, HorseClient client, CancellationToken cancellationToken)
+    {
+        QueueConfigBuilderInterceptorState.Calls.Enqueue(_dependency.Value);
+        return Task.CompletedTask;
+    }
+}
+
+internal class QueueConfigBuilderQueueModel
+{
+    public string Value { get; set; }
+}
+
+internal class QueueConfigBuilderQueueConsumer : IQueueConsumer<QueueConfigBuilderQueueModel>
+{
+    public static int ConsumeCount;
+
+    public Task Consume(HorseMessage message, QueueConfigBuilderQueueModel model, HorseClient client,
+        CancellationToken cancellationToken)
+    {
+        Interlocked.Increment(ref ConsumeCount);
+        return Task.CompletedTask;
+    }
+}
+
+internal class QueueConfigBuilderOptionModel
+{
+    public string Value { get; set; }
+}
+
+internal class QueueConfigBuilderOptionConsumer : IQueueConsumer<QueueConfigBuilderOptionModel>
+{
+    public Task Consume(HorseMessage message, QueueConfigBuilderOptionModel model, HorseClient client,
+        CancellationToken cancellationToken)
+    {
         return Task.CompletedTask;
     }
 }
@@ -787,6 +872,149 @@ public class InterceptorTests
 
             Assert.Equal(messageCount * 2, beforeCalls.Count);
             Assert.Equal(messageCount * 2, afterCalls.Count);
+        }
+        finally
+        {
+            server.Stop();
+        }
+    }
+
+    [Fact]
+    public async Task QueueConsumer_ConfigBuilder_AppliesAutoCreateOptions()
+    {
+        const string queueName = "builder-config-q";
+
+        var (server, port) = await StartServer();
+
+        try
+        {
+            HorseClient consumer = new HorseClientBuilder()
+                .AddHost("horse://localhost:" + port)
+                .AddScopedConsumer<QueueConfigBuilderOptionConsumer>(cfg =>
+                {
+                    cfg.QueueName = queueName;
+                    cfg.QueueType = MessagingQueueType.RoundRobin;
+                    cfg.Topic = "builder-topic";
+                    cfg.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                    cfg.DelayBetweenMessages = 25;
+                    cfg.AcknowledgeTimeout = 9;
+                    cfg.UniqueIdCheck = true;
+                    cfg.MessageTimeout = new MessageTimeoutStrategyInfo(17, "delete");
+                })
+                .AutoSubscribe(true)
+                .Build();
+
+            await consumer.ConnectAsync();
+            await WaitUntil(() => server.Rider.Queue.Find(queueName) != null);
+
+            HorseQueue queue = server.Rider.Queue.Find(queueName);
+
+            Assert.NotNull(queue);
+            Assert.Equal(QueueType.RoundRobin, queue.Type);
+            Assert.Equal("builder-topic", queue.Topic);
+            Assert.Equal(QueueAckDecision.WaitForAcknowledge, queue.Options.Acknowledge);
+            Assert.Equal(25, queue.Options.DelayBetweenMessages);
+            Assert.Equal(TimeSpan.FromSeconds(9), queue.Options.AcknowledgeTimeout);
+            Assert.True(queue.Options.MessageIdUniqueCheck);
+            Assert.NotNull(queue.Options.MessageTimeout);
+            Assert.Equal(17, queue.Options.MessageTimeout.MessageDuration);
+            Assert.Equal(MessageTimeoutPolicy.Delete, queue.Options.MessageTimeout.Policy);
+        }
+        finally
+        {
+            server.Stop();
+        }
+    }
+
+    [Fact]
+    public async Task QueueConsumer_ConfigBuilder_InterceptorsRunWithoutExplicitRegistration()
+    {
+        const string queueName = "builder-interceptor-q";
+
+        QueueConfigBuilderInterceptorState.Reset();
+        QueueConfigBuilderQueueConsumer.ConsumeCount = 0;
+
+        var (server, port) = await StartServer();
+
+        try
+        {
+            HorseClient consumer = new HorseClientBuilder()
+                .AddHost("horse://localhost:" + port)
+                .AddSingletonConsumer<QueueConfigBuilderQueueConsumer>(cfg =>
+                {
+                    cfg.QueueName = queueName;
+                    cfg.UseInterceptor<QueueConfigBuilderBeforeInterceptor>(order: 1);
+                    cfg.UseInterceptor<QueueConfigBuilderAfterInterceptor>(order: 2, runBefore: false);
+                })
+                .AutoSubscribe(true)
+                .Build();
+
+            await consumer.ConnectAsync();
+            await WaitUntil(() => server.Rider.Queue.Find(queueName) != null);
+
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync("horse://localhost:" + port);
+
+            await producer.Queue.Push(queueName,
+                new QueueConfigBuilderQueueModel { Value = "hello" },
+                true,
+                CancellationToken.None);
+
+            await WaitUntil(() =>
+                QueueConfigBuilderQueueConsumer.ConsumeCount > 0 &&
+                QueueConfigBuilderInterceptorState.Calls.Count >= 2);
+
+            Assert.Equal(1, QueueConfigBuilderQueueConsumer.ConsumeCount);
+            Assert.Equal(new[] { "before", "after" }, QueueConfigBuilderInterceptorState.Calls.ToArray());
+        }
+        finally
+        {
+            server.Stop();
+        }
+    }
+
+    [Fact]
+    public async Task QueueConsumer_ConfigBuilder_ResolvesInterceptorDependenciesWithoutExplicitRegistration()
+    {
+        const string queueName = "builder-di-interceptor-q";
+
+        QueueConfigBuilderInterceptorState.Reset();
+        QueueConfigBuilderQueueConsumer.ConsumeCount = 0;
+
+        var services = new ServiceCollection();
+        services.AddSingleton<QueueConfigBuilderDependency>();
+
+        var (server, port) = await StartServer();
+
+        try
+        {
+            HorseClient consumer = new HorseClientBuilder(services)
+                .AddHost("horse://localhost:" + port)
+                .AddScopedConsumer<QueueConfigBuilderQueueConsumer>(cfg =>
+                {
+                    cfg.QueueName = queueName;
+                    cfg.UseInterceptor<QueueConfigBuilderDependencyInterceptor>();
+                })
+                .AutoSubscribe(true)
+                .Build();
+
+            await consumer.ConnectAsync();
+            await WaitUntil(() => server.Rider.Queue.Find(queueName) != null);
+
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync("horse://localhost:" + port);
+
+            await producer.Queue.Push(queueName,
+                new QueueConfigBuilderQueueModel { Value = "hello" },
+                true,
+                CancellationToken.None);
+
+            await WaitUntil(() =>
+                QueueConfigBuilderQueueConsumer.ConsumeCount > 0 &&
+                QueueConfigBuilderInterceptorState.Calls.Count > 0);
+
+            Assert.Equal(1, QueueConfigBuilderQueueConsumer.ConsumeCount);
+            Assert.Equal(new[] { "dependency" }, QueueConfigBuilderInterceptorState.Calls.ToArray());
         }
         finally
         {

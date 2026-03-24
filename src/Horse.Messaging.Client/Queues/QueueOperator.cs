@@ -1192,16 +1192,38 @@ public class QueueOperator : IDisposable
             QueueName = queue,
             PartitionLabel = current.PartitionLabel,
             MaxPartitions = current.MaxPartitions,
-            SubscribersPerPartition = current.SubscribersPerPartition
+            SubscribersPerPartition = current.SubscribersPerPartition,
+            MoveOnError = current.MoveOnError,
+            DefaultPushException = current.DefaultPushException,
+            DefaultPublishException = current.DefaultPublishException
         };
 
         foreach (InterceptorTypeDescriptor descriptor in current.InterceptorDescriptors)
             registration.InterceptorDescriptors.Add(descriptor);
 
+        registration.PushExceptions.AddRange(current.PushExceptions);
+        registration.PublishExceptions.AddRange(current.PublishExceptions);
+
+        registration.SubscriptionHeaders.AddRange(MergeSubscriptionHeaders(current.SubscriptionHeaders, headers));
+
         list.Add(registration);
         Registrations = list;
 
-        return Subscribe(queue, verifyResponse, headers, cancellationToken);
+        if (registration.IsPartitioned)
+        {
+            return SubscribePartitioned(queue,
+                string.IsNullOrEmpty(registration.PartitionLabel) ? null : registration.PartitionLabel,
+                verifyResponse,
+                registration.MaxPartitions,
+                registration.SubscribersPerPartition,
+                registration.SubscriptionHeaders.Count > 0 ? registration.SubscriptionHeaders : null,
+                cancellationToken);
+        }
+
+        return Subscribe(queue,
+            verifyResponse,
+            registration.SubscriptionHeaders.Count > 0 ? registration.SubscriptionHeaders : null,
+            cancellationToken);
     }
 
     /// <summary>
@@ -1231,6 +1253,27 @@ public class QueueOperator : IDisposable
     public Task<HorseResult> UnsubscribeFromAllQueues(CancellationToken cancellationToken = default)
     {
         return Unsubscribe("*", true, cancellationToken);
+    }
+
+    private static List<KeyValuePair<string, string>> MergeSubscriptionHeaders(
+        IEnumerable<KeyValuePair<string, string>> existingHeaders,
+        IEnumerable<KeyValuePair<string, string>> overrideHeaders)
+    {
+        List<KeyValuePair<string, string>> merged = new();
+
+        if (existingHeaders != null)
+            merged.AddRange(existingHeaders);
+
+        if (overrideHeaders != null)
+        {
+            foreach (KeyValuePair<string, string> pair in overrideHeaders)
+            {
+                merged.RemoveAll(x => x.Key == pair.Key);
+                merged.Add(pair);
+            }
+        }
+
+        return merged;
     }
 
     #endregion

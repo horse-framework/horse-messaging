@@ -14,6 +14,11 @@ public class InterceptorTypeDescriptor
     public Type InterceptorType { get; init; }
 
     /// <summary>
+    /// Execution order
+    /// </summary>
+    public int Order { get; init; }
+
+    /// <summary>
     /// Interceptor method
     /// </summary>
     public bool RunBefore { get; init; }
@@ -36,10 +41,35 @@ public class InterceptorTypeDescriptor
         InterceptorTypeDescriptor descriptor = new()
         {
             InterceptorType = attr.InterceptorType,
+            Order = attr.Order,
             RunBefore = attr.RunBefore,
         };
         if (createInstance)
-            descriptor.Instance = (IHorseInterceptor) Activator.CreateInstance(attr.InterceptorType);
+            descriptor.Instance = TryCreateInstance(attr.InterceptorType);
         return descriptor;
+    }
+
+    internal static InterceptorTypeDescriptor Clone(InterceptorTypeDescriptor descriptor, bool createInstanceIfMissing)
+    {
+        InterceptorTypeDescriptor copy = new()
+        {
+            InterceptorType = descriptor.InterceptorType,
+            Order = descriptor.Order,
+            RunBefore = descriptor.RunBefore,
+            Instance = descriptor.Instance
+        };
+
+        if (copy.Instance == null && createInstanceIfMissing)
+            copy.Instance = TryCreateInstance(copy.InterceptorType);
+
+        return copy;
+    }
+
+    private static IHorseInterceptor TryCreateInstance(Type interceptorType)
+    {
+        if (interceptorType.GetConstructor(Type.EmptyTypes) == null)
+            return null;
+
+        return (IHorseInterceptor) Activator.CreateInstance(interceptorType);
     }
 }

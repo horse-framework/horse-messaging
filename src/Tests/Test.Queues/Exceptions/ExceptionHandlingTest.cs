@@ -11,9 +11,11 @@ using Horse.Messaging.Client.Annotations;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Client.Queues.Exceptions;
+using Horse.Messaging.Client.Routers.Annotations;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
+using Horse.Messaging.Server.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Test.Queues.Core;
 using Xunit;
@@ -62,6 +64,19 @@ public class SpecificExceptionLogModel : ITransportableException
     public void Initialize(ExceptionContext context)
     {
         Detail = $"Specific:{context.Exception.GetType().Name}:{context.Exception.Message}";
+    }
+}
+
+[RouterName("builder-exception-router")]
+public class RouterExceptionLogModel : ITransportableException
+{
+    public string ExceptionType { get; set; }
+    public string Message { get; set; }
+
+    public void Initialize(ExceptionContext context)
+    {
+        ExceptionType = context.Exception.GetType().FullName;
+        Message = context.Exception.Message;
     }
 }
 
@@ -298,7 +313,8 @@ public class ExceptionHandlingTest
 {
     #region Helpers
 
-    private static async Task<HorseClient> BuildConsumerWorker<TConsumer>(int port, ExceptionTracker tracker)
+    private static async Task<HorseClient> BuildConsumerWorker<TConsumer>(int port, ExceptionTracker tracker,
+        Action<QueueConfigBuilder> queueConfig = null)
         where TConsumer : class
     {
         ExceptionTrackerAccessor accessor = new(tracker);
@@ -309,7 +325,10 @@ public class ExceptionHandlingTest
         builder.AddHost($"horse://localhost:{port}");
         builder.SetClientType("exception-test-worker");
         builder.AutoSubscribe(true);
-        builder.AddScopedConsumer<TConsumer>();
+        if (queueConfig == null)
+            builder.AddScopedConsumer<TConsumer>();
+        else
+            builder.AddScopedConsumer<TConsumer>(queueConfig);
 
         HorseClient client = builder.Build();
         await client.ConnectAsync();
@@ -476,6 +495,47 @@ public class ExceptionHandlingTest
         sourceWatcher.Disconnect();
     }
 
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task MoveOnError_ConfigBuilder_OverridesAttributeAndAppliesTopic(string mode)
+    {
+        await using var ctx = await CreateContext(mode);
+
+        ExceptionTracker tracker = new() { ShouldThrow = true };
+        HorseClient worker = await BuildConsumerWorker<MoveOnErrorConsumer>(ctx.Port, tracker, cfg =>
+            cfg.MoveOnError("builder-error-q", "builder-error-topic"));
+        await Task.Delay(500);
+
+        HorseClient producer = await ConnectRaw(ctx.Port);
+        IHorseQueueBus bus = new HorseQueueBus(producer);
+        await bus.Push("source-q", new SourceModel { Data = "builder-move-on-error" }, false, CancellationToken.None);
+
+        await WaitUntil(() => tracker.ThrowCount >= 1);
+        await WaitUntil(() => ctx.Rider.Queue.Find("builder-error-q") != null, 5_000);
+
+        HorseQueue queue = ctx.Rider.Queue.Find("builder-error-q");
+
+        Assert.True(tracker.ThrowCount >= 1);
+        Assert.NotNull(queue);
+        Assert.Equal("builder-error-topic", queue.Topic);
+        Assert.Null(ctx.Rider.Queue.Find("error-q"));
+
+        ConcurrentBag<HorseMessage> errorMessages = new();
+        HorseClient errorConsumer = await ConnectRaw(ctx.Port);
+        errorConsumer.MessageReceived += (_, msg) => errorMessages.Add(msg);
+        await errorConsumer.Queue.Subscribe("builder-error-q", true, CancellationToken.None);
+
+        await WaitUntil(() => errorMessages.Count >= 1, 5_000);
+
+        HorseMessage errMsg = errorMessages.First();
+        Assert.Equal("builder-error-q", errMsg.Target);
+
+        producer.Disconnect();
+        worker.Disconnect();
+        errorConsumer.Disconnect();
+    }
+
     #endregion
 
     // ═══════════════════════════════════════════════════════════════════
@@ -525,6 +585,52 @@ public class ExceptionHandlingTest
         Assert.False(string.IsNullOrEmpty(content));
 
         // Content should be a serialized ExceptionLogModel
+        ExceptionLogModel logModel = JsonSerializer.Deserialize<ExceptionLogModel>(content);
+        Assert.NotNull(logModel);
+        Assert.Equal(typeof(InvalidOperationException).FullName, logModel.ExceptionType);
+        Assert.Equal("Test consumer error", logModel.Message);
+
+        producer.Disconnect();
+        worker.Disconnect();
+        logConsumer.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task PushExceptions_ConfigBuilder_Default_ExceptionLogPushedToQueue(string mode)
+    {
+        await using var ctx = await CreateContext(mode);
+
+        await ctx.Rider.Queue.Create("exception-log-q", o =>
+        {
+            o.Type = QueueType.Push;
+            o.CommitWhen = CommitWhen.AfterReceived;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        ExceptionTracker tracker = new() { ShouldThrow = true };
+        HorseClient worker = await BuildConsumerWorker<AutoNackOnlyConsumer>(ctx.Port, tracker,
+            cfg => cfg.PushExceptions<ExceptionLogModel>());
+        await Task.Delay(500);
+
+        ConcurrentBag<HorseMessage> logMessages = new();
+        HorseClient logConsumer = await ConnectRaw(ctx.Port);
+        logConsumer.MessageReceived += (_, msg) => { logMessages.Add(msg); };
+        await logConsumer.Queue.Subscribe("exception-log-q", true, CancellationToken.None);
+        await Task.Delay(200);
+
+        HorseClient producer = await ConnectRaw(ctx.Port);
+        IHorseQueueBus bus = new HorseQueueBus(producer);
+        await bus.Push("source-q", new SourceModel { Data = "push-exc-builder-test" }, false, CancellationToken.None);
+
+        await WaitUntil(() => tracker.ThrowCount >= 1);
+        await WaitUntil(() => logMessages.Count >= 1, 5_000);
+
+        Assert.True(tracker.ThrowCount >= 1);
+        Assert.True(logMessages.Count >= 1, $"Expected ≥1 exception log, got {logMessages.Count}");
+
+        string content = logMessages.First().GetStringContent();
         ExceptionLogModel logModel = JsonSerializer.Deserialize<ExceptionLogModel>(content);
         Assert.NotNull(logModel);
         Assert.Equal(typeof(InvalidOperationException).FullName, logModel.ExceptionType);
@@ -676,6 +782,62 @@ public class ExceptionHandlingTest
         worker.Disconnect();
         specificConsumer.Disconnect();
         defaultConsumer.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task PublishExceptions_ConfigBuilder_Default_ExceptionPublishedToRouter(string mode)
+    {
+        await using var ctx = await CreateContext(mode);
+
+        await ctx.Rider.Queue.Create("published-exception-q", o =>
+        {
+            o.Type = QueueType.Push;
+            o.CommitWhen = CommitWhen.AfterReceived;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        Router router = new Router(ctx.Rider, "builder-exception-router", RouteMethod.Distribute);
+        router.AddBinding(new QueueBinding
+        {
+            Name = "published-exception-binding",
+            Target = "published-exception-q",
+            Priority = 0,
+            Interaction = BindingInteraction.None
+        });
+        ctx.Rider.Router.Add(router);
+
+        ExceptionTracker tracker = new() { ShouldThrow = true };
+        HorseClient worker = await BuildConsumerWorker<AutoNackOnlyConsumer>(ctx.Port, tracker,
+            cfg => cfg.PublishExceptions<RouterExceptionLogModel>());
+        await Task.Delay(500);
+
+        ConcurrentBag<HorseMessage> publishedMessages = new();
+        HorseClient publishedConsumer = await ConnectRaw(ctx.Port);
+        publishedConsumer.MessageReceived += (_, msg) => { publishedMessages.Add(msg); };
+        await publishedConsumer.Queue.Subscribe("published-exception-q", true, CancellationToken.None);
+        await Task.Delay(200);
+
+        HorseClient producer = await ConnectRaw(ctx.Port);
+        IHorseQueueBus bus = new HorseQueueBus(producer);
+        await bus.Push("source-q", new SourceModel { Data = "publish-exc-builder-test" }, false, CancellationToken.None);
+
+        await WaitUntil(() => tracker.ThrowCount >= 1);
+        await WaitUntil(() => publishedMessages.Count >= 1, 5_000);
+
+        Assert.True(tracker.ThrowCount >= 1);
+        Assert.True(publishedMessages.Count >= 1, $"Expected ≥1 published exception, got {publishedMessages.Count}");
+
+        string content = publishedMessages.First().GetStringContent();
+        RouterExceptionLogModel logModel = JsonSerializer.Deserialize<RouterExceptionLogModel>(content);
+        Assert.NotNull(logModel);
+        Assert.Equal(typeof(InvalidOperationException).FullName, logModel.ExceptionType);
+        Assert.Equal("Test consumer error", logModel.Message);
+
+        producer.Disconnect();
+        worker.Disconnect();
+        publishedConsumer.Disconnect();
     }
 
     #endregion

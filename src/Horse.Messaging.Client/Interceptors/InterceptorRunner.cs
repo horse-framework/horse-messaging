@@ -43,9 +43,13 @@ internal sealed class InterceptorRunner(List<InterceptorTypeDescriptor> descript
     {
         if (descriptors.Count == 0) return;
         IEnumerable<InterceptorTypeDescriptor> decriptors = descriptors.Where(m => m.RunBefore == runBefore);
-        IEnumerable<IHorseInterceptor> interceptors = handlerFactory is null
-            ? decriptors.Select(m => m.Instance)
-            : decriptors.Select(m => handlerFactory.CreateInterceptor(m.InterceptorType));
+        IEnumerable<IHorseInterceptor> interceptors = decriptors.Select(m =>
+        {
+            if (handlerFactory == null)
+                return m.Instance;
+
+            return handlerFactory.CreateInterceptor(m.InterceptorType) ?? m.Instance;
+        });
         foreach (IHorseInterceptor interceptor in interceptors.Where(m => m is not null))
             try
             {
