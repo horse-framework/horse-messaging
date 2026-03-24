@@ -32,6 +32,7 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
         _registration = registration as QueueConsumerRegistration;
         _interceptorRunner = new InterceptorRunner(_registration!.InterceptorDescriptors);
         ResolveAttributes(_registration!.ConsumerType);
+        MergeRetry(_registration.Retry);
         MergeSendExceptions(_registration.DefaultPushException,
             _registration.PushExceptions,
             _registration.DefaultPublishException,
@@ -43,13 +44,20 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
     {
         _moveOnError = _registration?.MoveOnError ?? _consumerType.GetCustomAttribute<MoveOnErrorAttribute>();
 
-        if (!SendPositiveResponse)
+        if (_registration?.AutoAck == true)
+            SendPositiveResponse = true;
+        else if (!SendPositiveResponse)
         {
             AutoAckAttribute ackAttribute = _consumerType.GetCustomAttribute<AutoAckAttribute>();
             SendPositiveResponse = ackAttribute != null;
         }
 
-        if (!SendNegativeResponse)
+        if (_registration?.AutoNack == true)
+        {
+            SendNegativeResponse = true;
+            NegativeReason = _registration.AutoNackReason;
+        }
+        else if (!SendNegativeResponse)
         {
             AutoNackAttribute nackAttribute = _consumerType.GetCustomAttribute<AutoNackAttribute>();
             SendNegativeResponse = nackAttribute != null;

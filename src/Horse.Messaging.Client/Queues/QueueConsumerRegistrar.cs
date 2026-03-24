@@ -288,6 +288,10 @@ public class QueueConsumerRegistrar
 
         registration.SubscriptionHeaders.AddRange(BuildSubscriptionHeaders(modelDescriptor, consumerDescriptor));
         registration.MoveOnError = BuildMoveOnError(modelDescriptor, consumerDescriptor);
+        registration.AutoAck = modelDescriptor.AutoAck;
+        registration.AutoNack = modelDescriptor.AutoNack;
+        registration.AutoNackReason = modelDescriptor.AutoNackReason;
+        registration.Retry = CloneRetry(modelDescriptor.Retry);
         registration.DefaultPushException = modelDescriptor.DefaultPushException;
         registration.PushExceptions.AddRange(modelDescriptor.PushExceptions);
         registration.DefaultPublishException = modelDescriptor.DefaultPublishException;
@@ -369,5 +373,16 @@ public class QueueConsumerRegistrar
             return new MoveOnErrorAttribute(consumerDescriptor.MoveOnErrorQueueName, consumerDescriptor.MoveOnErrorQueueTopic);
 
         return null;
+    }
+
+    private static RetryAttribute CloneRetry(RetryAttribute retry)
+    {
+        if (retry == null)
+            return null;
+
+        return new RetryAttribute(retry.Count, retry.DelayBetweenRetries)
+        {
+            IgnoreExceptions = retry.IgnoreExceptions == null ? null : (Type[]) retry.IgnoreExceptions.Clone()
+        };
     }
 }

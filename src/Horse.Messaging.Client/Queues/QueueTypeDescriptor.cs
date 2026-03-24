@@ -107,6 +107,26 @@ public class QueueTypeDescriptor : ITypeDescriptor
     internal string MoveOnErrorQueueName { get; set; }
 
     /// <summary>
+    /// When true, consumer sends ACK automatically on success.
+    /// </summary>
+    internal bool AutoAck { get; set; }
+
+    /// <summary>
+    /// When true, consumer sends NACK automatically on failure.
+    /// </summary>
+    internal bool AutoNack { get; set; }
+
+    /// <summary>
+    /// NACK reason used when <see cref="AutoNack"/> is enabled.
+    /// </summary>
+    internal NegativeReason AutoNackReason { get; set; }
+
+    /// <summary>
+    /// Programmatic retry configuration for the consumer.
+    /// </summary>
+    internal RetryAttribute Retry { get; set; }
+
+    /// <summary>
     /// Optional topic used when the error queue is auto-created.
     /// </summary>
     internal string MoveOnErrorQueueTopic { get; set; }

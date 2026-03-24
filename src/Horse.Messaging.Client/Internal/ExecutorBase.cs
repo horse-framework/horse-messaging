@@ -95,7 +95,16 @@ public abstract class ExecutorBase
     {
         RetryAttribute retryAttr = type.GetCustomAttribute<RetryAttribute>();
         if (retryAttr != null)
-            Retry = retryAttr;
+            Retry = CloneRetry(retryAttr);
+    }
+
+    /// <summary>
+    /// Applies programmatic retry configuration after attributes are resolved.
+    /// </summary>
+    protected void MergeRetry(RetryAttribute retry)
+    {
+        if (retry != null)
+            Retry = CloneRetry(retry);
     }
 
     #region SEND EXCEPTIONS
@@ -216,6 +225,17 @@ public abstract class ExecutorBase
             target.RemoveAll(x => x.ExceptionType == descriptor.ExceptionType);
             target.Add(descriptor);
         }
+    }
+
+    private static RetryAttribute CloneRetry(RetryAttribute retry)
+    {
+        if (retry == null)
+            return null;
+
+        return new RetryAttribute(retry.Count, retry.DelayBetweenRetries)
+        {
+            IgnoreExceptions = retry.IgnoreExceptions == null ? null : (Type[]) retry.IgnoreExceptions.Clone()
+        };
     }
 
     #endregion

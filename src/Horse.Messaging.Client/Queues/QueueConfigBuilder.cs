@@ -16,6 +16,10 @@ public class QueueConfigBuilder
     private string _moveOnErrorQueueTopic;
     private TransportExceptionDescriptor _defaultPushException;
     private TransportExceptionDescriptor _defaultPublishException;
+    private bool _autoAck;
+    private bool _autoNack;
+    private NegativeReason _autoNackReason;
+    private RetryAttribute _retry;
 
     /// <summary>
     /// If true, message is sent as high priority.
@@ -68,7 +72,7 @@ public class QueueConfigBuilder
     /// <summary>
     /// Delay between messages option (in milliseconds)
     /// </summary>
-    public int? DelayBetweenMessages { get; set; }
+    public TimeSpan? DelayBetweenMessages { get; set; }
 
     /// <summary>
     /// Put back decision
@@ -78,7 +82,7 @@ public class QueueConfigBuilder
     /// <summary>
     /// Put back delay in milliseconds
     /// </summary>
-    public int? PutBackDelay { get; set; }
+    public TimeSpan? PutBackDelay { get; set; }
 
     /// <summary>
     /// Message timeout in seconds
@@ -88,7 +92,7 @@ public class QueueConfigBuilder
     /// <summary>
     /// Acknowledge timeout in seconds
     /// </summary>
-    public int? AcknowledgeTimeout { get; set; }
+    public TimeSpan? AcknowledgeTimeout { get; set; }
 
     /// <summary>
     /// If true, server checks all message id values and reject new messages with same id.
@@ -107,6 +111,49 @@ public class QueueConfigBuilder
     {
         InterceptorAttribute attr = new InterceptorAttribute(typeof(T), order, runBefore);
         Interceptors.Add(InterceptorTypeDescriptor.Create(attr, true));
+    }
+
+    /// <summary>
+    /// Sends ACK automatically when consume completes successfully.
+    /// </summary>
+    public void AutoAck()
+    {
+        _autoAck = true;
+    }
+
+    /// <summary>
+    /// Sends NACK automatically when consume throws an exception.
+    /// </summary>
+    public void AutoNack(NegativeReason reason = NegativeReason.None)
+    {
+        _autoNack = true;
+        _autoNackReason = reason;
+    }
+
+    /// <summary>
+    /// Retries consumer execution before propagating the exception.
+    /// </summary>
+    public void UseRetry(int count = 5, int delayBetweenRetries = 50, params Type[] ignoreExceptions)
+    {
+        if (count < 0)
+            throw new ArgumentOutOfRangeException(nameof(count), "Retry count cannot be negative.");
+
+        if (delayBetweenRetries < 0)
+            throw new ArgumentOutOfRangeException(nameof(delayBetweenRetries), "Retry delay cannot be negative.");
+
+        if (ignoreExceptions != null)
+        {
+            foreach (Type exceptionType in ignoreExceptions)
+            {
+                if (exceptionType == null || !typeof(Exception).IsAssignableFrom(exceptionType))
+                    throw new ArgumentException("Ignore exception types must derive from System.Exception.", nameof(ignoreExceptions));
+            }
+        }
+
+        _retry = new RetryAttribute(count, delayBetweenRetries)
+        {
+            IgnoreExceptions = ignoreExceptions
+        };
     }
 
     /// <summary>
@@ -156,12 +203,16 @@ public class QueueConfigBuilder
             Acknowledge = Acknowledge,
             Topic = Topic,
             QueueName = QueueName,
-            DelayBetweenMessages = DelayBetweenMessages,
+            DelayBetweenMessages = Convert.ToInt32(DelayBetweenMessages?.TotalMilliseconds ?? 0),
             PutBackDecision = PutBackDecision,
-            PutBackDelay = PutBackDelay,
+            PutBackDelay = Convert.ToInt32(PutBackDelay?.TotalMilliseconds ?? 0),
             MessageTimeout = MessageTimeout,
-            AcknowledgeTimeout = AcknowledgeTimeout,
+            AcknowledgeTimeout = Convert.ToInt32(AcknowledgeTimeout?.TotalSeconds ?? 0),
             UniqueIdCheck = UniqueIdCheck,
+            AutoAck = _autoAck,
+            AutoNack = _autoNack,
+            AutoNackReason = _autoNackReason,
+            Retry = CloneRetry(_retry),
             MoveOnErrorQueueName = _moveOnErrorQueueName,
             MoveOnErrorQueueTopic = _moveOnErrorQueueTopic,
             DefaultPushException = _defaultPushException,
@@ -190,5 +241,16 @@ public class QueueConfigBuilder
 
         descriptors.RemoveAll(x => x.ExceptionType == exceptionType);
         descriptors.Add(new TransportExceptionDescriptor(modelType, exceptionType));
+    }
+
+    private static RetryAttribute CloneRetry(RetryAttribute retry)
+    {
+        if (retry == null)
+            return null;
+
+        return new RetryAttribute(retry.Count, retry.DelayBetweenRetries)
+        {
+            IgnoreExceptions = retry.IgnoreExceptions == null ? null : (Type[])retry.IgnoreExceptions.Clone()
+        };
     }
 }

@@ -1194,6 +1194,17 @@ public class QueueOperator : IDisposable
             MaxPartitions = current.MaxPartitions,
             SubscribersPerPartition = current.SubscribersPerPartition,
             MoveOnError = current.MoveOnError,
+            AutoAck = current.AutoAck,
+            AutoNack = current.AutoNack,
+            AutoNackReason = current.AutoNackReason,
+            Retry = current.Retry == null
+                ? null
+                : new RetryAttribute(current.Retry.Count, current.Retry.DelayBetweenRetries)
+                {
+                    IgnoreExceptions = current.Retry.IgnoreExceptions == null
+                        ? null
+                        : (Type[]) current.Retry.IgnoreExceptions.Clone()
+                },
             DefaultPushException = current.DefaultPushException,
             DefaultPublishException = current.DefaultPublishException
         };

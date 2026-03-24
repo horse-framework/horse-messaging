@@ -254,6 +254,26 @@ public class AutoNackOnlyConsumer(ExceptionTrackerAccessor accessor) : IQueueCon
 }
 
 /// <summary>
+/// Consumer without queue-handling attributes. Builder config drives ACK/NACK behavior.
+/// </summary>
+public class BuilderConfiguredConsumer(ExceptionTrackerAccessor accessor) : IQueueConsumer<SourceModel>
+{
+    public Task Consume(HorseMessage message, SourceModel model, HorseClient client, CancellationToken cancellationToken = default)
+    {
+        Interlocked.Increment(ref accessor.Tracker.ConsumeAttemptCount);
+
+        if (accessor.Tracker.ShouldThrow)
+        {
+            Interlocked.Increment(ref accessor.Tracker.ThrowCount);
+            throw (Exception)Activator.CreateInstance(accessor.Tracker.ExceptionTypeToThrow, accessor.Tracker.ExceptionMessage);
+        }
+
+        accessor.Tracker.ConsumedMessages.Add(model.Data);
+        return Task.CompletedTask;
+    }
+}
+
+/// <summary>
 /// Consumer with [Retry] + [PushExceptions].
 /// PushExceptions should only fire after all retries are exhausted.
 /// </summary>
@@ -847,6 +867,78 @@ public class ExceptionHandlingTest
     // ═══════════════════════════════════════════════════════════════════
 
     #region AutoNack Only
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task AutoAck_ConfigBuilder_SuccessfulConsume_NotRedelivered(string mode)
+    {
+        await using var ctx = await CreateContext(mode);
+
+        await ctx.Rider.Queue.Create("source-q", o =>
+        {
+            o.Type = QueueType.RoundRobin;
+            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+            o.CommitWhen = CommitWhen.AfterReceived;
+            o.AcknowledgeTimeout = TimeSpan.FromSeconds(1);
+            o.PutBack = PutBackDecision.Regular;
+        });
+
+        ExceptionTracker tracker = new() { ShouldThrow = false };
+        HorseClient worker = await BuildConsumerWorker<BuilderConfiguredConsumer>(ctx.Port, tracker,
+            cfg => cfg.AutoAck());
+        await Task.Delay(500);
+
+        HorseClient producer = await ConnectRaw(ctx.Port);
+        IHorseQueueBus bus = new HorseQueueBus(producer);
+        await bus.Push("source-q", new SourceModel { Data = "builder-auto-ack" }, false, CancellationToken.None);
+
+        await WaitUntil(() => tracker.ConsumedMessages.Count >= 1);
+        await Task.Delay(2500);
+
+        Assert.Equal(1, tracker.ConsumeAttemptCount);
+        Assert.Equal(0, tracker.ThrowCount);
+        Assert.Single(tracker.ConsumedMessages);
+        Assert.Contains("builder-auto-ack", tracker.ConsumedMessages);
+
+        producer.Disconnect();
+        worker.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task AutoNack_ConfigBuilder_ExceptionThrown_NackSentToServer(string mode)
+    {
+        await using var ctx = await CreateContext(mode);
+
+        await ctx.Rider.Queue.Create("source-q", o =>
+        {
+            o.Type = QueueType.RoundRobin;
+            o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+            o.CommitWhen = CommitWhen.AfterReceived;
+            o.AcknowledgeTimeout = TimeSpan.FromSeconds(5);
+            o.PutBack = PutBackDecision.No;
+        });
+
+        ExceptionTracker tracker = new() { ShouldThrow = true };
+        HorseClient worker = await BuildConsumerWorker<BuilderConfiguredConsumer>(ctx.Port, tracker,
+            cfg => cfg.AutoNack(NegativeReason.Error));
+        await Task.Delay(500);
+
+        HorseClient producer = await ConnectRaw(ctx.Port);
+        IHorseQueueBus bus = new HorseQueueBus(producer);
+        await bus.Push("source-q", new SourceModel { Data = "builder-auto-nack" }, false, CancellationToken.None);
+
+        await WaitUntil(() => tracker.ThrowCount >= 1);
+        await Task.Delay(500);
+
+        Assert.Equal(1, tracker.ConsumeAttemptCount);
+        Assert.Equal(1, tracker.ThrowCount);
+
+        producer.Disconnect();
+        worker.Disconnect();
+    }
 
     [Theory]
     [InlineData("memory")]

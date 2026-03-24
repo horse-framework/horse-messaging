@@ -896,8 +896,8 @@ public class InterceptorTests
                     cfg.QueueType = MessagingQueueType.RoundRobin;
                     cfg.Topic = "builder-topic";
                     cfg.Acknowledge = QueueAckDecision.WaitForAcknowledge;
-                    cfg.DelayBetweenMessages = 25;
-                    cfg.AcknowledgeTimeout = 9;
+                    cfg.DelayBetweenMessages = TimeSpan.FromMilliseconds(25);
+                    cfg.AcknowledgeTimeout = TimeSpan.FromSeconds(9);
                     cfg.UniqueIdCheck = true;
                     cfg.MessageTimeout = new MessageTimeoutStrategyInfo(17, "delete");
                 })

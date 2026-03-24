@@ -191,6 +191,26 @@ public class Retry3WithMoveOnErrorConsumer(RetryTrackerAccessor accessor) : IQue
     }
 }
 
+/// <summary>
+/// Consumer without retry attributes. Builder config drives retry behavior.
+/// </summary>
+public class BuilderRetryConsumer(RetryTrackerAccessor accessor) : IQueueConsumer<RetryModel>
+{
+    public Task Consume(HorseMessage message, RetryModel model, HorseClient client, CancellationToken cancellationToken = default)
+    {
+        int attempt = Interlocked.Increment(ref accessor.Tracker.AttemptCount);
+
+        if (accessor.Tracker.ShouldThrow && attempt <= accessor.Tracker.StopThrowingAfterAttempt)
+        {
+            Interlocked.Increment(ref accessor.Tracker.ThrowCount);
+            throw new InvalidOperationException(accessor.Tracker.ExceptionMessage);
+        }
+
+        accessor.Tracker.ConsumedMessages.Add(model.Data);
+        return Task.CompletedTask;
+    }
+}
+
 #endregion
 
 /// <summary>
@@ -203,7 +223,8 @@ public class RetryTest
 {
     #region Helpers
 
-    private static async Task<HorseClient> BuildRetryWorker<TConsumer>(int port, RetryTracker tracker)
+    private static async Task<HorseClient> BuildRetryWorker<TConsumer>(int port, RetryTracker tracker,
+        Action<QueueConfigBuilder> queueConfig = null)
         where TConsumer : class
     {
         RetryTrackerAccessor accessor = new(tracker);
@@ -214,7 +235,10 @@ public class RetryTest
         builder.AddHost($"horse://localhost:{port}");
         builder.SetClientType("retry-worker");
         builder.AutoSubscribe(true);
-        builder.AddScopedConsumer<TConsumer>();
+        if (queueConfig == null)
+            builder.AddScopedConsumer<TConsumer>();
+        else
+            builder.AddScopedConsumer<TConsumer>(queueConfig);
 
         HorseClient client = builder.Build();
         await client.ConnectAsync();
@@ -262,6 +286,36 @@ public class RetryTest
     // ═══════════════════════════════════════════════════════════════════
 
     #region Basic Retry Count
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task UseRetry_ConfigBuilder_AllFail_ExactlyThreeAttempts(string mode)
+    {
+        await using var ctx = await CreateContext(mode);
+
+        RetryTracker tracker = new() { ShouldThrow = true };
+        HorseClient worker = await BuildRetryWorker<BuilderRetryConsumer>(ctx.Port, tracker, cfg =>
+        {
+            cfg.AutoNack(NegativeReason.Error);
+            cfg.UseRetry(3, 50);
+        });
+        await Task.Delay(500);
+
+        HorseClient producer = await ConnectRaw(ctx.Port);
+        IHorseQueueBus bus = new HorseQueueBus(producer);
+        await bus.Push("retry-q", new RetryModel { Data = "builder-r3-test" }, false, CancellationToken.None);
+
+        await WaitUntil(() => tracker.ThrowCount >= 3, 5_000);
+        await Task.Delay(200);
+
+        Assert.Equal(3, tracker.AttemptCount);
+        Assert.Equal(3, tracker.ThrowCount);
+        Assert.Empty(tracker.ConsumedMessages);
+
+        producer.Disconnect();
+        worker.Disconnect();
+    }
 
     [Theory]
     [InlineData("memory")]
@@ -683,4 +737,3 @@ public class RetryTest
 
     #endregion
 }
-

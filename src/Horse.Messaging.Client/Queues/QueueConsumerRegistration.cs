@@ -39,6 +39,26 @@ internal class QueueConsumerRegistration
     internal MoveOnErrorAttribute MoveOnError { get; set; }
 
     /// <summary>
+    /// True when the consumer should ACK automatically after successful execution.
+    /// </summary>
+    internal bool AutoAck { get; set; }
+
+    /// <summary>
+    /// True when the consumer should NACK automatically after failed execution.
+    /// </summary>
+    internal bool AutoNack { get; set; }
+
+    /// <summary>
+    /// NACK reason used when <see cref="AutoNack"/> is enabled.
+    /// </summary>
+    internal NegativeReason AutoNackReason { get; set; }
+
+    /// <summary>
+    /// Retry configuration resolved from builder or attributes.
+    /// </summary>
+    internal RetryAttribute Retry { get; set; }
+
+    /// <summary>
     /// Default push-exception transport descriptor.
     /// </summary>
     internal TransportExceptionDescriptor DefaultPushException { get; set; }

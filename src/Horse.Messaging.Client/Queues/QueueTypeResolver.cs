@@ -122,6 +122,18 @@ internal class QueueTypeResolver : ITypeDescriptorResolver<QueueTypeDescriptor>
         if (defaultConfigurator.UniqueIdCheck.HasValue)
             descriptor.UniqueIdCheck = defaultConfigurator.UniqueIdCheck.Value;
 
+        if (defaultConfigurator.AutoAck)
+            descriptor.AutoAck = true;
+
+        if (defaultConfigurator.AutoNack)
+        {
+            descriptor.AutoNack = true;
+            descriptor.AutoNackReason = defaultConfigurator.AutoNackReason;
+        }
+
+        if (defaultConfigurator.Retry != null)
+            descriptor.Retry = CloneRetry(defaultConfigurator.Retry);
+
         if (!string.IsNullOrEmpty(defaultConfigurator.MoveOnErrorQueueName))
         {
             descriptor.MoveOnErrorQueueName = defaultConfigurator.MoveOnErrorQueueName;
@@ -218,5 +230,16 @@ internal class QueueTypeResolver : ITypeDescriptorResolver<QueueTypeDescriptor>
             descriptor.MaxPartitions = partAttr.MaxPartitions >= 0 ? partAttr.MaxPartitions : null;
             descriptor.SubscribersPerPartition = partAttr.SubscribersPerPartition >= 0 ? partAttr.SubscribersPerPartition : null;
         }
+    }
+
+    private static RetryAttribute CloneRetry(RetryAttribute retry)
+    {
+        if (retry == null)
+            return null;
+
+        return new RetryAttribute(retry.Count, retry.DelayBetweenRetries)
+        {
+            IgnoreExceptions = retry.IgnoreExceptions == null ? null : (Type[]) retry.IgnoreExceptions.Clone()
+        };
     }
 }
