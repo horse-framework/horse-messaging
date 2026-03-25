@@ -151,9 +151,9 @@ public class TrackerAccessor(ConsumeTracker tracker)
 [AutoAck]
 public class QueueAConsumer(TrackerAccessor accessor) : IQueueConsumer<QueueAModel>
 {
-    public Task Consume(HorseMessage message, QueueAModel model, HorseClient client, CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<QueueAModel> context)
     {
-        accessor.Tracker.Record("QueueA", model.TenantId, model.Sequence);
+        accessor.Tracker.Record("QueueA", context.Model.TenantId, context.Model.Sequence);
         return Task.CompletedTask;
     }
 }
@@ -161,9 +161,9 @@ public class QueueAConsumer(TrackerAccessor accessor) : IQueueConsumer<QueueAMod
 [AutoAck]
 public class QueueBConsumer(TrackerAccessor accessor) : IQueueConsumer<QueueBModel>
 {
-    public Task Consume(HorseMessage message, QueueBModel model, HorseClient client, CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<QueueBModel> context)
     {
-        accessor.Tracker.Record("QueueB", model.TenantId, model.Sequence);
+        accessor.Tracker.Record("QueueB", context.Model.TenantId, context.Model.Sequence);
         return Task.CompletedTask;
     }
 }
@@ -171,9 +171,9 @@ public class QueueBConsumer(TrackerAccessor accessor) : IQueueConsumer<QueueBMod
 [AutoAck]
 public class QueueCConsumer(TrackerAccessor accessor) : IQueueConsumer<QueueCModel>
 {
-    public Task Consume(HorseMessage message, QueueCModel model, HorseClient client, CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<QueueCModel> context)
     {
-        accessor.Tracker.Record("QueueC", model.TenantId, model.Sequence);
+        accessor.Tracker.Record("QueueC", context.Model.TenantId, context.Model.Sequence);
         return Task.CompletedTask;
     }
 }
@@ -181,9 +181,9 @@ public class QueueCConsumer(TrackerAccessor accessor) : IQueueConsumer<QueueCMod
 [AutoAck]
 public class QueueDConsumer(TrackerAccessor accessor) : IQueueConsumer<QueueDModel>
 {
-    public Task Consume(HorseMessage message, QueueDModel model, HorseClient client, CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<QueueDModel> context)
     {
-        accessor.Tracker.Record("QueueD", model.TenantId, model.Sequence);
+        accessor.Tracker.Record("QueueD", context.Model.TenantId, context.Model.Sequence);
         return Task.CompletedTask;
     }
 }
@@ -191,9 +191,9 @@ public class QueueDConsumer(TrackerAccessor accessor) : IQueueConsumer<QueueDMod
 [AutoAck]
 public class LimitedPartitionConsumer(TrackerAccessor accessor) : IQueueConsumer<LimitedPartitionModel>
 {
-    public Task Consume(HorseMessage message, LimitedPartitionModel model, HorseClient client, CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<LimitedPartitionModel> context)
     {
-        accessor.Tracker.Record("LimitedQ", model.Data, 0);
+        accessor.Tracker.Record("LimitedQ", context.Model.Data, 0);
         return Task.CompletedTask;
     }
 }
@@ -201,9 +201,9 @@ public class LimitedPartitionConsumer(TrackerAccessor accessor) : IQueueConsumer
 [AutoAck]
 public class UnlimitedPartitionConsumer(TrackerAccessor accessor) : IQueueConsumer<UnlimitedPartitionModel>
 {
-    public Task Consume(HorseMessage message, UnlimitedPartitionModel model, HorseClient client, CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<UnlimitedPartitionModel> context)
     {
-        accessor.Tracker.Record("UnlimitedQ", model.Data, 0);
+        accessor.Tracker.Record("UnlimitedQ", context.Model.Data, 0);
         return Task.CompletedTask;
     }
 }
@@ -211,9 +211,9 @@ public class UnlimitedPartitionConsumer(TrackerAccessor accessor) : IQueueConsum
 [AutoAck]
 public class TierEventConsumer(TrackerAccessor accessor) : IQueueConsumer<TierEventModel>
 {
-    public Task Consume(HorseMessage message, TierEventModel model, HorseClient client, CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<TierEventModel> context)
     {
-        accessor.Tracker.Record("TierEvent", model.Tier, model.Sequence);
+        accessor.Tracker.Record("TierEvent", context.Model.Tier, context.Model.Sequence);
         return Task.CompletedTask;
     }
 }

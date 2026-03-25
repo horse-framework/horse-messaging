@@ -11,10 +11,9 @@ namespace ClusteringSample.Consumer;
 [AutoAck]
 public class FooConsumer : IQueueConsumer<Foo>
 {
-    public async Task Consume(HorseMessage message, Foo model, HorseClient client,
-        CancellationToken cancellationToken = default)
+    public async Task Consume(ConsumeContext<Foo> context)
     {
-        await Task.Delay(new Random().Next(50, 350), cancellationToken);
-        Console.WriteLine($"Message #{model.No} is Consumed");
+        await Task.Delay(new Random().Next(50, 350), context.CancellationToken);
+        Console.WriteLine($"Message #{context.Model.No} is Consumed");
     }
 }

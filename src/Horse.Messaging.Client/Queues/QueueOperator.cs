@@ -371,14 +371,14 @@ public class QueueOperator : IDisposable
     #region Push - Pull
 
     /// <summary>
-    /// Pushes a serialized model into a queue without waiting for commit (fire-and-forget).
+    /// Pushes a serialized model into a queue and waits for commit.
     /// The queue name is resolved from the <typeparamref name="T"/> attribute.
     /// </summary>
     /// <param name="model">The message model to push.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> Push<T>(T model, CancellationToken cancellationToken = default) where T : class
     {
-        return Push<T>(null, model, null, false, null, cancellationToken);
+        return Push<T>(null, model, null, true, null, cancellationToken);
     }
 
     /// <summary>
@@ -805,14 +805,14 @@ public class QueueOperator : IDisposable
     }
 
     /// <summary>
-    /// Pushes raw binary content into a queue without waiting for commit (fire-and-forget).
+    /// Pushes raw binary content into a queue and waits for commit.
     /// </summary>
     /// <param name="queue">Target queue name.</param>
     /// <param name="data">Raw byte array content to push.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> Push(string queue, byte[] data, CancellationToken cancellationToken = default)
     {
-        return Push(queue, new MemoryStream(data), null, false, null, cancellationToken);
+        return Push(queue, new MemoryStream(data), null, true, null, cancellationToken);
     }
 
     /// <summary>
@@ -870,14 +870,14 @@ public class QueueOperator : IDisposable
     }
 
     /// <summary>
-    /// Pushes raw binary content into a queue without waiting for commit (fire-and-forget).
+    /// Pushes raw binary content into a queue and waits for commit.
     /// </summary>
     /// <param name="queue">Target queue name.</param>
     /// <param name="content">Raw binary content to push.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public Task<HorseResult> Push(string queue, MemoryStream content, CancellationToken cancellationToken = default)
     {
-        return Push(queue, content, null, false, null, cancellationToken);
+        return Push(queue, content, null, true, null, cancellationToken);
     }
 
     /// <summary>

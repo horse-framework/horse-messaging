@@ -68,7 +68,7 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
     public override async Task Execute(HorseClient client, HorseMessage message, object model,
         CancellationToken cancellationToken)
     {
-        TModel t = (TModel) model;
+        TModel t = (TModel)model;
         ProvidedHandler providedHandler = null;
 
         try
@@ -81,7 +81,7 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
             {
                 IHandlerFactory handlerFactory = _consumerFactoryCreator();
                 providedHandler = handlerFactory.CreateHandler(_consumerType);
-                IQueueConsumer<TModel> consumer = (IQueueConsumer<TModel>) providedHandler.Service;
+                IQueueConsumer<TModel> consumer = (IQueueConsumer<TModel>)providedHandler.Service;
                 await Consume(consumer, message, t, client, handlerFactory, cancellationToken);
             }
             else
@@ -124,10 +124,11 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
     private async Task Consume(IQueueConsumer<TModel> consumer, HorseMessage message, TModel model,
         HorseClient client, IHandlerFactory handlerFactory, CancellationToken cancellationToken)
     {
+        var context = new ConsumeContext<TModel>(message, model, client, cancellationToken);
         if (Retry == null)
         {
             await _interceptorRunner.RunBeforeInterceptors(message, client, handlerFactory, cancellationToken);
-            await consumer.Consume(message, model, client, cancellationToken);
+            await consumer.Consume(context);
             await _interceptorRunner.RunAfterInterceptors(message, client, handlerFactory, cancellationToken);
             return;
         }
@@ -137,15 +138,17 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
         {
             try
             {
+                context.TryCount = i;
+                
                 await _interceptorRunner.RunBeforeInterceptors(message, client, handlerFactory, cancellationToken);
-                await consumer.Consume(message, model, client, cancellationToken);
+                await consumer.Consume(context);
                 await _interceptorRunner.RunAfterInterceptors(message, client, handlerFactory, cancellationToken);
                 return;
             }
             catch (Exception e)
             {
                 Type type = e.GetType();
-                if (Retry.IgnoreExceptions is {Length: > 0})
+                if (Retry.IgnoreExceptions is { Length: > 0 })
                 {
                     if (Retry.IgnoreExceptions.Any(x => x.IsAssignableFrom(type)))
                         throw;

@@ -59,13 +59,13 @@ public class RedeliverModel
 [AutoNack(NegativeReason.Error)]
 public class RedeliveryTrackingConsumer(RedeliveryTrackerAccessor accessor) : IQueueConsumer<RedeliverModel>
 {
-    public Task Consume(HorseMessage message, RedeliverModel model, HorseClient client, CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<RedeliverModel> context)
     {
         int count = Interlocked.Increment(ref accessor.Tracker.ConsumeCount);
-        string deliveryHeader = message.FindHeader(HorseHeaders.DELIVERY);
+        string deliveryHeader = context.Message.FindHeader(HorseHeaders.DELIVERY);
         int deliveryCount = string.IsNullOrEmpty(deliveryHeader) ? 1 : int.Parse(deliveryHeader);
 
-        accessor.Tracker.Deliveries.Add((message.MessageId, deliveryCount, model.Data));
+        accessor.Tracker.Deliveries.Add((context.Message.MessageId, deliveryCount, context.Model.Data));
 
         if (accessor.Tracker.ShouldNack && count <= accessor.Tracker.StopNackingAfterDelivery)
             throw new InvalidOperationException("Force NACK for redelivery test");
@@ -792,4 +792,3 @@ public class RedeliveryTest
 
     #endregion
 }
-

@@ -213,8 +213,7 @@ internal class InterceptedQueueConsumer : IQueueConsumer<InterceptedQueueModel>
 {
     public static int ConsumeCount;
 
-    public Task Consume(HorseMessage message, InterceptedQueueModel model, HorseClient client,
-        CancellationToken cancellationToken)
+    public Task Consume(ConsumeContext<InterceptedQueueModel> context)
     {
         Interlocked.Increment(ref ConsumeCount);
         return Task.CompletedTask;
@@ -236,8 +235,7 @@ internal class MultiInterceptorQueueConsumer : IQueueConsumer<SimpleQueueModel>
 {
     public static int ConsumeCount;
 
-    public Task Consume(HorseMessage message, SimpleQueueModel model, HorseClient client,
-        CancellationToken cancellationToken)
+    public Task Consume(ConsumeContext<SimpleQueueModel> context)
     {
         Interlocked.Increment(ref ConsumeCount);
         return Task.CompletedTask;
@@ -250,8 +248,7 @@ internal class NoInterceptorQueueConsumer : IQueueConsumer<SimpleQueueModel>
 {
     public static int ConsumeCount;
 
-    public Task Consume(HorseMessage message, SimpleQueueModel model, HorseClient client,
-        CancellationToken cancellationToken)
+    public Task Consume(ConsumeContext<SimpleQueueModel> context)
     {
         Interlocked.Increment(ref ConsumeCount);
         return Task.CompletedTask;
@@ -266,8 +263,7 @@ internal class ThrowingInterceptorQueueConsumer : IQueueConsumer<SimpleQueueMode
 {
     public static int ConsumeCount;
 
-    public Task Consume(HorseMessage message, SimpleQueueModel model, HorseClient client,
-        CancellationToken cancellationToken)
+    public Task Consume(ConsumeContext<SimpleQueueModel> context)
     {
         Interlocked.Increment(ref ConsumeCount);
         return Task.CompletedTask;
@@ -334,8 +330,7 @@ internal class QueueConfigBuilderQueueConsumer : IQueueConsumer<QueueConfigBuild
 {
     public static int ConsumeCount;
 
-    public Task Consume(HorseMessage message, QueueConfigBuilderQueueModel model, HorseClient client,
-        CancellationToken cancellationToken)
+    public Task Consume(ConsumeContext<QueueConfigBuilderQueueModel> context)
     {
         Interlocked.Increment(ref ConsumeCount);
         return Task.CompletedTask;
@@ -349,8 +344,7 @@ internal class QueueConfigBuilderOptionModel
 
 internal class QueueConfigBuilderOptionConsumer : IQueueConsumer<QueueConfigBuilderOptionModel>
 {
-    public Task Consume(HorseMessage message, QueueConfigBuilderOptionModel model, HorseClient client,
-        CancellationToken cancellationToken)
+    public Task Consume(ConsumeContext<QueueConfigBuilderOptionModel> context)
     {
         return Task.CompletedTask;
     }
@@ -462,8 +456,7 @@ internal class TransientQueueConsumer : IQueueConsumer<TransientQueueModel>
 {
     public static int ConsumeCount;
 
-    public Task Consume(HorseMessage message, TransientQueueModel model, HorseClient client,
-        CancellationToken cancellationToken)
+    public Task Consume(ConsumeContext<TransientQueueModel> context)
     {
         Interlocked.Increment(ref ConsumeCount);
         return Task.CompletedTask;
@@ -508,8 +501,7 @@ internal class ScopedQueueConsumer : IQueueConsumer<ScopedQueueModel>
 {
     public static int ConsumeCount;
 
-    public Task Consume(HorseMessage message, ScopedQueueModel model, HorseClient client,
-        CancellationToken cancellationToken)
+    public Task Consume(ConsumeContext<ScopedQueueModel> context)
     {
         Interlocked.Increment(ref ConsumeCount);
         return Task.CompletedTask;
@@ -897,6 +889,8 @@ public class InterceptorTests
                     cfg.Topic = "builder-topic";
                     cfg.Acknowledge = QueueAckDecision.WaitForAcknowledge;
                     cfg.DelayBetweenMessages = TimeSpan.FromMilliseconds(25);
+                    cfg.PutBackDecision = PutBack.Priority;
+                    cfg.PutBackDelay = TimeSpan.FromSeconds(7);
                     cfg.AcknowledgeTimeout = TimeSpan.FromSeconds(9);
                     cfg.UniqueIdCheck = true;
                     cfg.MessageTimeout = new MessageTimeoutStrategyInfo(17, "delete");
@@ -914,11 +908,151 @@ public class InterceptorTests
             Assert.Equal("builder-topic", queue.Topic);
             Assert.Equal(QueueAckDecision.WaitForAcknowledge, queue.Options.Acknowledge);
             Assert.Equal(25, queue.Options.DelayBetweenMessages);
+            Assert.Equal(PutBackDecision.Priority, queue.Options.PutBack);
+            Assert.Equal(7000, queue.Options.PutBackDelay);
             Assert.Equal(TimeSpan.FromSeconds(9), queue.Options.AcknowledgeTimeout);
             Assert.True(queue.Options.MessageIdUniqueCheck);
             Assert.NotNull(queue.Options.MessageTimeout);
             Assert.Equal(17, queue.Options.MessageTimeout.MessageDuration);
             Assert.Equal(MessageTimeoutPolicy.Delete, queue.Options.MessageTimeout.Policy);
+        }
+        finally
+        {
+            server.Stop();
+        }
+    }
+
+    [Fact]
+    public async Task QueueConsumer_ConfigBuilder_AppliesOptionsToNotInitializedAutoCreateQueue()
+    {
+        const string queueName = "builder-config-uninitialized-q";
+
+        var (server, port) = await StartServer();
+
+        try
+        {
+            HorseClient consumer = new HorseClientBuilder()
+                .AddHost("horse://localhost:" + port)
+                .AddScopedConsumer<QueueConfigBuilderOptionConsumer>(cfg =>
+                {
+                    cfg.QueueName = queueName;
+                    cfg.Topic = "builder-uninitialized-topic";
+                    cfg.PutBackDecision = PutBack.Regular;
+                    cfg.PutBackDelay = TimeSpan.FromSeconds(90);
+                    cfg.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
+                })
+                .AutoSubscribe(true)
+                .Build();
+
+            await consumer.ConnectAsync();
+            await WaitUntil(() => server.Rider.Queue.Find(queueName) != null);
+
+            HorseQueue queue = server.Rider.Queue.Find(queueName);
+
+            Assert.NotNull(queue);
+            Assert.Equal("builder-uninitialized-topic", queue.Topic);
+            Assert.Equal(PutBackDecision.Regular, queue.Options.PutBack);
+            Assert.Equal(90000, queue.Options.PutBackDelay);
+            Assert.Equal(TimeSpan.FromSeconds(90), queue.Options.AcknowledgeTimeout);
+        }
+        finally
+        {
+            server.Stop();
+        }
+    }
+
+    [Fact]
+    public async Task QueueConsumer_ConfigBuilder_RecreatesDeletedQueueWithPutBackDelay()
+    {
+        const string queueName = "builder-config-recreate-q";
+
+        var (server, port) = await StartServer();
+
+        async Task<HorseClient> BuildConsumer()
+        {
+            HorseClient consumer = new HorseClientBuilder()
+                .AddHost("horse://localhost:" + port)
+                .AddScopedConsumer<QueueConfigBuilderOptionConsumer>(cfg =>
+                {
+                    cfg.QueueName = queueName;
+                    cfg.PutBackDecision = PutBack.Regular;
+                    cfg.PutBackDelay = TimeSpan.FromSeconds(90);
+                    cfg.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
+                })
+                .AutoSubscribe(true)
+                .Build();
+
+            await consumer.ConnectAsync();
+            return consumer;
+        }
+
+        try
+        {
+            HorseClient firstConsumer = await BuildConsumer();
+            await WaitUntil(() => server.Rider.Queue.Find(queueName) != null);
+
+            HorseQueue firstQueue = server.Rider.Queue.Find(queueName);
+            Assert.NotNull(firstQueue);
+            Assert.Equal(PutBackDecision.Regular, firstQueue.Options.PutBack);
+            Assert.Equal(90000, firstQueue.Options.PutBackDelay);
+
+            firstConsumer.Disconnect();
+            await server.Rider.Queue.Remove(queueName);
+            await WaitUntil(() => server.Rider.Queue.Find(queueName) == null);
+
+            HorseClient secondConsumer = await BuildConsumer();
+            await WaitUntil(() => server.Rider.Queue.Find(queueName) != null);
+
+            HorseQueue secondQueue = server.Rider.Queue.Find(queueName);
+            Assert.NotNull(secondQueue);
+            Assert.Equal(PutBackDecision.Regular, secondQueue.Options.PutBack);
+            Assert.Equal(90000, secondQueue.Options.PutBackDelay);
+            Assert.Equal(TimeSpan.FromSeconds(90), secondQueue.Options.AcknowledgeTimeout);
+
+            secondConsumer.Disconnect();
+        }
+        finally
+        {
+            server.Stop();
+        }
+    }
+
+    [Fact]
+    public async Task QueueConsumers_ConfigBuilder_AppliesPutBackOptions()
+    {
+        const string queueName = "QueueConfigBuilderOptionConsumer-plural-builder-q";
+
+        var (server, port) = await StartServer();
+
+        try
+        {
+            HorseClient consumer = new HorseClientBuilder()
+                .AddHost("horse://localhost:" + port)
+                .AddScopedConsumers((type, cfg) =>
+                {
+                    cfg.QueueName = $"{type.Name}-plural-builder-q";
+                    cfg.QueueType = MessagingQueueType.RoundRobin;
+                    cfg.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                    cfg.PutBackDecision = PutBack.Regular;
+                    cfg.PutBackDelay = TimeSpan.FromSeconds(5);
+                    cfg.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
+                    cfg.Topic = "Worker";
+                }, typeof(QueueConfigBuilderOptionConsumer))
+                .AutoSubscribe(true)
+                .Build();
+
+            await consumer.ConnectAsync();
+            await WaitUntil(() => server.Rider.Queue.Find(queueName) != null);
+
+            HorseQueue queue = server.Rider.Queue.Find(queueName);
+
+            Assert.NotNull(queue);
+            Assert.Equal("Worker", queue.Topic);
+            Assert.Equal(PutBackDecision.Regular, queue.Options.PutBack);
+            Assert.Equal(5000, queue.Options.PutBackDelay);
+            Assert.Equal(TimeSpan.FromSeconds(90), queue.Options.AcknowledgeTimeout);
+
+            consumer.Disconnect();
         }
         finally
         {

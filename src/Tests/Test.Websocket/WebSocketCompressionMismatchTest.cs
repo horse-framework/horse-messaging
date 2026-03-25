@@ -24,10 +24,10 @@ public class TickerMessage
 
 public class TestTickerSubscriber : IChannelSubscriber<TickerMessage>
 {
-    public Task Handle(TickerMessage model, HorseMessage rawMessage, HorseClient client, CancellationToken cancellationToken)
+    public Task Handle(ChannelMessageContext<TickerMessage> context)
         => Task.CompletedTask;
 
-    public Task Error(Exception exception, TickerMessage model, HorseMessage rawMessage, HorseClient client, CancellationToken cancellationToken)
+    public Task Error(Exception exception, ChannelMessageContext<TickerMessage> context)
         => Task.CompletedTask;
 }
 

@@ -140,7 +140,7 @@ public class ExceptionTrackerAccessor(ExceptionTracker tracker)
 [MoveOnError("error-q")]
 public class MoveOnErrorConsumer(ExceptionTrackerAccessor accessor) : IQueueConsumer<SourceModel>
 {
-    public Task Consume(HorseMessage message, SourceModel model, HorseClient client, CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<SourceModel> context)
     {
         Interlocked.Increment(ref accessor.Tracker.ConsumeAttemptCount);
 
@@ -150,7 +150,7 @@ public class MoveOnErrorConsumer(ExceptionTrackerAccessor accessor) : IQueueCons
             throw new InvalidOperationException(accessor.Tracker.ExceptionMessage);
         }
 
-        accessor.Tracker.ConsumedMessages.Add(model.Data);
+        accessor.Tracker.ConsumedMessages.Add(context.Model.Data);
         return Task.CompletedTask;
     }
 }
@@ -164,7 +164,7 @@ public class MoveOnErrorConsumer(ExceptionTrackerAccessor accessor) : IQueueCons
 [PushExceptions<ExceptionLogModel>]
 public class PushExceptionConsumer(ExceptionTrackerAccessor accessor) : IQueueConsumer<SourceModel>
 {
-    public Task Consume(HorseMessage message, SourceModel model, HorseClient client, CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<SourceModel> context)
     {
         Interlocked.Increment(ref accessor.Tracker.ConsumeAttemptCount);
 
@@ -174,7 +174,7 @@ public class PushExceptionConsumer(ExceptionTrackerAccessor accessor) : IQueueCo
             throw (Exception)Activator.CreateInstance(accessor.Tracker.ExceptionTypeToThrow, accessor.Tracker.ExceptionMessage);
         }
 
-        accessor.Tracker.ConsumedMessages.Add(model.Data);
+        accessor.Tracker.ConsumedMessages.Add(context.Model.Data);
         return Task.CompletedTask;
     }
 }
@@ -190,7 +190,7 @@ public class PushExceptionConsumer(ExceptionTrackerAccessor accessor) : IQueueCo
 [PushExceptions<SpecificExceptionLogModel>(typeof(CustomBusinessException))]
 public class MultiPushExceptionConsumer(ExceptionTrackerAccessor accessor) : IQueueConsumer<SourceModel>
 {
-    public Task Consume(HorseMessage message, SourceModel model, HorseClient client, CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<SourceModel> context)
     {
         Interlocked.Increment(ref accessor.Tracker.ConsumeAttemptCount);
 
@@ -200,7 +200,7 @@ public class MultiPushExceptionConsumer(ExceptionTrackerAccessor accessor) : IQu
             throw (Exception)Activator.CreateInstance(accessor.Tracker.ExceptionTypeToThrow, accessor.Tracker.ExceptionMessage);
         }
 
-        accessor.Tracker.ConsumedMessages.Add(model.Data);
+        accessor.Tracker.ConsumedMessages.Add(context.Model.Data);
         return Task.CompletedTask;
     }
 }
@@ -215,7 +215,7 @@ public class MultiPushExceptionConsumer(ExceptionTrackerAccessor accessor) : IQu
 [PushExceptions<ExceptionLogModel>]
 public class MoveOnErrorAndPushExceptionConsumer(ExceptionTrackerAccessor accessor) : IQueueConsumer<SourceModel>
 {
-    public Task Consume(HorseMessage message, SourceModel model, HorseClient client, CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<SourceModel> context)
     {
         Interlocked.Increment(ref accessor.Tracker.ConsumeAttemptCount);
 
@@ -225,7 +225,7 @@ public class MoveOnErrorAndPushExceptionConsumer(ExceptionTrackerAccessor access
             throw new InvalidOperationException(accessor.Tracker.ExceptionMessage);
         }
 
-        accessor.Tracker.ConsumedMessages.Add(model.Data);
+        accessor.Tracker.ConsumedMessages.Add(context.Model.Data);
         return Task.CompletedTask;
     }
 }
@@ -238,7 +238,7 @@ public class MoveOnErrorAndPushExceptionConsumer(ExceptionTrackerAccessor access
 [AutoNack(NegativeReason.Error)]
 public class AutoNackOnlyConsumer(ExceptionTrackerAccessor accessor) : IQueueConsumer<SourceModel>
 {
-    public Task Consume(HorseMessage message, SourceModel model, HorseClient client, CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<SourceModel> context)
     {
         Interlocked.Increment(ref accessor.Tracker.ConsumeAttemptCount);
 
@@ -248,7 +248,7 @@ public class AutoNackOnlyConsumer(ExceptionTrackerAccessor accessor) : IQueueCon
             throw new InvalidOperationException(accessor.Tracker.ExceptionMessage);
         }
 
-        accessor.Tracker.ConsumedMessages.Add(model.Data);
+        accessor.Tracker.ConsumedMessages.Add(context.Model.Data);
         return Task.CompletedTask;
     }
 }
@@ -258,7 +258,7 @@ public class AutoNackOnlyConsumer(ExceptionTrackerAccessor accessor) : IQueueCon
 /// </summary>
 public class BuilderConfiguredConsumer(ExceptionTrackerAccessor accessor) : IQueueConsumer<SourceModel>
 {
-    public Task Consume(HorseMessage message, SourceModel model, HorseClient client, CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<SourceModel> context)
     {
         Interlocked.Increment(ref accessor.Tracker.ConsumeAttemptCount);
 
@@ -268,7 +268,7 @@ public class BuilderConfiguredConsumer(ExceptionTrackerAccessor accessor) : IQue
             throw (Exception)Activator.CreateInstance(accessor.Tracker.ExceptionTypeToThrow, accessor.Tracker.ExceptionMessage);
         }
 
-        accessor.Tracker.ConsumedMessages.Add(model.Data);
+        accessor.Tracker.ConsumedMessages.Add(context.Model.Data);
         return Task.CompletedTask;
     }
 }
@@ -283,7 +283,7 @@ public class BuilderConfiguredConsumer(ExceptionTrackerAccessor accessor) : IQue
 [PushExceptions<ExceptionLogModel>]
 public class RetryThenPushExceptionConsumer(ExceptionTrackerAccessor accessor) : IQueueConsumer<SourceModel>
 {
-    public Task Consume(HorseMessage message, SourceModel model, HorseClient client, CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<SourceModel> context)
     {
         Interlocked.Increment(ref accessor.Tracker.ConsumeAttemptCount);
 
@@ -293,7 +293,7 @@ public class RetryThenPushExceptionConsumer(ExceptionTrackerAccessor accessor) :
             throw new InvalidOperationException(accessor.Tracker.ExceptionMessage);
         }
 
-        accessor.Tracker.ConsumedMessages.Add(model.Data);
+        accessor.Tracker.ConsumedMessages.Add(context.Model.Data);
         return Task.CompletedTask;
     }
 }
@@ -307,7 +307,7 @@ public class RetryThenPushExceptionConsumer(ExceptionTrackerAccessor accessor) :
 [PushExceptions<ExceptionLogModel>]
 public class SpecificExceptionConsumer(ExceptionTrackerAccessor accessor) : IQueueConsumer<SourceModel>
 {
-    public Task Consume(HorseMessage message, SourceModel model, HorseClient client, CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<SourceModel> context)
     {
         Interlocked.Increment(ref accessor.Tracker.ConsumeAttemptCount);
 
@@ -317,7 +317,7 @@ public class SpecificExceptionConsumer(ExceptionTrackerAccessor accessor) : IQue
             throw (Exception)Activator.CreateInstance(accessor.Tracker.ExceptionTypeToThrow, accessor.Tracker.ExceptionMessage);
         }
 
-        accessor.Tracker.ConsumedMessages.Add(model.Data);
+        accessor.Tracker.ConsumedMessages.Add(context.Model.Data);
         return Task.CompletedTask;
     }
 }

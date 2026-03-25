@@ -203,11 +203,17 @@ public class QueueConfigBuilder
             Acknowledge = Acknowledge,
             Topic = Topic,
             QueueName = QueueName,
-            DelayBetweenMessages = Convert.ToInt32(DelayBetweenMessages?.TotalMilliseconds ?? 0),
+            DelayBetweenMessages = DelayBetweenMessages.HasValue
+                ? Convert.ToInt32(DelayBetweenMessages.Value.TotalMilliseconds)
+                : null,
             PutBackDecision = PutBackDecision,
-            PutBackDelay = Convert.ToInt32(PutBackDelay?.TotalMilliseconds ?? 0),
+            PutBackDelay = PutBackDelay.HasValue
+                ? Convert.ToInt32(PutBackDelay.Value.TotalMilliseconds)
+                : null,
             MessageTimeout = MessageTimeout,
-            AcknowledgeTimeout = Convert.ToInt32(AcknowledgeTimeout?.TotalSeconds ?? 0),
+            AcknowledgeTimeout = AcknowledgeTimeout.HasValue
+                ? Convert.ToInt32(AcknowledgeTimeout.Value.TotalSeconds)
+                : null,
             UniqueIdCheck = UniqueIdCheck,
             AutoAck = _autoAck,
             AutoNack = _autoNack,

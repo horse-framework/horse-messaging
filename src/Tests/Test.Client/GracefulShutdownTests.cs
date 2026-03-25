@@ -36,8 +36,7 @@ internal static class ShutdownState
 [AutoAck]
 internal class GracefulShutdownConsumer : IQueueConsumer<string>
 {
-    public Task Consume(HorseMessage message, string model, HorseClient client,
-        CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<string> context)
     {
         Interlocked.Increment(ref ShutdownState.ConsumeCount);
         return Task.CompletedTask;
@@ -602,4 +601,3 @@ public class GracefulShutdownTests
         Assert.True(shutdownFound, "GracefulShutdownService must be registered when UseGracefulShutdown is configured");
     }
 }
-

@@ -13,7 +13,7 @@ namespace Sample.Consumer;
 [QueueName("SampleTestEvent")]
 public class ModelAConsumer : IQueueConsumer<ModelA>
 {
-    public Task Consume(HorseMessage message, ModelA model, HorseClient client, CancellationToken cancellationToken)
+    public Task Consume(ConsumeContext<ModelA> context)
     {
         _ = Console.Out.WriteLineAsync("CONSUMED");
         return Task.CompletedTask;

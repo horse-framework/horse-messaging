@@ -19,8 +19,7 @@ public class Model
 
 public class ModelConsumer : IQueueConsumer<Model>
 {
-    public Task Consume(HorseMessage message, Model model, HorseClient client,
-        CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<Model> context)
     {
         throw new System.NotImplementedException();
     }

@@ -50,10 +50,9 @@ internal static class TestState
 [AutoAck]
 internal class CapturingQueueConsumer : IQueueConsumer<string>
 {
-    public Task Consume(HorseMessage message, string model, HorseClient client,
-        CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<string> context)
     {
-        TestState.LastQueueToken = cancellationToken;
+        TestState.LastQueueToken = context.CancellationToken;
         Interlocked.Increment(ref TestState.QueueConsumeCount);
         return Task.CompletedTask;
     }
@@ -63,10 +62,9 @@ internal class CapturingQueueConsumer : IQueueConsumer<string>
 [AutoAck]
 internal class MultiTokenQueueConsumer : IQueueConsumer<string>
 {
-    public Task Consume(HorseMessage message, string model, HorseClient client,
-        CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<string> context)
     {
-        TestState.MultiTokens.Add(cancellationToken);
+        TestState.MultiTokens.Add(context.CancellationToken);
         return Task.CompletedTask;
     }
 }
@@ -79,11 +77,10 @@ internal class BlockingQueueConsumer : IQueueConsumer<string>
     public static SemaphoreSlim Finished = new(0, 1);
     public static bool CancelledObserved;
 
-    public async Task Consume(HorseMessage message, string model, HorseClient client,
-        CancellationToken cancellationToken = default)
+    public async Task Consume(ConsumeContext<string> context)
     {
         Started.Release();
-        try { await Task.Delay(10_000, cancellationToken); }
+        try { await Task.Delay(10_000, context.CancellationToken); }
         catch (OperationCanceledException) { CancelledObserved = true; }
         finally { Finished.Release(); }
     }
@@ -96,11 +93,10 @@ internal class DelayTimingQueueConsumer : IQueueConsumer<string>
     public static TaskCompletionSource<bool> StartedTcs = new();
     public static TaskCompletionSource<bool> FinishedTcs = new();
 
-    public async Task Consume(HorseMessage message, string model, HorseClient client,
-        CancellationToken cancellationToken = default)
+    public async Task Consume(ConsumeContext<string> context)
     {
         StartedTcs.TrySetResult(true);
-        try { await Task.Delay(30_000, cancellationToken); }
+        try { await Task.Delay(30_000, context.CancellationToken); }
         catch (OperationCanceledException) { }
         finally { FinishedTcs.TrySetResult(true); }
     }
@@ -138,16 +134,14 @@ internal class BlockingDirectHandler : IDirectMessageHandler<string>
 [ChannelName("test-channel-ct")]
 internal class ChannelTokenCapturingSubscriber : IChannelSubscriber<string>
 {
-    public Task Handle(string model, HorseMessage rawMessage, HorseClient client,
-        CancellationToken cancellationToken = default)
+    public Task Handle(ChannelMessageContext<string> context)
     {
-        TestState.LastChannelToken = cancellationToken;
+        TestState.LastChannelToken = context.CancellationToken;
         Interlocked.Increment(ref TestState.ChannelHandleCount);
         return Task.CompletedTask;
     }
 
-    public Task Error(Exception exception, string model, HorseMessage rawMessage, HorseClient client,
-        CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public Task Error(Exception exception, ChannelMessageContext<string> context) => Task.CompletedTask;
 }
 
 // ---------------------------------------------------------------------------
@@ -288,7 +282,7 @@ public class CancellationTokenTests
         // Directly invoke consumer with the live ConsumeToken — mirrors what OnQueueMessage does
         var consumer = new CapturingQueueConsumer();
         var fakeMsg = new HorseMessage(MessageType.QueueMessage, "push-a");
-        await consumer.Consume(fakeMsg, "hello", client, client.ConsumeToken);
+        await consumer.Consume(new ConsumeContext<string>(fakeMsg, "hello", client, client.ConsumeToken));
 
         Assert.True(TestState.QueueConsumeCount > 0, "Consumer.Consume was not called");
         Assert.False(TestState.LastQueueToken.IsCancellationRequested,
@@ -323,7 +317,7 @@ public class CancellationTokenTests
 
         // Fire-and-forget — consumer blocks on the token
         var consumeTask = Task.Run(async () =>
-            await consumer.Consume(fakeMsg, "block", client, client.ConsumeToken));
+            await consumer.Consume(new ConsumeContext<string>(fakeMsg, "block", client, client.ConsumeToken)));
 
         bool entered = await BlockingQueueConsumer.Started.WaitAsync(TimeSpan.FromSeconds(3));
         Assert.True(entered, "Consumer did not enter blocking section");
@@ -435,7 +429,7 @@ public class CancellationTokenTests
         for (int i = 0; i < msgCount; i++)
         {
             var msg = new HorseMessage(MessageType.QueueMessage, "push-a");
-            await consumer.Consume(msg, $"msg-{i}", client, client.ConsumeToken);
+            await consumer.Consume(new ConsumeContext<string>(msg, $"msg-{i}", client, client.ConsumeToken));
         }
 
         Assert.Equal(msgCount, TestState.MultiTokens.Count);
@@ -638,7 +632,7 @@ public class CancellationTokenTests
         var subscriber = new ChannelTokenCapturingSubscriber();
         var rawMsg = new HorseMessage(MessageType.Channel, "test-channel-ct");
         rawMsg.SetStringContent("hello-channel");
-        await subscriber.Handle("hello-channel", rawMsg, client, client.ConsumeToken);
+        await subscriber.Handle(new ChannelMessageContext<string>(rawMsg, "hello-channel", client, client.ConsumeToken));
 
         Assert.True(TestState.ChannelHandleCount > 0, "ChannelSubscriber was not invoked");
         Assert.False(TestState.LastChannelToken.IsCancellationRequested,
@@ -659,4 +653,3 @@ public class CancellationTokenTests
             await Task.Delay(30);
     }
 }
-

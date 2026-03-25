@@ -1183,9 +1183,8 @@ public class TestCompareOrdersModel { }
 
 public class TestCompareOrdersConsumer : Horse.Messaging.Client.Queues.IQueueConsumer<TestCompareOrdersModel>
 {
-    public Task Consume(HorseMessage message, TestCompareOrdersModel model, HorseClient client, CancellationToken cancellationToken)
+    public Task Consume(Horse.Messaging.Client.Queues.ConsumeContext<TestCompareOrdersModel> context)
     {
         return Task.CompletedTask;
     }
 }
-

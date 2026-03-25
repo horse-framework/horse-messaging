@@ -46,141 +46,32 @@ public static class GenericHostExtensions
         }
 
         /// <summary>Registers a <see cref="HorseClient"/> with access to <see cref="IConfiguration"/>.</summary>
-        public IHostBuilder AddHorse(Action<HorseClientBuilder, IConfiguration> configure, bool autoConnect = true)
+        public IHostBuilder AddHorse(Action<HorseClientBuilder, HorseBuilderContext> configure, bool autoConnect = true)
         {
             Action<HostBuilderContext, IServiceCollection> reg = (ctx, s) =>
-                HorseRegistrar.Add(s, b => configure(b, ctx.Configuration), autoConnect);
+                HorseRegistrar.Add(s, b => configure(b, new HorseBuilderContext
+                    {
+                        Configuration = ctx.Configuration,
+                        Environment = ctx.HostingEnvironment,
+                        Services = s
+                    }),
+                    autoConnect);
             hostBuilder.ConfigureServices(reg);
             return hostBuilder;
         }
 
         /// <summary>Registers a keyed <see cref="HorseClient"/> with access to <see cref="IConfiguration"/>.</summary>
-        public IHostBuilder AddHorse(string key, Action<HorseClientBuilder, IConfiguration> configure, bool autoConnect = true)
+        public IHostBuilder AddHorse(string key, Action<HorseClientBuilder, HorseBuilderContext> configure, bool autoConnect = true)
         {
             Action<HostBuilderContext, IServiceCollection> reg = (ctx, s) =>
-                HorseRegistrar.AddKeyed(s, key, b => configure(b, ctx.Configuration), autoConnect);
+                HorseRegistrar.AddKeyed(s, key, b => configure(b, new HorseBuilderContext
+                    {
+                        Configuration = ctx.Configuration,
+                        Environment = ctx.HostingEnvironment,
+                        Services = s
+                    }),
+                    autoConnect);
             hostBuilder.ConfigureServices(reg);
-            return hostBuilder;
-        }
-
-        /// <summary>Registers a <see cref="HorseClient"/> with access to <see cref="IHostEnvironment"/>.</summary>
-        public IHostBuilder AddHorse(Action<HorseClientBuilder, IHostEnvironment> configure, bool autoConnect = true)
-        {
-            Action<HostBuilderContext, IServiceCollection> reg = (ctx, s) =>
-                HorseRegistrar.Add(s, b => configure(b, ctx.HostingEnvironment), autoConnect);
-            hostBuilder.ConfigureServices(reg);
-            return hostBuilder;
-        }
-
-        /// <summary>Registers a keyed <see cref="HorseClient"/> with access to <see cref="IHostEnvironment"/>.</summary>
-        public IHostBuilder AddHorse(string key, Action<HorseClientBuilder, IHostEnvironment> configure, bool autoConnect = true)
-        {
-            Action<HostBuilderContext, IServiceCollection> reg = (ctx, s) =>
-                HorseRegistrar.AddKeyed(s, key, b => configure(b, ctx.HostingEnvironment), autoConnect);
-            hostBuilder.ConfigureServices(reg);
-            return hostBuilder;
-        }
-
-        /// <summary>Registers a <see cref="HorseClient"/> with access to <see cref="IServiceCollection"/>.</summary>
-        public IHostBuilder AddHorse(Action<HorseClientBuilder, IServiceCollection> configure, bool autoConnect = true)
-        {
-            Action<HostBuilderContext, IServiceCollection> reg = (_, s) =>
-                HorseRegistrar.Add(s, b => configure(b, s), autoConnect);
-            hostBuilder.ConfigureServices(reg);
-            return hostBuilder;
-        }
-
-        /// <summary>Registers a keyed <see cref="HorseClient"/> with access to <see cref="IServiceCollection"/>.</summary>
-        public IHostBuilder AddHorse(string key, Action<HorseClientBuilder, IServiceCollection> configure, bool autoConnect = true)
-        {
-            Action<HostBuilderContext, IServiceCollection> reg = (_, s) =>
-                HorseRegistrar.AddKeyed(s, key, b => configure(b, s), autoConnect);
-            hostBuilder.ConfigureServices(reg);
-            return hostBuilder;
-        }
-
-        /// <summary>Registers a <see cref="HorseClient"/> with access to <see cref="IConfiguration"/> and <see cref="IHostEnvironment"/>.</summary>
-        public IHostBuilder AddHorse(Action<HorseClientBuilder, IConfiguration, IHostEnvironment> configure, bool autoConnect = true)
-        {
-            Action<HostBuilderContext, IServiceCollection> reg = (ctx, s) =>
-                HorseRegistrar.Add(s, b => configure(b, ctx.Configuration, ctx.HostingEnvironment), autoConnect);
-            hostBuilder.ConfigureServices(reg);
-            return hostBuilder;
-        }
-
-        /// <summary>Registers a keyed <see cref="HorseClient"/> with access to <see cref="IConfiguration"/> and <see cref="IHostEnvironment"/>.</summary>
-        public IHostBuilder AddHorse(string key, Action<HorseClientBuilder, IConfiguration, IHostEnvironment> configure, bool autoConnect = true)
-        {
-            Action<HostBuilderContext, IServiceCollection> reg = (ctx, s) =>
-                HorseRegistrar.AddKeyed(s, key, b => configure(b, ctx.Configuration, ctx.HostingEnvironment), autoConnect);
-            hostBuilder.ConfigureServices(reg);
-            return hostBuilder;
-        }
-
-        /// <summary>Registers a <see cref="HorseClient"/> with access to <see cref="IConfiguration"/> and <see cref="IServiceCollection"/>.</summary>
-        public IHostBuilder AddHorse(Action<HorseClientBuilder, IConfiguration, IServiceCollection> configure, bool autoConnect = true)
-        {
-            Action<HostBuilderContext, IServiceCollection> reg = (ctx, s) =>
-                HorseRegistrar.Add(s, b => configure(b, ctx.Configuration, s), autoConnect);
-            hostBuilder.ConfigureServices(reg);
-            return hostBuilder;
-        }
-
-        /// <summary>Registers a keyed <see cref="HorseClient"/> with access to <see cref="IConfiguration"/> and <see cref="IServiceCollection"/>.</summary>
-        public IHostBuilder AddHorse(string key, Action<HorseClientBuilder, IConfiguration, IServiceCollection> configure, bool autoConnect = true)
-        {
-            Action<HostBuilderContext, IServiceCollection> reg = (ctx, s) =>
-                HorseRegistrar.AddKeyed(s, key, b => configure(b, ctx.Configuration, s), autoConnect);
-            hostBuilder.ConfigureServices(reg);
-            return hostBuilder;
-        }
-
-        /// <summary>Registers a <see cref="HorseClient"/> with access to <see cref="IHostEnvironment"/> and <see cref="IServiceCollection"/>.</summary>
-        public IHostBuilder AddHorse(Action<HorseClientBuilder, IHostEnvironment, IServiceCollection> configure, bool autoConnect = true)
-        {
-            Action<HostBuilderContext, IServiceCollection> reg = (ctx, s) =>
-                HorseRegistrar.Add(s, b => configure(b, ctx.HostingEnvironment, s), autoConnect);
-            hostBuilder.ConfigureServices(reg);
-            return hostBuilder;
-        }
-
-        /// <summary>Registers a keyed <see cref="HorseClient"/> with access to <see cref="IHostEnvironment"/> and <see cref="IServiceCollection"/>.</summary>
-        public IHostBuilder AddHorse(string key, Action<HorseClientBuilder, IHostEnvironment, IServiceCollection> configure, bool autoConnect = true)
-        {
-            Action<HostBuilderContext, IServiceCollection> reg = (ctx, s) =>
-                HorseRegistrar.AddKeyed(s, key, b => configure(b, ctx.HostingEnvironment, s), autoConnect);
-            hostBuilder.ConfigureServices(reg);
-            return hostBuilder;
-        }
-
-        /// <summary>Registers a <see cref="HorseClient"/> with access to <see cref="IConfiguration"/>, <see cref="IHostEnvironment"/> and <see cref="IServiceCollection"/>.</summary>
-        public IHostBuilder AddHorse(
-            Action<HorseClientBuilder, IConfiguration, IHostEnvironment, IServiceCollection> configure,
-            bool autoConnect = true)
-        {
-            Action<HostBuilderContext, IServiceCollection> reg = (ctx, s) =>
-                HorseRegistrar.Add(s, b => configure(b, ctx.Configuration, ctx.HostingEnvironment, s), autoConnect);
-            hostBuilder.ConfigureServices(reg);
-            return hostBuilder;
-        }
-
-        /// <summary>Registers a keyed <see cref="HorseClient"/> with access to <see cref="IConfiguration"/>, <see cref="IHostEnvironment"/> and <see cref="IServiceCollection"/>.</summary>
-        public IHostBuilder AddHorse(
-            string key,
-            Action<HorseClientBuilder, IConfiguration, IHostEnvironment, IServiceCollection> configure,
-            bool autoConnect = true)
-        {
-            Action<HostBuilderContext, IServiceCollection> reg = (ctx, s) =>
-                HorseRegistrar.AddKeyed(s, key, b => configure(b, ctx.Configuration, ctx.HostingEnvironment, s), autoConnect);
-            hostBuilder.ConfigureServices(reg);
-            return hostBuilder;
-        }
-
-        /// <summary>Registers a typed <see cref="HorseClient{TIdentifier}"/> into the host's DI container.</summary>
-        /// <typeparam name="TIdentifier">Marker type used to distinguish this connection.</typeparam>
-        public IHostBuilder AddHorse<TIdentifier>(Action<HorseClientBuilder> configure, bool autoConnect = true)
-        {
-            hostBuilder.ConfigureServices((_, s) => HorseRegistrar.Add<TIdentifier>(s, configure, autoConnect));
             return hostBuilder;
         }
     }
@@ -209,112 +100,26 @@ public static class GenericHostExtensions
         }
 
         /// <summary>Registers a <see cref="HorseClient"/> with access to <see cref="IConfiguration"/>.</summary>
-        public IHostApplicationBuilder AddHorse(Action<HorseClientBuilder, IConfiguration> configure, bool autoConnect = true)
+        public IHostApplicationBuilder AddHorse(Action<HorseClientBuilder, HorseBuilderContext> configure, bool autoConnect = true)
         {
-            HorseRegistrar.Add(hostBuilder.Services, b => configure(b, hostBuilder.Configuration), autoConnect);
+            HorseRegistrar.Add(hostBuilder.Services, b => configure(b, new HorseBuilderContext
+            {
+                Configuration = hostBuilder.Configuration,
+                Environment = hostBuilder.Environment,
+                Services = hostBuilder.Services
+            }), autoConnect);
             return hostBuilder;
         }
 
         /// <summary>Registers a keyed <see cref="HorseClient"/> with access to <see cref="IConfiguration"/>.</summary>
-        public IHostApplicationBuilder AddHorse(string key, Action<HorseClientBuilder, IConfiguration> configure, bool autoConnect = true)
+        public IHostApplicationBuilder AddHorse(string key, Action<HorseClientBuilder, HorseBuilderContext> configure, bool autoConnect = true)
         {
-            HorseRegistrar.AddKeyed(hostBuilder.Services, key, b => configure(b, hostBuilder.Configuration), autoConnect);
-            return hostBuilder;
-        }
-
-        /// <summary>Registers a <see cref="HorseClient"/> with access to <see cref="IHostEnvironment"/>.</summary>
-        public IHostApplicationBuilder AddHorse(Action<HorseClientBuilder, IHostEnvironment> configure, bool autoConnect = true)
-        {
-            HorseRegistrar.Add(hostBuilder.Services, b => configure(b, hostBuilder.Environment), autoConnect);
-            return hostBuilder;
-        }
-
-        /// <summary>Registers a keyed <see cref="HorseClient"/> with access to <see cref="IHostEnvironment"/>.</summary>
-        public IHostApplicationBuilder AddHorse(string key, Action<HorseClientBuilder, IHostEnvironment> configure, bool autoConnect = true)
-        {
-            HorseRegistrar.AddKeyed(hostBuilder.Services, key, b => configure(b, hostBuilder.Environment), autoConnect);
-            return hostBuilder;
-        }
-
-        /// <summary>Registers a <see cref="HorseClient"/> with access to <see cref="IServiceCollection"/>.</summary>
-        public IHostApplicationBuilder AddHorse(Action<HorseClientBuilder, IServiceCollection> configure, bool autoConnect = true)
-        {
-            HorseRegistrar.Add(hostBuilder.Services, b => configure(b, hostBuilder.Services), autoConnect);
-            return hostBuilder;
-        }
-
-        /// <summary>Registers a keyed <see cref="HorseClient"/> with access to <see cref="IServiceCollection"/>.</summary>
-        public IHostApplicationBuilder AddHorse(string key, Action<HorseClientBuilder, IServiceCollection> configure, bool autoConnect = true)
-        {
-            HorseRegistrar.AddKeyed(hostBuilder.Services, key, b => configure(b, hostBuilder.Services), autoConnect);
-            return hostBuilder;
-        }
-
-        /// <summary>Registers a <see cref="HorseClient"/> with access to <see cref="IConfiguration"/> and <see cref="IHostEnvironment"/>.</summary>
-        public IHostApplicationBuilder AddHorse(Action<HorseClientBuilder, IConfiguration, IHostEnvironment> configure, bool autoConnect = true)
-        {
-            HorseRegistrar.Add(hostBuilder.Services, b => configure(b, hostBuilder.Configuration, hostBuilder.Environment), autoConnect);
-            return hostBuilder;
-        }
-
-        /// <summary>Registers a keyed <see cref="HorseClient"/> with access to <see cref="IConfiguration"/> and <see cref="IHostEnvironment"/>.</summary>
-        public IHostApplicationBuilder AddHorse(string key, Action<HorseClientBuilder, IConfiguration, IHostEnvironment> configure, bool autoConnect = true)
-        {
-            HorseRegistrar.AddKeyed(hostBuilder.Services, key, b => configure(b, hostBuilder.Configuration, hostBuilder.Environment), autoConnect);
-            return hostBuilder;
-        }
-
-        /// <summary>Registers a <see cref="HorseClient"/> with access to <see cref="IConfiguration"/> and <see cref="IServiceCollection"/>.</summary>
-        public IHostApplicationBuilder AddHorse(Action<HorseClientBuilder, IConfiguration, IServiceCollection> configure, bool autoConnect = true)
-        {
-            HorseRegistrar.Add(hostBuilder.Services, b => configure(b, hostBuilder.Configuration, hostBuilder.Services), autoConnect);
-            return hostBuilder;
-        }
-
-        /// <summary>Registers a keyed <see cref="HorseClient"/> with access to <see cref="IConfiguration"/> and <see cref="IServiceCollection"/>.</summary>
-        public IHostApplicationBuilder AddHorse(string key, Action<HorseClientBuilder, IConfiguration, IServiceCollection> configure, bool autoConnect = true)
-        {
-            HorseRegistrar.AddKeyed(hostBuilder.Services, key, b => configure(b, hostBuilder.Configuration, hostBuilder.Services), autoConnect);
-            return hostBuilder;
-        }
-
-        /// <summary>Registers a <see cref="HorseClient"/> with access to <see cref="IHostEnvironment"/> and <see cref="IServiceCollection"/>.</summary>
-        public IHostApplicationBuilder AddHorse(Action<HorseClientBuilder, IHostEnvironment, IServiceCollection> configure, bool autoConnect = true)
-        {
-            HorseRegistrar.Add(hostBuilder.Services, b => configure(b, hostBuilder.Environment, hostBuilder.Services), autoConnect);
-            return hostBuilder;
-        }
-
-        /// <summary>Registers a keyed <see cref="HorseClient"/> with access to <see cref="IHostEnvironment"/> and <see cref="IServiceCollection"/>.</summary>
-        public IHostApplicationBuilder AddHorse(string key, Action<HorseClientBuilder, IHostEnvironment, IServiceCollection> configure, bool autoConnect = true)
-        {
-            HorseRegistrar.AddKeyed(hostBuilder.Services, key, b => configure(b, hostBuilder.Environment, hostBuilder.Services), autoConnect);
-            return hostBuilder;
-        }
-
-        /// <summary>Registers a <see cref="HorseClient"/> with access to <see cref="IConfiguration"/>, <see cref="IHostEnvironment"/> and <see cref="IServiceCollection"/>.</summary>
-        public IHostApplicationBuilder AddHorse(
-            Action<HorseClientBuilder, IConfiguration, IHostEnvironment, IServiceCollection> configure,
-            bool autoConnect = true)
-        {
-            HorseRegistrar.Add(
-                hostBuilder.Services,
-                b => configure(b, hostBuilder.Configuration, hostBuilder.Environment, hostBuilder.Services),
-                autoConnect);
-            return hostBuilder;
-        }
-
-        /// <summary>Registers a keyed <see cref="HorseClient"/> with access to <see cref="IConfiguration"/>, <see cref="IHostEnvironment"/> and <see cref="IServiceCollection"/>.</summary>
-        public IHostApplicationBuilder AddHorse(
-            string key,
-            Action<HorseClientBuilder, IConfiguration, IHostEnvironment, IServiceCollection> configure,
-            bool autoConnect = true)
-        {
-            HorseRegistrar.AddKeyed(
-                hostBuilder.Services,
-                key,
-                b => configure(b, hostBuilder.Configuration, hostBuilder.Environment, hostBuilder.Services),
-                autoConnect);
+            HorseRegistrar.AddKeyed(hostBuilder.Services, key, b => configure(b, new HorseBuilderContext
+            {
+                Configuration = hostBuilder.Configuration,
+                Environment = hostBuilder.Environment,
+                Services = hostBuilder.Services
+            }), autoConnect);
             return hostBuilder;
         }
 
@@ -323,6 +128,19 @@ public static class GenericHostExtensions
         public IHostApplicationBuilder AddHorse<TIdentifier>(Action<HorseClientBuilder> configure, bool autoConnect = true)
         {
             HorseRegistrar.Add<TIdentifier>(hostBuilder.Services, configure, autoConnect);
+            return hostBuilder;
+        }
+
+        /// <summary>Registers a typed <see cref="HorseClient{TIdentifier}"/> into the host application's DI container.</summary>
+        /// <typeparam name="TIdentifier">Marker type used to distinguish this connection.</typeparam>
+        public IHostApplicationBuilder AddHorse<TIdentifier>(Action<HorseClientBuilder, HorseBuilderContext> configure, bool autoConnect = true)
+        {
+            HorseRegistrar.Add<TIdentifier>(hostBuilder.Services, b => configure(b, new HorseBuilderContext
+            {
+                Configuration = hostBuilder.Configuration,
+                Environment = hostBuilder.Environment,
+                Services = hostBuilder.Services
+            }), autoConnect);
             return hostBuilder;
         }
     }

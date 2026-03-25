@@ -9,10 +9,9 @@ namespace Sample.Cluster;
 
 public class MirroredModelConsumer : IQueueConsumer<MirroredModel>
 {
-    public Task Consume(HorseMessage message, MirroredModel model, HorseClient client,
-        CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<MirroredModel> context)
     {
-        Console.WriteLine($"Consumed {model.Foo}");
+        Console.WriteLine($"Consumed {context.Model.Foo}");
         return Task.CompletedTask;
     }
 }

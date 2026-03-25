@@ -59,7 +59,7 @@ public class RetryModel
 [Retry(3, 50)]
 public class Retry3Consumer(RetryTrackerAccessor accessor) : IQueueConsumer<RetryModel>
 {
-    public Task Consume(HorseMessage message, RetryModel model, HorseClient client, CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<RetryModel> context)
     {
         int attempt = Interlocked.Increment(ref accessor.Tracker.AttemptCount);
 
@@ -69,7 +69,7 @@ public class Retry3Consumer(RetryTrackerAccessor accessor) : IQueueConsumer<Retr
             throw new InvalidOperationException(accessor.Tracker.ExceptionMessage);
         }
 
-        accessor.Tracker.ConsumedMessages.Add(model.Data);
+        accessor.Tracker.ConsumedMessages.Add(context.Model.Data);
         return Task.CompletedTask;
     }
 }
@@ -82,7 +82,7 @@ public class Retry3Consumer(RetryTrackerAccessor accessor) : IQueueConsumer<Retr
 [Retry(5, 10)]
 public class Retry5Consumer(RetryTrackerAccessor accessor) : IQueueConsumer<RetryModel>
 {
-    public Task Consume(HorseMessage message, RetryModel model, HorseClient client, CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<RetryModel> context)
     {
         int attempt = Interlocked.Increment(ref accessor.Tracker.AttemptCount);
 
@@ -92,7 +92,7 @@ public class Retry5Consumer(RetryTrackerAccessor accessor) : IQueueConsumer<Retr
             throw new InvalidOperationException(accessor.Tracker.ExceptionMessage);
         }
 
-        accessor.Tracker.ConsumedMessages.Add(model.Data);
+        accessor.Tracker.ConsumedMessages.Add(context.Model.Data);
         return Task.CompletedTask;
     }
 }
@@ -105,7 +105,7 @@ public class Retry5Consumer(RetryTrackerAccessor accessor) : IQueueConsumer<Retr
 [Retry(1)]
 public class Retry1Consumer(RetryTrackerAccessor accessor) : IQueueConsumer<RetryModel>
 {
-    public Task Consume(HorseMessage message, RetryModel model, HorseClient client, CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<RetryModel> context)
     {
         Interlocked.Increment(ref accessor.Tracker.AttemptCount);
 
@@ -115,7 +115,7 @@ public class Retry1Consumer(RetryTrackerAccessor accessor) : IQueueConsumer<Retr
             throw new InvalidOperationException(accessor.Tracker.ExceptionMessage);
         }
 
-        accessor.Tracker.ConsumedMessages.Add(model.Data);
+        accessor.Tracker.ConsumedMessages.Add(context.Model.Data);
         return Task.CompletedTask;
     }
 }
@@ -129,7 +129,7 @@ public class Retry1Consumer(RetryTrackerAccessor accessor) : IQueueConsumer<Retr
 [PushExceptions<ExceptionLogModel>]
 public class Retry3WithPushExceptionConsumer(RetryTrackerAccessor accessor) : IQueueConsumer<RetryModel>
 {
-    public Task Consume(HorseMessage message, RetryModel model, HorseClient client, CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<RetryModel> context)
     {
         int attempt = Interlocked.Increment(ref accessor.Tracker.AttemptCount);
 
@@ -139,7 +139,7 @@ public class Retry3WithPushExceptionConsumer(RetryTrackerAccessor accessor) : IQ
             throw new InvalidOperationException(accessor.Tracker.ExceptionMessage);
         }
 
-        accessor.Tracker.ConsumedMessages.Add(model.Data);
+        accessor.Tracker.ConsumedMessages.Add(context.Model.Data);
         return Task.CompletedTask;
     }
 }
@@ -152,7 +152,7 @@ public class Retry3WithPushExceptionConsumer(RetryTrackerAccessor accessor) : IQ
 [Retry(3, 50, IgnoreExceptions = new[] { typeof(CustomBusinessException) })]
 public class Retry3IgnoreBusinessExceptionConsumer(RetryTrackerAccessor accessor) : IQueueConsumer<RetryModel>
 {
-    public Task Consume(HorseMessage message, RetryModel model, HorseClient client, CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<RetryModel> context)
     {
         Interlocked.Increment(ref accessor.Tracker.AttemptCount);
 
@@ -162,7 +162,7 @@ public class Retry3IgnoreBusinessExceptionConsumer(RetryTrackerAccessor accessor
             throw (Exception)Activator.CreateInstance(accessor.Tracker.ExceptionTypeToThrow, accessor.Tracker.ExceptionMessage);
         }
 
-        accessor.Tracker.ConsumedMessages.Add(model.Data);
+        accessor.Tracker.ConsumedMessages.Add(context.Model.Data);
         return Task.CompletedTask;
     }
 }
@@ -176,7 +176,7 @@ public class Retry3IgnoreBusinessExceptionConsumer(RetryTrackerAccessor accessor
 [MoveOnError("retry-error-q")]
 public class Retry3WithMoveOnErrorConsumer(RetryTrackerAccessor accessor) : IQueueConsumer<RetryModel>
 {
-    public Task Consume(HorseMessage message, RetryModel model, HorseClient client, CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<RetryModel> context)
     {
         Interlocked.Increment(ref accessor.Tracker.AttemptCount);
 
@@ -186,7 +186,7 @@ public class Retry3WithMoveOnErrorConsumer(RetryTrackerAccessor accessor) : IQue
             throw new InvalidOperationException(accessor.Tracker.ExceptionMessage);
         }
 
-        accessor.Tracker.ConsumedMessages.Add(model.Data);
+        accessor.Tracker.ConsumedMessages.Add(context.Model.Data);
         return Task.CompletedTask;
     }
 }
@@ -196,7 +196,7 @@ public class Retry3WithMoveOnErrorConsumer(RetryTrackerAccessor accessor) : IQue
 /// </summary>
 public class BuilderRetryConsumer(RetryTrackerAccessor accessor) : IQueueConsumer<RetryModel>
 {
-    public Task Consume(HorseMessage message, RetryModel model, HorseClient client, CancellationToken cancellationToken = default)
+    public Task Consume(ConsumeContext<RetryModel> context)
     {
         int attempt = Interlocked.Increment(ref accessor.Tracker.AttemptCount);
 
@@ -206,7 +206,7 @@ public class BuilderRetryConsumer(RetryTrackerAccessor accessor) : IQueueConsume
             throw new InvalidOperationException(accessor.Tracker.ExceptionMessage);
         }
 
-        accessor.Tracker.ConsumedMessages.Add(model.Data);
+        accessor.Tracker.ConsumedMessages.Add(context.Model.Data);
         return Task.CompletedTask;
     }
 }

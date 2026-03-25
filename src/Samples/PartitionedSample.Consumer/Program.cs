@@ -35,67 +35,63 @@ consumer1.Run();
 [AutoNack]
 internal class TestEventConsumer(IHorseQueueBus queueBus) : IQueueConsumer<TestEvent>
 {
-    public async Task Consume(HorseMessage message, TestEvent model, HorseClient client,
-        CancellationToken cancellationToken)
+    public async Task Consume(ConsumeContext<TestEvent> context)
     {
-        Console.WriteLine($"Received TestEvent: {model.Foo}");
+        Console.WriteLine($"Received TestEvent: {context.Model.Foo}");
         Test.MessageConsumed = true;
-        HorseResult? result = await queueBus.Push(new Test2Event(), true, null, Label.Value, cancellationToken);
+        HorseResult? result = await queueBus.Push(new Test2Event(), true, null, Label.Value, context.CancellationToken);
         Console.WriteLine($"Message2 sent: {result.Code}");
-        HorseMessage? ack = message.CreateAcknowledge();
+        HorseMessage? ack = context.Message.CreateAcknowledge();
 
         if (ack != null)
-            client.Send(ack, message.Headers.ToList());
+            context.Client.Send(ack, context.Message.Headers.ToList());
     }
 }
 
 [AutoNack]
 internal class TestEvent2Consumer(IHorseQueueBus queueBus) : IQueueConsumer<Test2Event>
 {
-    public async Task Consume(HorseMessage message, Test2Event model, HorseClient client,
-        CancellationToken cancellationToken)
+    public async Task Consume(ConsumeContext<Test2Event> context)
     {
-        Console.WriteLine($"Received Test2Event: {model.Foo}");
+        Console.WriteLine($"Received Test2Event: {context.Model.Foo}");
         Test.Message2Consumed = true;
         Dictionary<string, string> headers = new() { { "tenant-id", "tenant-id-value" } };
-        HorseResult? result = await queueBus.Push("Test3Event-Free", new Test3Event(), true, headers, "tenant-id", cancellationToken);
+        HorseResult? result = await queueBus.Push("Test3Event-Free", new Test3Event(), true, headers, "tenant-id", context.CancellationToken);
         Console.WriteLine($"Message3 sent: {result.Code}");
-        HorseMessage? ack = message.CreateAcknowledge();
+        HorseMessage? ack = context.Message.CreateAcknowledge();
 
         if (ack != null)
-            client.Send(ack, message.Headers.ToList());
+            context.Client.Send(ack, context.Message.Headers.ToList());
     }
 }
 
 [AutoNack]
 internal class TestEvent3Consumer(IHorseQueueBus queueBus) : IQueueConsumer<Test3Event>
 {
-    public async Task Consume(HorseMessage message, Test3Event model, HorseClient client,
-        CancellationToken cancellationToken)
+    public async Task Consume(ConsumeContext<Test3Event> context)
     {
-        Console.WriteLine($"Received Test3Event: {model.Foo}");
+        Console.WriteLine($"Received Test3Event: {context.Model.Foo}");
         Test.Message3Consumed = true;
-        HorseResult? result = await queueBus.Push(new Test4Event(), true, null, Label.Value, cancellationToken);
+        HorseResult? result = await queueBus.Push(new Test4Event(), true, null, Label.Value, context.CancellationToken);
         Console.WriteLine($"Message4 sent: {result.Code}");
-        HorseMessage? ack = message.CreateAcknowledge();
+        HorseMessage? ack = context.Message.CreateAcknowledge();
 
         if (ack != null)
-            client.Send(ack, message.Headers.ToList());
+            context.Client.Send(ack, context.Message.Headers.ToList());
     }
 }
 
 [AutoNack]
 internal class TestEvent4Consumer(IHorseQueueBus queueBus) : IQueueConsumer<Test4Event>
 {
-    public Task Consume(HorseMessage message, Test4Event model, HorseClient client,
-        CancellationToken cancellationToken)
+    public Task Consume(ConsumeContext<Test4Event> context)
     {
-        Console.WriteLine($"Received Test4Event: {model.Foo}");
+        Console.WriteLine($"Received Test4Event: {context.Model.Foo}");
         Test.Message4Consumed = true;
-        HorseMessage? ack = message.CreateAcknowledge();
+        HorseMessage? ack = context.Message.CreateAcknowledge();
 
         if (ack != null)
-            client.Send(ack, message.Headers.ToList());
+            context.Client.Send(ack, context.Message.Headers.ToList());
         return Task.CompletedTask;
     }
 }

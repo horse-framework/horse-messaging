@@ -9,15 +9,13 @@ namespace Benchmark.Channel.Subscriber;
 
 public class ChannelSubscriber : IChannelSubscriber<ChannelModel>
 {
-    public Task Handle(ChannelModel model, HorseMessage rawMessage, HorseClient client,
-        CancellationToken cancellationToken = default)
+    public Task Handle(ChannelMessageContext<ChannelModel> context)
     {
         Program.Counter.Increase();
         return Task.CompletedTask;
     }
 
-    public async Task Error(Exception exception, ChannelModel model, HorseMessage rawMessage, HorseClient client,
-        CancellationToken cancellationToken = default)
+    public Task Error(Exception exception, ChannelMessageContext<ChannelModel> context)
     {
         throw new NotImplementedException();
     }
