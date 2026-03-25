@@ -518,6 +518,7 @@ internal class ServerMessageHandler : INetworkMessageHandler
                 ReceivedMessages = queue.Info.ReceivedMessages,
                 SentMessages = queue.Info.SentMessages,
                 NegativeAcks = queue.Info.NegativeAcknowledge,
+                Unacknowledges = queue.Info.Unacknowledges,
                 Acks = queue.Info.Acknowledges,
                 TimeoutMessages = queue.Info.TimedOutMessages,
                 SavedMessages = queue.Info.MessageSaved,

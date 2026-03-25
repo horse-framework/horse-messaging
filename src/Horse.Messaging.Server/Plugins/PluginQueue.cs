@@ -50,6 +50,7 @@ internal class PluginQueue : IPluginQueue
             ReceivedMessages = _queue.Info.ReceivedMessages,
             SentMessages = _queue.Info.SentMessages,
             NegativeAcks = _queue.Info.NegativeAcknowledge,
+            Unacknowledges = _queue.Info.Unacknowledges,
             Acks = _queue.Info.Acknowledges,
             TimeoutMessages = _queue.Info.TimedOutMessages,
             SavedMessages = _queue.Info.MessageSaved,

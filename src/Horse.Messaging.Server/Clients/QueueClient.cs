@@ -48,11 +48,6 @@ public class QueueClient
     public long AcknowledgeCount { get; set; }
 
     /// <summary>
-    /// Total count of how many times consumer received a message but could not send ack in time
-    /// </summary>
-    public long AckTimeoutCount { get; set; }
-
-    /// <summary>
     /// Creates new queue client pair descriptor
     /// </summary>
     public QueueClient(HorseQueue queue, MessagingClient client)

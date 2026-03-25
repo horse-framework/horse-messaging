@@ -68,9 +68,14 @@ public class QueueInformation
     public long SentMessages { get; set; }
 
     /// <summary>
-    /// Total unacknowledged messages
+    /// Total negatively acknowledged messages
     /// </summary>
     public long NegativeAcks { get; set; }
+
+    /// <summary>
+    /// Total acknowledge timeouts
+    /// </summary>
+    public long Unacknowledges { get; set; }
 
     /// <summary>
     /// Total acknowledged messages
