@@ -576,10 +576,7 @@ public class HorseClient : IDisposable
     /// </summary>
     public void SetClientType(string type)
     {
-        if (_data.Properties.ContainsKey(HorseHeaders.CLIENT_TYPE))
-            _data.Properties[HorseHeaders.CLIENT_TYPE] = type;
-        else
-            _data.Properties.Add(HorseHeaders.CLIENT_TYPE, type);
+        _data.Properties[HorseHeaders.CLIENT_TYPE] = type;
     }
 
     /// <summary>
@@ -587,12 +584,27 @@ public class HorseClient : IDisposable
     /// </summary>
     public void SetClientName(string name)
     {
-        if (_data.Properties.ContainsKey(HorseHeaders.CLIENT_NAME))
-            _data.Properties[HorseHeaders.CLIENT_NAME] = name;
-        else
-            _data.Properties.Add(HorseHeaders.CLIENT_NAME, name);
+        _data.Properties[HorseHeaders.CLIENT_NAME] = name;
     }
 
+    /// <summary>
+    /// Gets client name
+    /// </summary>
+    public string GetClientName()
+    {
+        _data.Properties.TryGetValue(HorseHeaders.CLIENT_NAME, out string name);
+        return name;
+    }
+    
+    /// <summary>
+    /// Gets client type
+    /// </summary>
+    public string GetClientType()
+    {
+        _data.Properties.TryGetValue(HorseHeaders.CLIENT_TYPE, out string name);
+        return name;
+    }
+    
     /// <summary>
     /// Sets client unique id.
     /// If not set, a unique id will be generated automatically on connect.

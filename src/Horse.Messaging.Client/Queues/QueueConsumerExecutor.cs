@@ -70,6 +70,7 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
     {
         TModel t = (TModel)model;
         ProvidedHandler providedHandler = null;
+        int tryCount = Retry.Count == 0 ? 100 : Retry.Count;
 
         try
         {
@@ -95,7 +96,8 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
             if (_moveOnError != null && !string.IsNullOrEmpty(_moveOnError.QueueName))
             {
                 HorseMessage clone = message.Clone(true, true, client.UniqueIdGenerator.Create());
-                clone.SetStringAdditionalContent(System.Text.Json.JsonSerializer.Serialize(ExceptionDescription.Create(e)));
+                var exDesc = ExceptionDescription.Create(client, message, e, tryCount);
+                clone.SetStringAdditionalContent(System.Text.Json.JsonSerializer.Serialize(exDesc));
                 clone.Type = MessageType.QueueMessage;
 
                 if (!string.IsNullOrEmpty(_moveOnError.QueueTopic))
@@ -139,7 +141,7 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
             try
             {
                 context.TryCount = i;
-                
+
                 await _interceptorRunner.RunBeforeInterceptors(message, client, handlerFactory, cancellationToken);
                 await consumer.Consume(context);
                 await _interceptorRunner.RunAfterInterceptors(message, client, handlerFactory, cancellationToken);
