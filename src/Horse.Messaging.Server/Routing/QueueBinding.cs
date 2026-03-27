@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
@@ -28,11 +29,11 @@ public class QueueBinding : Binding
             if (queue == null)
                 return false;
 
-            string messageId = Interaction == BindingInteraction.None
-                ? Router.Rider.MessageIdGenerator.Create()
-                : message.MessageId;
+            bool doNotClone = Router.Bindings.Length == 1 || Router.Method != RouteMethod.Distribute;
 
-            HorseMessage msg = message.Clone(true, true, messageId);
+            HorseMessage msg = doNotClone
+                ? message
+                : message.Clone(true, true, Router.Rider.MessageIdGenerator.Create());
 
             msg.Type = MessageType.QueueMessage;
             msg.SetTarget(Target);

@@ -116,9 +116,6 @@ internal class RoundRobinQueueState : IQueueState
         if (!await _queue.ApplyDecision(message.Decision, message))
             return PushResult.Success;
 
-        //create prepared message data
-        byte[] data = HorseProtocolWriter.Create(message.Message);
-
         //create delivery object
         MessageDelivery delivery = new MessageDelivery(message, receiver, deadline);
 
@@ -138,7 +135,7 @@ internal class RoundRobinQueueState : IQueueState
         }
 
         //send the message
-        bool sent = await receiver.Client.SendAsync(data);
+        bool sent = await receiver.Client.SendAsync(message.Message);
 
         if (sent)
         {
