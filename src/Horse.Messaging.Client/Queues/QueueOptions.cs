@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Client.Queues.Annotations;
 
 namespace Horse.Messaging.Client.Queues;
 
@@ -50,6 +51,13 @@ public class QueueOptions
     public int? ClientLimit { get; set; }
 
     /// <summary>
+    /// Queue topic.
+    /// Null keeps the current topic when updating options.
+    /// </summary>
+    [JsonPropertyName("Topic")]
+    public string Topic { get; set; }
+
+    /// <summary>
     /// Auto destroy options for the queue:
     /// "disabled": Auto destroy is disabled
     /// "no-message": Queue is destroyed when there is no message (even there are consumers)
@@ -66,6 +74,12 @@ public class QueueOptions
     /// </summary>
     [JsonPropertyName("DelayBetweenMessages")]
     public int? DelayBetweenMessages { get; set; }
+
+    /// <summary>
+    /// Decision for how messages are put back after failed delivery.
+    /// </summary>
+    [JsonPropertyName("PutBack")]
+    public PutBack? PutBack { get; set; }
 
     /// <summary>
     /// Waits in milliseconds before putting message back into the queue.

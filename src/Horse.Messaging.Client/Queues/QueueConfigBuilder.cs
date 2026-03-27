@@ -55,6 +55,12 @@ public class QueueConfigBuilder
     public MessagingQueueType? QueueType { get; set; }
 
     /// <summary>
+    /// Maximum client limit of the queue.
+    /// Zero is unlimited.
+    /// </summary>
+    public int? ClientLimit { get; set; }
+
+    /// <summary>
     /// If queue is created with a message push and that value is not null, queue topic.
     /// </summary>
     public string Topic { get; set; }
@@ -200,6 +206,7 @@ public class QueueConfigBuilder
             MaxPartitions = MaxPartitions,
             SubscribersPerPartition = SubscribersPerPartition,
             QueueType = QueueType,
+            ClientLimit = ClientLimit,
             Acknowledge = Acknowledge,
             Topic = Topic,
             QueueName = QueueName,

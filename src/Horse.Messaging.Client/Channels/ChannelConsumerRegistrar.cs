@@ -149,9 +149,36 @@ public class ChannelConsumerRegistrar
             Executer = executor
         };
 
+        registration.SubscriptionHeaders.AddRange(BuildSubscriptionHeaders(modelDescriptor, consumerDescriptor));
+
         if (executor != null)
             executor.Resolve(registration);
 
         return registration;
+    }
+
+    private static List<KeyValuePair<string, string>> BuildSubscriptionHeaders(ChannelTypeDescriptor modelDescriptor,
+        ChannelTypeDescriptor consumerDescriptor)
+    {
+        List<KeyValuePair<string, string>> headers = new();
+        MergeDescriptorHeaders(headers, modelDescriptor);
+        MergeDescriptorHeaders(headers, consumerDescriptor);
+        return headers;
+    }
+
+    private static void MergeDescriptorHeaders(List<KeyValuePair<string, string>> headers, ChannelTypeDescriptor descriptor)
+    {
+        if (descriptor == null)
+            return;
+
+        HorseMessage message = descriptor.CreateMessage();
+        if (!message.HasHeader)
+            return;
+
+        foreach (KeyValuePair<string, string> pair in message.Headers)
+        {
+            headers.RemoveAll(x => x.Key == pair.Key);
+            headers.Add(pair);
+        }
     }
 }

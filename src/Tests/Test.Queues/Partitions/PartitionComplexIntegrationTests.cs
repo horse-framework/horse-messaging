@@ -647,8 +647,10 @@ public class PartitionComplexIntegrationTests
         // tenant-1 gets just 1 message (will be consumed fast → partition becomes empty)
         await PushLabeled(producer, "ad-multi-q", "tenant-1");
 
-        // Wait until tenant-1 is consumed
-        await WaitUntil(() => tracker.TotalCount() >= 2, 10_000);
+        // Push is fire-and-forget here, so wait specifically for tenant-1 to be
+        // routed and consumed before asserting its partition gets auto-destroyed.
+        await WaitUntil(() => queue.PartitionManager.Partitions.Any(p => p.Label == "tenant-1"), 10_000);
+        await WaitUntil(() => tracker.Get("QueueA", "tenant-1").Count >= 1, 10_000);
 
         // Wait for auto-destroy to remove tenant-1.
         // Condition: tenant-1 partition no longer exists. tenant-2 should survive.

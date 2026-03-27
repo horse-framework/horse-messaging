@@ -2,6 +2,7 @@ using System;
 using System.Text.Json.Serialization;
 using EnumsNET;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Messaging.Server.Queues.Partitions;
 
 namespace Horse.Messaging.Server.Queues;
@@ -52,6 +53,12 @@ public class NetworkOptionsBuilder
     public int? ClientLimit { get; set; }
 
     /// <summary>
+    /// Queue topic.
+    /// </summary>
+    [JsonPropertyName("Topic")]
+    public string Topic { get; set; }
+
+    /// <summary>
     /// Maximum queue limit of the server
     /// Zero is unlimited
     /// </summary>
@@ -77,6 +84,12 @@ public class NetworkOptionsBuilder
     /// </summary>
     [JsonPropertyName("DelayBetweenMessages")]
     public int? DelayBetweenMessages { get; set; }
+
+    /// <summary>
+    /// Queue put back decision option.
+    /// </summary>
+    [JsonPropertyName("PutBack")]
+    public string PutBack { get; set; }
 
     /// <summary>
     /// Waits in milliseconds before putting message back into the queue.
@@ -150,6 +163,9 @@ public class NetworkOptionsBuilder
 
         if (DelayBetweenMessages.HasValue)
             target.DelayBetweenMessages = DelayBetweenMessages.Value;
+
+        if (!string.IsNullOrEmpty(PutBack))
+            target.PutBack = Enums.Parse<PutBackDecision>(PutBack, true, EnumFormat.Description);
 
         if (PutBackDelay.HasValue)
             target.PutBackDelay = PutBackDelay.Value;

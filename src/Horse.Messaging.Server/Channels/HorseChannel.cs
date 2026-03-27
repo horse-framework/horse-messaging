@@ -77,7 +77,7 @@ public class HorseChannel
     private Timer _destroyTimer;
     private byte[] _initialMessage;
     private readonly object _channelClientLock = new();
-    private readonly ChannelClient[] _channelClients = new ChannelClient[256];
+    private ChannelClient[] _channelClients = new ChannelClient[256];
 
     private readonly Channel<HorseMessage> _channel = Channel.CreateBounded<HorseMessage>(
         new BoundedChannelOptions(50000)
@@ -116,6 +116,39 @@ public class HorseChannel
         _ = Run();
     }
 
+    internal bool CanSubscribe(MessagingClient client)
+    {
+        foreach (IChannelAuthorization authenticator in Rider.Channel.Authenticators.All())
+        {
+            bool allowed = authenticator.CanSubscribe(this, client);
+            if (!allowed)
+                return false;
+        }
+
+        return true;
+    }
+
+    internal void EnsureClientCapacity()
+    {
+        EnsureClientCapacity(Options?.ClientLimit ?? 0);
+    }
+
+    private void EnsureClientCapacity(int clientLimit)
+    {
+        if (clientLimit <= 0)
+            return;
+
+        lock (_channelClientLock)
+        {
+            if (clientLimit <= _channelClients.Length)
+                return;
+
+            ChannelClient[] clients = new ChannelClient[clientLimit];
+            Array.Copy(_channelClients, clients, _channelClients.Length);
+            _channelClients = clients;
+        }
+    }
+
     internal void Destroy()
     {
         Status = ChannelStatus.Destroyed;
@@ -135,35 +168,69 @@ public class HorseChannel
         }
     }
 
-    internal void UpdateOptionsByMessage(HorseMessage message)
+    internal bool UpdateOptionsByMessage(HorseMessage message)
     {
+        bool changed = false;
+
         string clientLimit = message.FindHeader(HorseHeaders.CLIENT_LIMIT);
         if (!string.IsNullOrEmpty(clientLimit))
-            Options.ClientLimit = Convert.ToInt32(clientLimit.Trim());
+        {
+            int value = Convert.ToInt32(clientLimit.Trim());
+            if (Options.ClientLimit != value)
+            {
+                Options.ClientLimit = value;
+                EnsureClientCapacity();
+                changed = true;
+            }
+        }
 
         string messageSizeLimit = message.FindHeader(HorseHeaders.MESSAGE_SIZE_LIMIT);
         if (!string.IsNullOrEmpty(messageSizeLimit))
-            Options.MessageSizeLimit = Convert.ToUInt64(messageSizeLimit.Trim());
+        {
+            ulong value = Convert.ToUInt64(messageSizeLimit.Trim());
+            if (Options.MessageSizeLimit != value)
+            {
+                Options.MessageSizeLimit = value;
+                changed = true;
+            }
+        }
 
         string autoDestroy = message.FindHeader(HorseHeaders.AUTO_DESTROY);
         if (!string.IsNullOrEmpty(autoDestroy))
         {
             string value = autoDestroy.Trim();
-            Options.AutoDestroy = value.Equals("TRUE", StringComparison.CurrentCultureIgnoreCase) || value == "1";
+            bool parsed = value.Equals("TRUE", StringComparison.CurrentCultureIgnoreCase) || value == "1";
+            if (Options.AutoDestroy != parsed)
+            {
+                Options.AutoDestroy = parsed;
+                changed = true;
+            }
         }
 
         string initialMessage = message.FindHeader(HorseHeaders.CHANNEL_INITIAL_MESSAGE);
         if (!string.IsNullOrEmpty(initialMessage))
         {
             string value = initialMessage.Trim();
-            Options.SendLastMessageAsInitial = value.Equals("TRUE", StringComparison.CurrentCultureIgnoreCase) || value == "1";
+            bool parsed = value.Equals("TRUE", StringComparison.CurrentCultureIgnoreCase) || value == "1";
+            if (Options.SendLastMessageAsInitial != parsed)
+            {
+                Options.SendLastMessageAsInitial = parsed;
+                changed = true;
+            }
         }
 
         string idleSeconds = message.FindHeader(HorseHeaders.CHANNEL_DESTROY_IDLE_SECONDS);
         if (!string.IsNullOrEmpty(idleSeconds))
-            Options.AutoDestroyIdleSeconds = Convert.ToInt32(idleSeconds.Trim());
+        {
+            int value = Convert.ToInt32(idleSeconds.Trim());
+            if (Options.AutoDestroyIdleSeconds != value)
+            {
+                Options.AutoDestroyIdleSeconds = value;
+                changed = true;
+            }
+        }
 
-        Rider.Channel.ClusterNotifier.SendChannelUpdated(this);
+        return changed;
     }
 
     private async Task Run()
@@ -234,7 +301,7 @@ public class HorseChannel
             return PushResult.LimitExceeded;
 
         //remove operational headers that are should not be sent to consumers or saved to disk
-        message.RemoveHeaders(HorseHeaders.CHANNEL_NAME, HorseHeaders.CC);
+        message.RemoveHeaders(HorseHeaders.CHANNEL_NAME, HorseHeaders.CC, HorseHeaders.CLIENT_LIMIT);
         message.WaitResponse = false;
         LastPublishDate = DateTime.UtcNow;
 
@@ -280,17 +347,20 @@ public class HorseChannel
     /// </summary>
     public SubscriptionResult AddClient(MessagingClient client)
     {
-        foreach (IChannelAuthorization authenticator in Rider.Channel.Authenticators.All())
-        {
-            bool allowed = authenticator.CanSubscribe(this, client);
-            if (!allowed)
-                return SubscriptionResult.Unauthorized;
-        }
+        return AddClient(client, false);
+    }
+
+    internal SubscriptionResult AddClient(MessagingClient client, bool authorizationChecked)
+    {
+        if (!authorizationChecked && !CanSubscribe(client))
+            return SubscriptionResult.Unauthorized;
 
         ChannelClient channelClient = new ChannelClient(this, client);
         bool added = false;
         lock (_channelClientLock)
         {
+            EnsureClientCapacity();
+
             for (int i = 0; i < _channelClients.Length; i++)
             {
                 if (Options.ClientLimit > 0 && i + 1 >= Options.ClientLimit)

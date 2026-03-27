@@ -142,6 +142,7 @@ internal class ServerMessageHandler : INetworkMessageHandler
     private async Task Subscribe(MessagingClient client, HorseMessage message)
     {
         HorseQueue queue = _rider.Queue.Find(message.Target);
+        bool queueAlreadyExists = queue != null;
 
         //if auto creation active, try to create queue
         if (queue == null && _rider.Queue.Options.AutoQueueCreation)
@@ -186,6 +187,24 @@ internal class ServerMessageHandler : INetworkMessageHandler
             return;
         }
 
+        bool authorizationChecked = false;
+        if (queueAlreadyExists)
+        {
+            bool authorized = await queue.CanSubscribe(client);
+            if (!authorized)
+            {
+                if (message.WaitResponse)
+                    await client.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
+
+                return;
+            }
+
+            authorizationChecked = true;
+
+            if (queue.ApplyLiveSubscriptionOptions(message))
+                queue.UpdateConfiguration(true);
+        }
+
         // Partition intercept: delegate subscribe to PartitionManager
         if (queue.IsPartitioned)
         {
@@ -211,7 +230,7 @@ internal class ServerMessageHandler : INetworkMessageHandler
             return;
         }
 
-        SubscriptionResult result = await queue.AddClient(client);
+        SubscriptionResult result = await queue.AddClient(client, authorizationChecked);
         if (message.WaitResponse)
         {
             switch (result)
@@ -341,7 +360,11 @@ internal class ServerMessageHandler : INetworkMessageHandler
         //creates new queue
         QueueOptions options = QueueOptions.CloneFrom(_rider.Queue.Options);
         if (builder != null)
+        {
             builder.ApplyToQueue(options);
+            if (builder.Topic != null)
+                message.SetOrAddHeader(HorseHeaders.QUEUE_TOPIC, builder.Topic);
+        }
 
         queue = await _rider.Queue.Create(message.Target, options, message, true, false, client);
 
@@ -416,6 +439,9 @@ internal class ServerMessageHandler : INetworkMessageHandler
 
         builder.Type = null;
         builder.ApplyToQueue(queue.Options);
+        queue.EnsureClientCapacity();
+        if (builder.Topic != null)
+            queue.Topic = builder.Topic;
         queue.UpdateConfiguration(true);
 
         //if creation successful, sends response

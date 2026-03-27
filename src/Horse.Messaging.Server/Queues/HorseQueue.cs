@@ -198,7 +198,7 @@ public class HorseQueue
     private readonly HashSet<string> _messageIdList = new(StringComparer.Ordinal);
 
     private readonly object _queueClientLock = new();
-    private readonly QueueClient[] _queueClients = new QueueClient[32];
+    private QueueClient[] _queueClients = new QueueClient[32];
 
     /// <summary>
     /// True if queue is destroyed
@@ -255,6 +255,42 @@ public class HorseQueue
         MessageNackEvent = new EventManager(rider, HorseEventType.QueueMessageNack, name);
         MessageUnackEvent = new EventManager(rider, HorseEventType.QueueMessageUnack, name);
         MessageTimeoutEvent = new EventManager(rider, HorseEventType.QueueMessageTimeout, name);
+    }
+
+    internal async Task<bool> CanSubscribe(MessagingClient client)
+    {
+        foreach (IQueueAuthenticator authenticator in Rider.Queue.Authenticators.All())
+        {
+            bool allowed = await authenticator.Authenticate(this, client);
+            if (!allowed)
+                return false;
+        }
+
+        return true;
+    }
+
+    internal void EnsureClientCapacity()
+    {
+        if (Options == null)
+            return;
+
+        EnsureClientCapacity(Options.ClientLimit);
+    }
+
+    private void EnsureClientCapacity(int clientLimit)
+    {
+        if (clientLimit <= 0)
+            return;
+
+        lock (_queueClientLock)
+        {
+            if (clientLimit <= _queueClients.Length)
+                return;
+
+            QueueClient[] clients = new QueueClient[clientLimit];
+            Array.Copy(_queueClients, clients, _queueClients.Length);
+            _queueClients = clients;
+        }
     }
 
     /// <summary>
@@ -535,6 +571,12 @@ public class HorseQueue
             else if (pair.Key.Equals(HorseHeaders.QUEUE_TOPIC, StringComparison.OrdinalIgnoreCase))
                 Topic = pair.Value;
 
+            else if (pair.Key.Equals(HorseHeaders.CLIENT_LIMIT, StringComparison.OrdinalIgnoreCase))
+            {
+                Options.ClientLimit = Convert.ToInt32(pair.Value);
+                EnsureClientCapacity();
+            }
+
             else if (pair.Key.Equals(HorseHeaders.PUT_BACK, StringComparison.OrdinalIgnoreCase))
                 Options.PutBack = Enums.Parse<PutBackDecision>(pair.Value, true, EnumFormat.Description);
 
@@ -567,6 +609,133 @@ public class HorseQueue
         }
     }
 
+    internal bool ApplyLiveSubscriptionOptions(HorseMessage message)
+    {
+        if (message == null || !message.HasHeader)
+            return false;
+
+        bool changed = false;
+
+        foreach (KeyValuePair<string, string> pair in message.Headers)
+        {
+            if (pair.Key.Equals(HorseHeaders.QUEUE_TOPIC, StringComparison.OrdinalIgnoreCase))
+            {
+                if (!string.Equals(Topic, pair.Value, StringComparison.Ordinal))
+                {
+                    Topic = pair.Value;
+                    changed = true;
+                }
+            }
+
+            else if (pair.Key.Equals(HorseHeaders.CLIENT_LIMIT, StringComparison.OrdinalIgnoreCase))
+            {
+                int clientLimit = Convert.ToInt32(pair.Value);
+                if (Options.ClientLimit != clientLimit)
+                {
+                    Options.ClientLimit = clientLimit;
+                    EnsureClientCapacity();
+                    changed = true;
+                }
+            }
+
+            else if (pair.Key.Equals(HorseHeaders.PUT_BACK, StringComparison.OrdinalIgnoreCase))
+            {
+                PutBackDecision decision = Enums.Parse<PutBackDecision>(pair.Value, true, EnumFormat.Description);
+                if (Options.PutBack != decision)
+                {
+                    Options.PutBack = decision;
+                    changed = true;
+                }
+            }
+
+            else if (pair.Key.Equals(HorseHeaders.PUT_BACK_DELAY, StringComparison.OrdinalIgnoreCase))
+            {
+                int delay = Convert.ToInt32(pair.Value);
+                if (Options.PutBackDelay != delay)
+                {
+                    Options.PutBackDelay = delay;
+                    changed = true;
+                }
+            }
+
+            else if (pair.Key.Equals(HorseHeaders.MESSAGE_TIMEOUT, StringComparison.OrdinalIgnoreCase))
+            {
+                string[] timeoutValues = pair.Value.Split(';');
+                if (timeoutValues.Length >= 2)
+                {
+                    MessageTimeoutStrategy timeout = new MessageTimeoutStrategy
+                    {
+                        MessageDuration = Convert.ToInt32(timeoutValues[0]),
+                        Policy = Enums.Parse<MessageTimeoutPolicy>(timeoutValues[1], true, EnumFormat.Description),
+                        TargetName = timeoutValues.Length > 2 ? timeoutValues[2] : string.Empty
+                    };
+
+                    if (Options.MessageTimeout == null ||
+                        Options.MessageTimeout.MessageDuration != timeout.MessageDuration ||
+                        Options.MessageTimeout.Policy != timeout.Policy ||
+                        !string.Equals(Options.MessageTimeout.TargetName, timeout.TargetName, StringComparison.Ordinal))
+                    {
+                        Options.MessageTimeout = timeout;
+                        changed = true;
+                    }
+                }
+            }
+
+            else if (pair.Key.Equals(HorseHeaders.ACK_TIMEOUT, StringComparison.OrdinalIgnoreCase))
+            {
+                TimeSpan acknowledgeTimeout = TimeSpan.FromSeconds(Convert.ToInt32(pair.Value));
+                if (Options.AcknowledgeTimeout != acknowledgeTimeout)
+                {
+                    Options.AcknowledgeTimeout = acknowledgeTimeout;
+                    changed = true;
+                }
+            }
+
+            else if (pair.Key.Equals(HorseHeaders.DELAY_BETWEEN_MESSAGES, StringComparison.OrdinalIgnoreCase) &&
+                     !string.IsNullOrEmpty(pair.Value))
+            {
+                int delay = Convert.ToInt32(pair.Value);
+                if (Options.DelayBetweenMessages != delay)
+                {
+                    Options.DelayBetweenMessages = delay;
+                    changed = true;
+                }
+            }
+        }
+
+        return changed;
+    }
+
+    internal bool ApplyLivePushOptions(HorseMessage message)
+    {
+        if (message == null || !message.HasHeader)
+            return false;
+
+        string timeoutValue = message.FindHeader(HorseHeaders.MESSAGE_TIMEOUT);
+        if (string.IsNullOrEmpty(timeoutValue))
+            return false;
+
+        string[] timeoutValues = timeoutValue.Split(';');
+        if (timeoutValues.Length < 2)
+            return false;
+
+        MessageTimeoutStrategy timeout = new MessageTimeoutStrategy
+        {
+            MessageDuration = Convert.ToInt32(timeoutValues[0]),
+            Policy = Enums.Parse<MessageTimeoutPolicy>(timeoutValues[1], true, EnumFormat.Description),
+            TargetName = timeoutValues.Length > 2 ? timeoutValues[2] : string.Empty
+        };
+
+        if (Options.MessageTimeout != null &&
+            Options.MessageTimeout.MessageDuration == timeout.MessageDuration &&
+            Options.MessageTimeout.Policy == timeout.Policy &&
+            string.Equals(Options.MessageTimeout.TargetName, timeout.TargetName, StringComparison.Ordinal))
+            return false;
+
+        Options.MessageTimeout = timeout;
+        return true;
+    }
+
     internal void UpdateOptionsByNodeInfo(NodeQueueInfo info)
     {
         if (!string.IsNullOrEmpty(info.Acknowledge))
@@ -579,6 +748,8 @@ public class HorseQueue
             Options.AutoDestroy = Enums.Parse<QueueDestroy>(info.AutoDestroy, true, EnumFormat.Description);
 
         Options.AcknowledgeTimeout = TimeSpan.FromMilliseconds(info.AcknowledgeTimeout);
+        if (!string.IsNullOrEmpty(info.PutBack))
+            Options.PutBack = Enums.Parse<PutBackDecision>(info.PutBack, true, EnumFormat.Description);
         Options.MessageTimeout = new MessageTimeoutStrategy
         {
             MessageDuration = info.MessageTimeout.MessageDuration,
@@ -587,6 +758,7 @@ public class HorseQueue
         };
 
         Options.ClientLimit = info.ClientLimit;
+        EnsureClientCapacity();
         Options.MessageLimit = info.MessageLimit;
         Options.MessageSizeLimit = info.MessageSizeLimit;
         Options.MessageIdUniqueCheck = info.MessageIdUniqueCheck;
@@ -701,6 +873,7 @@ public class HorseQueue
         //remove operational headers that are should not be sent to consumers or saved to disk
         message.Message.RemoveHeaders(HorseHeaders.DELAY_BETWEEN_MESSAGES,
             HorseHeaders.ACKNOWLEDGE,
+            HorseHeaders.CLIENT_LIMIT,
             HorseHeaders.QUEUE_NAME,
             HorseHeaders.QUEUE_TYPE,
             HorseHeaders.QUEUE_TOPIC,
@@ -1370,19 +1543,22 @@ public class HorseQueue
     /// <summary>
     /// Adds the client to the queue
     /// </summary>
-    public async Task<SubscriptionResult> AddClient(MessagingClient client)
+    public Task<SubscriptionResult> AddClient(MessagingClient client)
     {
-        foreach (IQueueAuthenticator authenticator in Rider.Queue.Authenticators.All())
-        {
-            bool allowed = await authenticator.Authenticate(this, client);
-            if (!allowed)
-                return SubscriptionResult.Unauthorized;
-        }
+        return AddClient(client, false);
+    }
+
+    internal async Task<SubscriptionResult> AddClient(MessagingClient client, bool authorizationChecked)
+    {
+        if (!authorizationChecked && !await CanSubscribe(client))
+            return SubscriptionResult.Unauthorized;
 
         QueueClient cc = new QueueClient(this, client);
         bool added = false;
         lock (_queueClientLock)
         {
+            EnsureClientCapacity();
+
             for (int i = 0; i < _queueClients.Length; i++)
             {
                 if (Options.ClientLimit > 0 && i + 1 > Options.ClientLimit)

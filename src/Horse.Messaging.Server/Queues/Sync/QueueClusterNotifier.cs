@@ -174,6 +174,7 @@ internal class QueueClusterNotifier
             Topic = _queue.Topic,
             HandlerName = _queue.ManagerName,
             Initialized = _queue.Status != QueueStatus.NotInitialized,
+            PutBack = _queue.Options.PutBack.AsString(EnumFormat.Description),
             PutBackDelay = _queue.Options.PutBackDelay,
             MessageSizeLimit = _queue.Options.MessageSizeLimit,
             MessageLimit = _queue.Options.MessageLimit,

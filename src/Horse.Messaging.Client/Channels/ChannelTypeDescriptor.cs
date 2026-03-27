@@ -24,6 +24,12 @@ public class ChannelTypeDescriptor : ITypeDescriptor
     public bool InitialChannelMessage { get; set; }
 
     /// <summary>
+    /// Maximum client limit of the channel.
+    /// Zero is unlimited.
+    /// </summary>
+    public int? ClientLimit { get; set; }
+
+    /// <summary>
     /// Creates new message
     /// </summary>
     public HorseMessage CreateMessage(string overwrittenTarget = null)
@@ -32,6 +38,9 @@ public class ChannelTypeDescriptor : ITypeDescriptor
 
         if (InitialChannelMessage)
             message.AddHeader(HorseHeaders.CHANNEL_INITIAL_MESSAGE, "1");
+
+        if (ClientLimit.HasValue)
+            message.AddHeader(HorseHeaders.CLIENT_LIMIT, ClientLimit.Value.ToString());
 
         return message;
     }

@@ -30,6 +30,7 @@ internal class NodeQueueInfo
     public MessageTimeoutStrategyInfo MessageTimeout { get; set; }
     public int DelayBetweenMessages { get; set; }
     public ulong MessageSizeLimit { get; set; }
+    public string PutBack { get; set; }
     public int PutBackDelay { get; set; }
         
     public bool MessageIdUniqueCheck { get; set; }

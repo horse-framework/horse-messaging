@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using Horse.Messaging.Client.Annotations;
 using Horse.Messaging.Client.Channels.Annotations;
 using Horse.Messaging.Client.Internal;
 
@@ -27,6 +28,7 @@ public class ChannelTypeResolver : ITypeDescriptorResolver<ChannelTypeDescriptor
     {
         ChannelTypeDescriptor descriptor = new ChannelTypeDescriptor();
         descriptor.Name = defaultDescriptor?.Name;
+        descriptor.ClientLimit = defaultDescriptor?.ClientLimit;
 
         if (_client.Channel.NameHandler != null && !IsSubscriberType(type))
         {
@@ -50,6 +52,10 @@ public class ChannelTypeResolver : ITypeDescriptorResolver<ChannelTypeDescriptor
         InitialChannelMessageAttribute initMsgAttr = type.GetCustomAttribute<InitialChannelMessageAttribute>();
         if (initMsgAttr != null)
             descriptor.InitialChannelMessage = true;
+
+        ClientLimitAttribute clientLimitAttr = type.GetCustomAttribute<ClientLimitAttribute>(true);
+        if (clientLimitAttr != null)
+            descriptor.ClientLimit = clientLimitAttr.Value;
 
         return descriptor;
     }

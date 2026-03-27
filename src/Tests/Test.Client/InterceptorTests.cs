@@ -6,12 +6,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Annotations;
+using Horse.Messaging.Client.Channels;
+using Horse.Messaging.Client.Channels.Annotations;
 using Horse.Messaging.Client.Direct;
 using Horse.Messaging.Client.Direct.Annotations;
 using Horse.Messaging.Client.Interceptors;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Server.Channels;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
 using Microsoft.Extensions.DependencyInjection;
@@ -345,6 +348,31 @@ internal class QueueConfigBuilderOptionModel
 internal class QueueConfigBuilderOptionConsumer : IQueueConsumer<QueueConfigBuilderOptionModel>
 {
     public Task Consume(ConsumeContext<QueueConfigBuilderOptionModel> context)
+    {
+        return Task.CompletedTask;
+    }
+}
+
+[QueueName("client-limit-attribute-queue")]
+[ClientLimit(2)]
+internal class ClientLimitAttributeQueueConsumer : IQueueConsumer<SimpleQueueModel>
+{
+    public Task Consume(ConsumeContext<SimpleQueueModel> context)
+    {
+        return Task.CompletedTask;
+    }
+}
+
+[ChannelName("client-limit-attribute-channel")]
+[ClientLimit(2)]
+internal class ClientLimitAttributeChannelSubscriber : IChannelSubscriber<string>
+{
+    public Task Handle(ChannelMessageContext<string> context)
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task Error(Exception exception, ChannelMessageContext<string> context)
     {
         return Task.CompletedTask;
     }
@@ -1051,6 +1079,239 @@ public class InterceptorTests
             Assert.Equal(PutBackDecision.Regular, queue.Options.PutBack);
             Assert.Equal(5000, queue.Options.PutBackDelay);
             Assert.Equal(TimeSpan.FromSeconds(90), queue.Options.AcknowledgeTimeout);
+
+            consumer.Disconnect();
+        }
+        finally
+        {
+            server.Stop();
+        }
+    }
+
+    [Fact]
+    public async Task QueueConsumer_ConfigBuilder_AppliesClientLimitToAutoSubscribeQueue()
+    {
+        const string queueName = "QueueConfigBuilderOptionConsumer-client-limit-q";
+
+        var (server, port) = await StartServer();
+
+        try
+        {
+            HorseClient consumer = new HorseClientBuilder()
+                .AddHost("horse://localhost:" + port)
+                .AddScopedConsumer<QueueConfigBuilderOptionConsumer>(cfg =>
+                {
+                    cfg.QueueName = queueName;
+                    cfg.QueueType = MessagingQueueType.Push;
+                    cfg.ClientLimit = 2;
+                })
+                .AutoSubscribe(true)
+                .Build();
+
+            await consumer.ConnectAsync();
+            await WaitUntil(() => server.Rider.Queue.Find(queueName) != null);
+
+            HorseQueue queue = server.Rider.Queue.Find(queueName);
+            Assert.NotNull(queue);
+            Assert.Equal(2, queue.Options.ClientLimit);
+
+            HorseClient secondConsumer = new HorseClient();
+            HorseClient thirdConsumer = new HorseClient();
+
+            await secondConsumer.ConnectAsync($"horse://localhost:{port}");
+            await thirdConsumer.ConnectAsync($"horse://localhost:{port}");
+
+            HorseResult secondResult = await secondConsumer.Queue.Subscribe(queueName, true, CancellationToken.None);
+            HorseResult thirdResult = await thirdConsumer.Queue.Subscribe(queueName, true, CancellationToken.None);
+
+            Assert.Equal(HorseResultCode.Ok, secondResult.Code);
+            Assert.Equal(HorseResultCode.LimitExceeded, thirdResult.Code);
+
+            secondConsumer.Disconnect();
+            thirdConsumer.Disconnect();
+            consumer.Disconnect();
+        }
+        finally
+        {
+            server.Stop();
+        }
+    }
+
+    [Fact]
+    public async Task QueueConsumer_ConfigBuilder_UpdatesExistingQueueOptionsOnSubscribe()
+    {
+        const string queueName = "QueueConfigBuilderOptionConsumer-existing-update-q";
+
+        var (server, port) = await StartServer();
+
+        try
+        {
+            await server.Rider.Queue.Create(queueName, options =>
+            {
+                options.Type = QueueType.Push;
+                options.ClientLimit = 5;
+                options.DelayBetweenMessages = 0;
+                options.PutBack = PutBackDecision.No;
+                options.PutBackDelay = 0;
+                options.AcknowledgeTimeout = TimeSpan.FromSeconds(1);
+                options.MessageTimeout = new MessageTimeoutStrategy
+                {
+                    MessageDuration = 0,
+                    Policy = MessageTimeoutPolicy.NoTimeout,
+                    TargetName = string.Empty
+                };
+            });
+
+            HorseQueue existing = server.Rider.Queue.Find(queueName);
+            Assert.NotNull(existing);
+            existing.Topic = "before-topic";
+
+            HorseClient consumer = new HorseClientBuilder()
+                .AddHost("horse://localhost:" + port)
+                .AddScopedConsumer<QueueConfigBuilderOptionConsumer>(cfg =>
+                {
+                    cfg.QueueName = queueName;
+                    cfg.Topic = "after-topic";
+                    cfg.ClientLimit = 2;
+                    cfg.DelayBetweenMessages = TimeSpan.FromMilliseconds(25);
+                    cfg.PutBackDecision = PutBack.Regular;
+                    cfg.PutBackDelay = TimeSpan.FromSeconds(7);
+                    cfg.AcknowledgeTimeout = TimeSpan.FromSeconds(9);
+                    cfg.MessageTimeout = new MessageTimeoutStrategyInfo(17, "delete");
+                })
+                .AutoSubscribe(true)
+                .Build();
+
+            await consumer.ConnectAsync();
+            await WaitUntil(() =>
+            {
+                HorseQueue queue = server.Rider.Queue.Find(queueName);
+                return queue != null &&
+                       queue.Topic == "after-topic" &&
+                       queue.Options.ClientLimit == 2 &&
+                       queue.Options.DelayBetweenMessages == 25 &&
+                       queue.Options.PutBack == PutBackDecision.Regular &&
+                       queue.Options.PutBackDelay == 7000 &&
+                       queue.Options.AcknowledgeTimeout == TimeSpan.FromSeconds(9) &&
+                       queue.Options.MessageTimeout.MessageDuration == 17 &&
+                       queue.Options.MessageTimeout.Policy == MessageTimeoutPolicy.Delete;
+            });
+
+            HorseQueue queue = server.Rider.Queue.Find(queueName);
+            Assert.NotNull(queue);
+            Assert.Equal(QueueType.Push, queue.Type);
+            Assert.Equal("after-topic", queue.Topic);
+            Assert.Equal(2, queue.Options.ClientLimit);
+            Assert.Equal(25, queue.Options.DelayBetweenMessages);
+            Assert.Equal(PutBackDecision.Regular, queue.Options.PutBack);
+            Assert.Equal(7000, queue.Options.PutBackDelay);
+            Assert.Equal(TimeSpan.FromSeconds(9), queue.Options.AcknowledgeTimeout);
+            Assert.Equal(17, queue.Options.MessageTimeout.MessageDuration);
+            Assert.Equal(MessageTimeoutPolicy.Delete, queue.Options.MessageTimeout.Policy);
+
+            HorseClient secondConsumer = new HorseClient();
+            HorseClient thirdConsumer = new HorseClient();
+
+            await secondConsumer.ConnectAsync($"horse://localhost:{port}");
+            await thirdConsumer.ConnectAsync($"horse://localhost:{port}");
+
+            HorseResult secondResult = await secondConsumer.Queue.Subscribe(queueName, true, CancellationToken.None);
+            HorseResult thirdResult = await thirdConsumer.Queue.Subscribe(queueName, true, CancellationToken.None);
+
+            Assert.Equal(HorseResultCode.Ok, secondResult.Code);
+            Assert.Equal(HorseResultCode.LimitExceeded, thirdResult.Code);
+
+            secondConsumer.Disconnect();
+            thirdConsumer.Disconnect();
+            consumer.Disconnect();
+        }
+        finally
+        {
+            server.Stop();
+        }
+    }
+
+    [Fact]
+    public async Task QueueConsumer_ClientLimitAttribute_UpdatesExistingQueueOnSubscribe()
+    {
+        const string queueName = "client-limit-attribute-queue";
+
+        var (server, port) = await StartServer();
+
+        try
+        {
+            await server.Rider.Queue.Create(queueName, options =>
+            {
+                options.Type = QueueType.Push;
+                options.ClientLimit = 5;
+            });
+
+            HorseClient consumer = new HorseClientBuilder()
+                .AddHost("horse://localhost:" + port)
+                .AddSingletonConsumer<ClientLimitAttributeQueueConsumer>()
+                .AutoSubscribe(true)
+                .Build();
+
+            await consumer.ConnectAsync();
+            await WaitUntil(() =>
+            {
+                HorseQueue existing = server.Rider.Queue.Find(queueName);
+                return existing?.Options.ClientLimit == 2 &&
+                       existing.ClientsCount() == 1;
+            });
+
+            HorseQueue queue = server.Rider.Queue.Find(queueName);
+            Assert.NotNull(queue);
+            Assert.Equal(2, queue.Options.ClientLimit);
+
+            HorseClient secondConsumer = new HorseClient();
+            HorseClient thirdConsumer = new HorseClient();
+
+            await secondConsumer.ConnectAsync($"horse://localhost:{port}");
+            await thirdConsumer.ConnectAsync($"horse://localhost:{port}");
+
+            HorseResult secondResult = await secondConsumer.Queue.Subscribe(queueName, true, CancellationToken.None);
+            HorseResult thirdResult = await thirdConsumer.Queue.Subscribe(queueName, true, CancellationToken.None);
+
+            Assert.Equal(HorseResultCode.Ok, secondResult.Code);
+            Assert.Equal(HorseResultCode.LimitExceeded, thirdResult.Code);
+
+            secondConsumer.Disconnect();
+            thirdConsumer.Disconnect();
+            consumer.Disconnect();
+        }
+        finally
+        {
+            server.Stop();
+        }
+    }
+
+    [Fact]
+    public async Task ChannelSubscriber_ClientLimitAttribute_UpdatesExistingChannelOnSubscribe()
+    {
+        const string channelName = "client-limit-attribute-channel";
+
+        var (server, port) = await StartServer();
+
+        try
+        {
+            await server.Rider.Channel.Create(channelName, options =>
+            {
+                options.ClientLimit = 8;
+            });
+
+            HorseClient consumer = new HorseClientBuilder()
+                .AddHost("horse://localhost:" + port)
+                .AddSingletonChannelSubscriber<ClientLimitAttributeChannelSubscriber>()
+                .AutoSubscribe(true)
+                .Build();
+
+            await consumer.ConnectAsync();
+            await WaitUntil(() => server.Rider.Channel.Find(channelName)?.Options.ClientLimit == 2);
+
+            HorseChannel channel = server.Rider.Channel.Find(channelName);
+            Assert.NotNull(channel);
+            Assert.Equal(2, channel.Options.ClientLimit);
 
             consumer.Disconnect();
         }

@@ -1646,7 +1646,10 @@ public class HorseClient : IDisposable
 
         foreach (ChannelSubscriberRegistration registration in Channel.Registrations)
         {
-            HorseResult joinResult = await Channel.Subscribe(registration.Name, true, null, ConsumeToken);
+            IEnumerable<KeyValuePair<string, string>> descriptorHeaders =
+                registration.SubscriptionHeaders.Count > 0 ? registration.SubscriptionHeaders : null;
+
+            HorseResult joinResult = await Channel.Subscribe(registration.Name, true, descriptorHeaders, ConsumeToken);
             if (joinResult.Code == HorseResultCode.Ok)
                 continue;
 

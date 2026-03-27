@@ -1,9 +1,13 @@
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
+using Horse.Messaging.Client.Queues;
+using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Queues.Delivery;
 using Xunit;
 
 namespace Test.Queues.Core;
@@ -126,6 +130,104 @@ public class QueueCreateTest
         Assert.Equal(100, queue.Options.MessageLimit);
         Assert.Equal(5, queue.Options.ClientLimit);
         Assert.Equal(50, queue.Options.DelayBetweenMessages);
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task Create_WithClientQueueOperator_AppliesTopicAndPutBack(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        HorseClient client = new HorseClient();
+        await client.ConnectAsync($"horse://localhost:{ctx.Port}");
+
+        HorseResult result = await client.Queue.Create("client-create-q", options =>
+        {
+            options.Type = MessagingQueueType.RoundRobin;
+            options.Topic = "client-topic";
+            options.PutBack = PutBack.Priority;
+            options.PutBackDelay = 1500;
+            options.ClientLimit = 2;
+            options.DelayBetweenMessages = 25;
+            options.AcknowledgeTimeout = 9000;
+            options.MessageTimeout = new MessageTimeoutStrategyInfo(17, "delete");
+        }, null, null, CancellationToken.None);
+
+        Assert.Equal(HorseResultCode.Ok, result.Code);
+
+        HorseQueue queue = ctx.Rider.Queue.Find("client-create-q");
+        Assert.NotNull(queue);
+        Assert.Equal(QueueType.RoundRobin, queue.Type);
+        Assert.Equal("client-topic", queue.Topic);
+        Assert.Equal(PutBackDecision.Priority, queue.Options.PutBack);
+        Assert.Equal(1500, queue.Options.PutBackDelay);
+        Assert.Equal(2, queue.Options.ClientLimit);
+        Assert.Equal(25, queue.Options.DelayBetweenMessages);
+        Assert.Equal(TimeSpan.FromMilliseconds(9000), queue.Options.AcknowledgeTimeout);
+        Assert.Equal(17, queue.Options.MessageTimeout.MessageDuration);
+        Assert.Equal(MessageTimeoutPolicy.Delete, queue.Options.MessageTimeout.Policy);
+
+        client.Disconnect();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task SetOptions_WithClientQueueOperator_UpdatesTopicAndPutBack(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode);
+
+        await ctx.Rider.Queue.Create("client-update-q", options =>
+        {
+            options.Type = QueueType.Push;
+            options.PutBack = PutBackDecision.No;
+            options.PutBackDelay = 0;
+            options.ClientLimit = 5;
+            options.DelayBetweenMessages = 0;
+            options.AcknowledgeTimeout = TimeSpan.FromSeconds(1);
+            options.MessageTimeout = new MessageTimeoutStrategy
+            {
+                MessageDuration = 0,
+                Policy = MessageTimeoutPolicy.NoTimeout,
+                TargetName = string.Empty
+            };
+        });
+
+        HorseQueue existing = ctx.Rider.Queue.Find("client-update-q");
+        Assert.NotNull(existing);
+        existing.Topic = "before-topic";
+
+        HorseClient client = new HorseClient();
+        await client.ConnectAsync($"horse://localhost:{ctx.Port}");
+
+        HorseResult result = await client.Queue.SetOptions("client-update-q", options =>
+        {
+            options.Topic = "after-topic";
+            options.PutBack = PutBack.Regular;
+            options.PutBackDelay = 2200;
+            options.ClientLimit = 1;
+            options.DelayBetweenMessages = 15;
+            options.AcknowledgeTimeout = 4000;
+            options.MessageTimeout = new MessageTimeoutStrategyInfo(9, "delete");
+            options.Type = MessagingQueueType.RoundRobin;
+        }, CancellationToken.None);
+
+        Assert.Equal(HorseResultCode.Ok, result.Code);
+
+        HorseQueue queue = ctx.Rider.Queue.Find("client-update-q");
+        Assert.NotNull(queue);
+        Assert.Equal(QueueType.Push, queue.Type);
+        Assert.Equal("after-topic", queue.Topic);
+        Assert.Equal(PutBackDecision.Regular, queue.Options.PutBack);
+        Assert.Equal(2200, queue.Options.PutBackDelay);
+        Assert.Equal(1, queue.Options.ClientLimit);
+        Assert.Equal(15, queue.Options.DelayBetweenMessages);
+        Assert.Equal(TimeSpan.FromMilliseconds(4000), queue.Options.AcknowledgeTimeout);
+        Assert.Equal(9, queue.Options.MessageTimeout.MessageDuration);
+        Assert.Equal(MessageTimeoutPolicy.Delete, queue.Options.MessageTimeout.Policy);
+
+        client.Disconnect();
     }
 
     [Theory]

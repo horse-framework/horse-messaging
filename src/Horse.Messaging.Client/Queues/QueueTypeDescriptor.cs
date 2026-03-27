@@ -46,6 +46,12 @@ public class QueueTypeDescriptor : ITypeDescriptor
     public QueueAckDecision? Acknowledge { get; set; }
 
     /// <summary>
+    /// Maximum client limit of the queue.
+    /// Zero is unlimited.
+    /// </summary>
+    public int? ClientLimit { get; set; }
+
+    /// <summary>
     /// If queue is created with a message push and that value is not null, queue will be created with that status
     /// </summary>
     public MessagingQueueType? QueueType { get; set; }
@@ -172,6 +178,9 @@ public class QueueTypeDescriptor : ITypeDescriptor
 
         if (Acknowledge.HasValue)
             message.AddHeader(HorseHeaders.ACKNOWLEDGE, Acknowledge.Value.AsString(EnumFormat.Description));
+
+        if (ClientLimit.HasValue)
+            message.AddHeader(HorseHeaders.CLIENT_LIMIT, ClientLimit.Value.ToString());
 
         if (HasQueueName)
             message.AddHeader(HorseHeaders.QUEUE_NAME, QueueName);

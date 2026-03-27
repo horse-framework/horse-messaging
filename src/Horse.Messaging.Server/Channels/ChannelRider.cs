@@ -208,6 +208,15 @@ public class ChannelRider
                 throw new DuplicateNameException($"The server has already a channel with same name: {channelName}");
             }
 
+            if (requestMessage != null)
+            {
+                string clientLimit = requestMessage.FindHeader(HorseHeaders.CLIENT_LIMIT);
+                if (!string.IsNullOrEmpty(clientLimit) &&
+                    int.TryParse(clientLimit.Trim(), out int parsedClientLimit) &&
+                    parsedClientLimit >= 0)
+                    options.ClientLimit = parsedClientLimit;
+            }
+
             channel = new HorseChannel(Rider, channelName, options);
             if (requestMessage != null)
                 channel.UpdateOptionsByMessage(requestMessage);
@@ -300,9 +309,17 @@ public class ChannelRider
     /// If channel options changed by Options property.
     /// Applies new configurationsa and triggers sync operations between nodes. 
     /// </summary>
-    public void ApplyChangedOptions(HorseChannel channel)
+    public void ApplyChangedOptions(HorseChannel channel, bool notifyCluster = false)
     {
-        ClusterNotifier.SendChannelUpdated(channel);
+        if (OptionsConfigurator != null)
+        {
+            OptionsConfigurator.Remove(x => x.Name == channel.Name);
+            OptionsConfigurator.Add(ChannelConfiguration.Create(channel));
+            OptionsConfigurator.Save();
+        }
+
+        if (notifyCluster)
+            ClusterNotifier.SendChannelUpdated(channel);
     }
 
     #endregion

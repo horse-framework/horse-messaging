@@ -92,6 +92,9 @@ internal class QueueTypeResolver : ITypeDescriptorResolver<QueueTypeDescriptor>
         if (defaultConfigurator.QueueType.HasValue)
             descriptor.QueueType = defaultConfigurator.QueueType.Value;
 
+        if (defaultConfigurator.ClientLimit.HasValue)
+            descriptor.ClientLimit = defaultConfigurator.ClientLimit.Value;
+
         if (!string.IsNullOrEmpty(defaultConfigurator.Topic))
             descriptor.Topic = defaultConfigurator.Topic;
 
@@ -178,6 +181,10 @@ internal class QueueTypeResolver : ITypeDescriptorResolver<QueueTypeDescriptor>
         QueueTopicAttribute topicAttr = type.GetCustomAttribute<QueueTopicAttribute>(true);
         if (topicAttr != null)
             descriptor.Topic = topicAttr.Topic;
+
+        ClientLimitAttribute clientLimitAttr = type.GetCustomAttribute<ClientLimitAttribute>(true);
+        if (clientLimitAttr != null)
+            descriptor.ClientLimit = clientLimitAttr.Value;
 
         UniqueIdCheckAttribute uidAttr = type.GetCustomAttribute<UniqueIdCheckAttribute>(true);
         if (uidAttr != null)

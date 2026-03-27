@@ -54,7 +54,10 @@ internal class ChannelNetworkHandler : INetworkMessageHandler
                 if (channel == null)
                 {
                     if (_rider.Channel.Options.AutoChannelCreation)
-                        channel = await _rider.Channel.Create(message.Target);
+                    {
+                        HorseChannelOptions options = HorseChannelOptions.Clone(_rider.Channel.Options);
+                        channel = await _rider.Channel.Create(message.Target, options, message, true, true, true);
+                    }
 
                     if (channel == null)
                     {
@@ -64,6 +67,8 @@ internal class ChannelNetworkHandler : INetworkMessageHandler
                         return;
                     }
                 }
+                else if (channel.UpdateOptionsByMessage(message))
+                    _rider.Channel.ApplyChangedOptions(channel, true);
 
                 PushResult result = channel.Push(message);
 
@@ -99,10 +104,16 @@ internal class ChannelNetworkHandler : INetworkMessageHandler
                 HorseChannel channel = _rider.Channel.Find(message.Target);
                 HorseMessage response;
                 if (channel != null)
+                {
+                    if (channel.UpdateOptionsByMessage(message))
+                        _rider.Channel.ApplyChangedOptions(channel, true);
+
                     response = message.CreateResponse(HorseResultCode.Ok);
+                }
                 else
                 {
-                    channel = await _rider.Channel.Create(message.Target);
+                    HorseChannelOptions options = HorseChannelOptions.Clone(_rider.Channel.Options);
+                    channel = await _rider.Channel.Create(message.Target, options, message, true, false, true);
                     response = channel != null
                         ? message.CreateResponse(HorseResultCode.Ok)
                         : message.CreateAcknowledge("Failed");
@@ -140,11 +151,15 @@ internal class ChannelNetworkHandler : INetworkMessageHandler
             {
                 bool waitResponse = message.WaitResponse;
                 HorseChannel channel = _rider.Channel.Find(message.Target);
+                bool channelAlreadyExists = channel != null;
 
                 if (channel == null)
                 {
                     if (_rider.Channel.Options.AutoChannelCreation)
-                        channel = await _rider.Channel.Create(message.Target);
+                    {
+                        HorseChannelOptions options = HorseChannelOptions.Clone(_rider.Channel.Options);
+                        channel = await _rider.Channel.Create(message.Target, options, message, true, true, true);
+                    }
 
                     if (channel == null)
                     {
@@ -154,8 +169,21 @@ internal class ChannelNetworkHandler : INetworkMessageHandler
                         return;
                     }
                 }
+                else
+                {
+                    if (!channel.CanSubscribe(client))
+                    {
+                        if (waitResponse)
+                            await client.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
 
-                SubscriptionResult result = channel.AddClient(client);
+                        return;
+                    }
+
+                    if (channel.UpdateOptionsByMessage(message))
+                        _rider.Channel.ApplyChangedOptions(channel, true);
+                }
+
+                SubscriptionResult result = channel.AddClient(client, channelAlreadyExists);
                 if (waitResponse)
                 {
                     HorseMessage response;

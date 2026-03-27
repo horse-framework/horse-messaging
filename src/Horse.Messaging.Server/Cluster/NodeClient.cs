@@ -525,6 +525,7 @@ public class NodeClient
                     string content = message.GetStringContent();
                     HorseChannelOptions options = JsonSerializer.Deserialize<HorseChannelOptions>(content, SerializerFactory.Default());
                     channel.Options.ApplyFrom(options);
+                    channel.EnsureClientCapacity();
                     Rider.Channel.ApplyChangedOptions(channel);
                 }
 

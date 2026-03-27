@@ -29,7 +29,7 @@ public class QueueBinding : Binding
             if (queue == null)
                 return false;
 
-            bool doNotClone = Router.Bindings.Length == 1 || Router.Method != RouteMethod.Distribute;
+            bool doNotClone = Router.Bindings.Length == 1 || Router.Method != RouteMethod.Distribute || Interaction == BindingInteraction.Response;
 
             HorseMessage msg = doNotClone
                 ? message

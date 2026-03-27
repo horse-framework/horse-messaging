@@ -388,6 +388,10 @@ public class QueueRider
                     options.Type = Enums.Parse<QueueType>(queueType, true, EnumFormat.Description);
                 }
 
+                string clientLimit = requestMessage.FindHeader(HorseHeaders.CLIENT_LIMIT);
+                if (!string.IsNullOrEmpty(clientLimit) && int.TryParse(clientLimit.Trim(), out int parsedClientLimit) && parsedClientLimit >= 0)
+                    options.ClientLimit = parsedClientLimit;
+
                 // Partition headers also force initialization so the PartitionManager is set up immediately
                 if (!typeSpecified && options.Partition is { Enabled: true })
                     typeSpecified = true;

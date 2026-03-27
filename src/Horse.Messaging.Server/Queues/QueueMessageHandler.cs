@@ -91,6 +91,9 @@ internal class QueueMessageHandler : INetworkMessageHandler
             }
         }
 
+        if (queue.Status != QueueStatus.NotInitialized && queue.ApplyLivePushOptions(message))
+            queue.UpdateConfiguration(true);
+
         //prepare the message
         QueueMessage queueMessage = new QueueMessage(message);
         queueMessage.Source = client;
