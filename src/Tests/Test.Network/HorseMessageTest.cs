@@ -121,6 +121,21 @@ public class HorseMessageTest
     }
 
     [Fact]
+    public void RemoveHeaders_CaseInsensitiveMultipleKeys()
+    {
+        HorseMessage msg = new HorseMessage(MessageType.Server, "target");
+        msg.AddHeader("Content-Type", "text/plain");
+        msg.AddHeader("CorrelationId", "123");
+        msg.AddHeader("Keep", "Value");
+
+        msg.RemoveHeaders("content-type", "CORRELATIONID");
+
+        Assert.Null(msg.FindHeader("Content-Type"));
+        Assert.Null(msg.FindHeader("CorrelationId"));
+        Assert.Equal("Value", msg.FindHeader("Keep"));
+    }
+
+    [Fact]
     public void AddHeader_IntValue()
     {
         HorseMessage msg = new HorseMessage(MessageType.Server, "target");
@@ -451,5 +466,4 @@ public class HorseMessageTest
 
     #endregion
 }
-
 

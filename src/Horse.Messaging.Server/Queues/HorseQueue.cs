@@ -32,6 +32,23 @@ public delegate void QueueEventHandler(HorseQueue queue);
 /// </summary>
 public class HorseQueue
 {
+    private static readonly HashSet<string> OperationalHeadersToRemove = new(StringComparer.OrdinalIgnoreCase)
+    {
+        HorseHeaders.DELAY_BETWEEN_MESSAGES,
+        HorseHeaders.ACKNOWLEDGE,
+        HorseHeaders.CLIENT_LIMIT,
+        HorseHeaders.QUEUE_NAME,
+        HorseHeaders.QUEUE_TYPE,
+        HorseHeaders.QUEUE_TOPIC,
+        HorseHeaders.PUT_BACK,
+        HorseHeaders.PUT_BACK_DELAY,
+        HorseHeaders.DELIVERY,
+        HorseHeaders.QUEUE_MANAGER,
+        HorseHeaders.MESSAGE_TIMEOUT,
+        HorseHeaders.ACK_TIMEOUT,
+        HorseHeaders.CC
+    };
+
     #region Properties
 
     /// <summary>
@@ -196,9 +213,25 @@ public class HorseQueue
     private readonly SemaphoreSlim _triggerLock = new(1, 1);
     private readonly List<PutBackQueueMessage> _putBackWaitList = new(8);
     private readonly HashSet<string> _messageIdList = new(StringComparer.Ordinal);
-
     private readonly object _queueClientLock = new();
     private QueueClient[] _queueClients = new QueueClient[32];
+
+    private static HashSet<string> _operationalHeaders = new(StringComparer.OrdinalIgnoreCase)
+    {
+        HorseHeaders.DELAY_BETWEEN_MESSAGES,
+        HorseHeaders.ACKNOWLEDGE,
+        HorseHeaders.CLIENT_LIMIT,
+        HorseHeaders.QUEUE_NAME,
+        HorseHeaders.QUEUE_TYPE,
+        HorseHeaders.QUEUE_TOPIC,
+        HorseHeaders.PUT_BACK,
+        HorseHeaders.PUT_BACK_DELAY,
+        HorseHeaders.DELIVERY,
+        HorseHeaders.QUEUE_MANAGER,
+        HorseHeaders.MESSAGE_TIMEOUT,
+        HorseHeaders.ACK_TIMEOUT,
+        HorseHeaders.CC
+    };
 
     /// <summary>
     /// True if queue is destroyed
@@ -871,19 +904,7 @@ public class HorseQueue
         }
 
         //remove operational headers that are should not be sent to consumers or saved to disk
-        message.Message.RemoveHeaders(HorseHeaders.DELAY_BETWEEN_MESSAGES,
-            HorseHeaders.ACKNOWLEDGE,
-            HorseHeaders.CLIENT_LIMIT,
-            HorseHeaders.QUEUE_NAME,
-            HorseHeaders.QUEUE_TYPE,
-            HorseHeaders.QUEUE_TOPIC,
-            HorseHeaders.PUT_BACK,
-            HorseHeaders.PUT_BACK_DELAY,
-            HorseHeaders.DELIVERY,
-            HorseHeaders.QUEUE_MANAGER,
-            HorseHeaders.MESSAGE_TIMEOUT,
-            HorseHeaders.ACK_TIMEOUT,
-            HorseHeaders.CC);
+        message.Message.RemoveHeaders(OperationalHeadersToRemove);
 
         //prepare properties
         message.Message.WaitResponse = Options.Acknowledge != QueueAckDecision.None;
@@ -904,21 +925,24 @@ public class HorseQueue
                 if (Rider.Cluster.State > NodeState.Main)
                     return PushResult.StatusNotSupported;
 
-                try
+                if (Rider.Cluster.Clients.Length > 0)
                 {
-                    await QueueLock.WaitAsync();
+                    try
+                    {
+                        await QueueLock.WaitAsync();
 
-                    if (Rider.Cluster.State > NodeState.Main)
-                        return PushResult.StatusNotSupported;
-                }
-                finally
-                {
-                    QueueLock.Release();
-                }
+                        if (Rider.Cluster.State > NodeState.Main)
+                            return PushResult.StatusNotSupported;
+                    }
+                    finally
+                    {
+                        QueueLock.Release();
+                    }
 
-                bool ack = await ClusterNotifier.SendMessagePush(message.Message);
-                if (!ack)
-                    return PushResult.Error;
+                    bool ack = await ClusterNotifier.SendMessagePush(message.Message);
+                    if (!ack)
+                        return PushResult.Error;
+                }
             }
 
             //fire message receive event

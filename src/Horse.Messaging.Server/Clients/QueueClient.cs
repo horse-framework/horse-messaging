@@ -48,6 +48,11 @@ public class QueueClient
     public long AcknowledgeCount { get; set; }
 
     /// <summary>
+    /// If true, that client cannot consume any message from the queue.
+    /// </summary>
+    public bool Blocked { get; set; }
+
+    /// <summary>
     /// Creates new queue client pair descriptor
     /// </summary>
     public QueueClient(HorseQueue queue, MessagingClient client)

@@ -52,7 +52,7 @@ public class ClusterManager
     /// <summary>
     /// Other nodes in cluster
     /// </summary>
-    public NodeClient[] Clients { get; private set; } = Array.Empty<NodeClient>();
+    public NodeClient[] Clients { get; private set; } = [];
 
     /// <summary>
     /// Event Manager for HorseEventType.ConnectedToRemoteNode 

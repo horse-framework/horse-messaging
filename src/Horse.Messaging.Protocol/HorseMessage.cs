@@ -147,7 +147,6 @@ public class HorseMessage : IDisposable
         SetTarget(target);
     }
 
-
     #endregion
 
     #region Methods
@@ -230,6 +229,7 @@ public class HorseMessage : IDisposable
             Span<byte> span = Content.GetBuffer().AsSpan(0, byteCount);
             Encoding.UTF8.GetBytes(content.AsSpan(), span);
         }
+
         Length = (ulong)byteCount;
     }
 
@@ -445,12 +445,59 @@ public class HorseMessage : IDisposable
     /// </summary>
     public void RemoveHeaders(params string[] keys)
     {
-        if (HeadersList == null || HeadersList.Count == 0)
+        if (keys == null || keys.Length == 0)
             return;
 
-        StringComparer comparer = StringComparer.OrdinalIgnoreCase;
-        HeadersList.RemoveAll(x => keys.Contains(x.Key, comparer));
-        HasHeader = HeadersList.Count > 0;
+        RemoveHeaders(new HashSet<string>(keys, StringComparer.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Removes a header by key
+    /// </summary>
+    public void RemoveHeaders(HashSet<string> keys)
+    {
+        if (HeadersList == null || HeadersList.Count == 0 || keys == null || keys.Count == 0)
+            return;
+
+        int writeIndex = 0;
+
+        if (keys.Count == 1)
+        {
+            using HashSet<string>.Enumerator enumerator = keys.GetEnumerator();
+            enumerator.MoveNext();
+            string key = enumerator.Current;
+
+            for (int readIndex = 0; readIndex < HeadersList.Count; readIndex++)
+            {
+                KeyValuePair<string, string> header = HeadersList[readIndex];
+                if (string.Equals(header.Key, key, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                if (writeIndex != readIndex)
+                    HeadersList[writeIndex] = header;
+
+                writeIndex++;
+            }
+        }
+        else
+        {
+            for (int readIndex = 0; readIndex < HeadersList.Count; readIndex++)
+            {
+                KeyValuePair<string, string> header = HeadersList[readIndex];
+                if (keys.Contains(header.Key))
+                    continue;
+
+                if (writeIndex != readIndex)
+                    HeadersList[writeIndex] = header;
+
+                writeIndex++;
+            }
+        }
+
+        if (writeIndex < HeadersList.Count)
+            HeadersList.RemoveRange(writeIndex, HeadersList.Count - writeIndex);
+
+        HasHeader = writeIndex > 0;
     }
 
     #endregion

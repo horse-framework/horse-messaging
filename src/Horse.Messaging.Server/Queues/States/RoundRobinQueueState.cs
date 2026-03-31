@@ -224,6 +224,9 @@ internal class RoundRobinQueueState : IQueueState
 
                 if (!client.Client.IsConnected)
                     continue;
+                
+                if (client.Blocked)
+                    continue;
 
                 if (waitForAcknowledge && client.CurrentlyProcessing != null)
                 {

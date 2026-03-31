@@ -87,6 +87,9 @@ internal class PushQueueState : IQueueState
             //to only online receivers
             if (!client.Client.IsConnected)
                 continue;
+            
+            if (client.Blocked)
+                continue;
 
             //call before send and check decision
             bool canConsumerReceive = await deliveryHandler.CanConsumerReceive(_queue, message, client.Client);

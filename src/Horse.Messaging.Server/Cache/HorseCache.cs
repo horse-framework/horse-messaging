@@ -26,6 +26,8 @@ public record GetCacheItemResult(bool IsFirstWarningReceiver, HorseCacheItem Ite
 /// </summary>
 public class HorseCache
 {
+    private static readonly object[] IncrementLocks = CreateIncrementLocks();
+
     #region Properties
 
     /// <summary>
@@ -112,6 +114,21 @@ public class HorseCache
     #endregion
 
     #region Actions
+
+    private static object[] CreateIncrementLocks()
+    {
+        object[] locks = new object[64];
+        for (int i = 0; i < locks.Length; i++)
+            locks[i] = new object();
+
+        return locks;
+    }
+
+    private static object GetIncrementLock(string key)
+    {
+        int hash = StringComparer.OrdinalIgnoreCase.GetHashCode(key);
+        return IncrementLocks[(hash & int.MaxValue) % IncrementLocks.Length];
+    }
 
     private void RemoveExpiredKeys()
     {
@@ -269,47 +286,43 @@ public class HorseCache
     /// </summary>
     private GetCacheItemResult GetIncremental(bool notifyCluster, string key, TimeSpan duration, int incrementValue, string[] tags = null)
     {
-        _items.TryGetValue(key, out HorseCacheItem item);
-        if (item == null)
+        lock (GetIncrementLock(key))
         {
-            CacheOperation operation = Set(key, new MemoryStream(BitConverter.GetBytes(incrementValue)), duration, null, tags);
-            return new GetCacheItemResult(false, operation.Item);
-        }
-
-        if (item.Expiration < DateTime.UtcNow)
-        {
-            Remove(item.Key);
-            item = null;
-        }
-
-        if (item == null)
-        {
-            CacheOperation operation = Set(key, new MemoryStream(BitConverter.GetBytes(incrementValue)), duration, null, tags);
-            return new GetCacheItemResult(false, operation.Item);
-        }
-
-        lock (item)
-        {
-            int value;
-            if (item.Value.TryGetBuffer(out ArraySegment<byte> seg))
-                value = BitConverter.ToInt32(seg.AsSpan());
-            else
+            _items.TryGetValue(key, out HorseCacheItem item);
+            if (item == null)
             {
-                item.Value.Position = 0;
-                Span<byte> tmp = stackalloc byte[4];
-                item.Value.ReadExactly(tmp);
-                value = BitConverter.ToInt32(tmp);
+                CacheOperation operation = Set(null, notifyCluster, key, new MemoryStream(BitConverter.GetBytes(incrementValue)), duration, null, tags);
+                return new GetCacheItemResult(false, operation.Item);
             }
 
-            byte[] data = BitConverter.GetBytes(value + incrementValue);
-            item.Value.Position = 0;
-            item.Value.Write(data);
+            if (item.Expiration < DateTime.UtcNow)
+            {
+                Remove(null, item.Key, notifyCluster);
+                CacheOperation operation = Set(null, notifyCluster, key, new MemoryStream(BitConverter.GetBytes(incrementValue)), duration, null, tags);
+                return new GetCacheItemResult(false, operation.Item);
+            }
+
+            lock (item)
+            {
+                int value;
+                if (item.Value.TryGetBuffer(out ArraySegment<byte> seg))
+                    value = BitConverter.ToInt32(seg.AsSpan());
+                else
+                {
+                    item.Value.Position = 0;
+                    Span<byte> tmp = stackalloc byte[4];
+                    item.Value.ReadExactly(tmp);
+                    value = BitConverter.ToInt32(tmp);
+                }
+
+                item.Value = new MemoryStream(BitConverter.GetBytes(value + incrementValue));
+            }
+
+            if (notifyCluster)
+                ClusterNotifier.SendSet(item);
+
+            return new GetCacheItemResult(false, item);
         }
-
-        if (notifyCluster)
-            ClusterNotifier.SendSet(item);
-
-        return new GetCacheItemResult(false, item);
     }
 
     /// <summary>

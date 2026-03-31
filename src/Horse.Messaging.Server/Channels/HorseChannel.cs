@@ -21,6 +21,13 @@ namespace Horse.Messaging.Server.Channels;
 /// </summary>
 public class HorseChannel
 {
+    private static readonly HashSet<string> OperationalHeadersToRemove = new(StringComparer.OrdinalIgnoreCase)
+    {
+        HorseHeaders.CHANNEL_NAME,
+        HorseHeaders.CC,
+        HorseHeaders.CLIENT_LIMIT
+    };
+
     #region Properties
 
     /// <summary>
@@ -301,7 +308,7 @@ public class HorseChannel
             return PushResult.LimitExceeded;
 
         //remove operational headers that are should not be sent to consumers or saved to disk
-        message.RemoveHeaders(HorseHeaders.CHANNEL_NAME, HorseHeaders.CC, HorseHeaders.CLIENT_LIMIT);
+        message.RemoveHeaders(OperationalHeadersToRemove);
         message.WaitResponse = false;
         LastPublishDate = DateTime.UtcNow;
 

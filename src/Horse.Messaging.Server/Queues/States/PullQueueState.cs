@@ -235,6 +235,9 @@ internal class PullQueueState : IQueueState
     /// </summary>
     private async Task<bool> ProcessPull(QueueClient requester, HorseMessage request, QueueMessage message, IList<KeyValuePair<string, string>> headers)
     {
+        if (requester.Blocked)
+            return false;
+
         //if we need acknowledge, we are sending this information to receivers that we require response
         message.Message.WaitResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
 
@@ -259,7 +262,7 @@ internal class PullQueueState : IQueueState
 
         //create delivery object
         MessageDelivery delivery = new MessageDelivery(message, requester, deadline);
-        
+
         bool tracked = false;
         while (!tracked)
         {
@@ -267,7 +270,7 @@ internal class PullQueueState : IQueueState
             if (!tracked)
                 await Task.Delay(10);
         }
-        
+
         bool sent = await requester.Client.SendAsync(message.Message, headers);
 
         if (sent)

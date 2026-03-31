@@ -70,7 +70,7 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
     {
         TModel t = (TModel)model;
         ProvidedHandler providedHandler = null;
-        int tryCount = Retry.Count == 0 ? 100 : Retry.Count;
+        int tryCount = Retry == null || Retry.Count == 0 ? 100 : Retry.Count;
 
         try
         {
