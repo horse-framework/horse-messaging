@@ -834,6 +834,9 @@ public class HorseQueue
     /// </summary>
     internal async Task<PushResult> Push(QueueMessage message, MessagingClient sender)
     {
+        if (Rider.Queue.IsShuttingDown)
+            return PushResult.StatusNotSupported;
+
         if (Status == QueueStatus.NotInitialized)
         {
             try
@@ -1114,6 +1117,9 @@ public class HorseQueue
 
     internal async Task<PushResult> PushByNode(HorseMessage horseMessage)
     {
+        if (Rider.Queue.IsShuttingDown)
+            return PushResult.StatusNotSupported;
+
         QueueMessage message = new QueueMessage(horseMessage);
 
         if (Status == QueueStatus.NotInitialized)
@@ -1354,11 +1360,7 @@ public class HorseQueue
     /// </summary>
     public Task RemoveMessage(string messageId)
     {
-        if (Options.MessageIdUniqueCheck && !string.IsNullOrEmpty(messageId))
-        {
-            lock (_messageIdList)
-                _messageIdList.Remove(messageId);
-        }
+        ReleaseUniqueMessageId(messageId);
 
         return Manager.RemoveMessage(messageId);
     }
@@ -1376,16 +1378,21 @@ public class HorseQueue
     /// </summary>
     private async Task RemoveMessage(QueueMessage message, bool notifyCluster)
     {
-        if (Options.MessageIdUniqueCheck && !string.IsNullOrEmpty(message.Message.MessageId))
-        {
-            lock (_messageIdList)
-                _messageIdList.Remove(message.Message.MessageId);
-        }
+        ReleaseUniqueMessageId(message.Message.MessageId);
 
         bool removed = await Manager.RemoveMessage(message);
 
         if (removed && notifyCluster)
             ClusterNotifier.SendMessageRemoval(message.Message);
+    }
+
+    internal void ReleaseUniqueMessageId(string messageId)
+    {
+        if (!Options.MessageIdUniqueCheck || string.IsNullOrEmpty(messageId))
+            return;
+
+        lock (_messageIdList)
+            _messageIdList.Remove(messageId);
     }
 
     /// <summary>

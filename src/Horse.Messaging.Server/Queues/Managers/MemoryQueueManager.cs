@@ -117,6 +117,14 @@ public class MemoryQueueManager : IHorseQueueManager
     }
 
     /// <inheritdoc />
+    public virtual async Task Flush()
+    {
+        PriorityMessageStore.TimeoutTracker.Stop();
+        MessageStore.TimeoutTracker.Stop();
+        await DeliveryHandler.Tracker.Destroy();
+    }
+
+    /// <inheritdoc />
     public virtual Task<bool> ChangeMessagePriority(QueueMessage message, bool priority)
     {
         if (message.Message.HighPriority == priority)

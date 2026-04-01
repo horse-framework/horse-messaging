@@ -17,6 +17,7 @@ internal static class HorseLogEvents
     internal const int QueueSaveMessage = 213;
     internal const int QueueAckReceived = 214;
     internal const int QueuePersistentDestroy = 215;
+    internal const int QueueShutdownFlush = 216;
 
     internal const int ChannelCreate = 301;
     internal const int ChannelRemove = 302;

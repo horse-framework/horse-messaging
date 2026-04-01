@@ -68,6 +68,7 @@ public class DefaultMessageTimeoutTracker : IMessageTimeoutTracker
                     }
 
                     Store.Remove(message);
+                    _queue.ReleaseUniqueMessageId(message.Message.MessageId);
 
                     _queue.Info.AddMessageTimeout();
                     message.MarkAsTimedOut();

@@ -9,26 +9,6 @@ namespace Horse.Messaging.Client.Queues.Exceptions;
 public class ExceptionDescription
 {
     /// <summary>
-    /// Fullname of type of exception
-    /// </summary>
-    public string ExceptionType { get; set; }
-
-    /// <summary>
-    /// Exception message
-    /// </summary>
-    public string Message { get; set; }
-
-    /// <summary>
-    /// Exception stack trace
-    /// </summary>
-    public string StackTrace { get; set; }
-
-    /// <summary>
-    /// Machine name
-    /// </summary>
-    public string MachineName { get; set; }
-
-    /// <summary>
     /// Target name of the message (queue name, channel name, router name etc)
     /// </summary>
     public string TargetName { get; set; }
@@ -52,6 +32,26 @@ public class ExceptionDescription
     /// Retry count
     /// </summary>
     public int TryCount { get; set; }
+
+    /// <summary>
+    /// Machine name
+    /// </summary>
+    public string MachineName { get; set; }
+
+    /// <summary>
+    /// Fullname of type of exception
+    /// </summary>
+    public string ExceptionType { get; set; }
+
+    /// <summary>
+    /// Exception message
+    /// </summary>
+    public string Message { get; set; }
+
+    /// <summary>
+    /// Exception stack trace
+    /// </summary>
+    public string StackTrace { get; set; }
 
     /// <summary>
     /// Create new description object from exception

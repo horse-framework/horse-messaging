@@ -150,6 +150,9 @@ public class RedeliveryService
         await _slim.WaitAsync();
         try
         {
+            if (_stream == null)
+                return;
+
             await _stream.FlushAsync();
             _stream.Close();
             await _stream.DisposeAsync();

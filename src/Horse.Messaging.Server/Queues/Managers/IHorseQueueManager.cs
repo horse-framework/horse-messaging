@@ -75,6 +75,11 @@ public interface IHorseQueueManager
     Task<bool> SaveMessage(QueueMessage message);
 
     /// <summary>
+    /// Flushes pending writes of the queue manager.
+    /// </summary>
+    Task Flush();
+
+    /// <summary>
     /// Changes message priority
     /// </summary>
     Task<bool> ChangeMessagePriority(QueueMessage message, bool priority);

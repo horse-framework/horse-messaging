@@ -4,6 +4,7 @@ using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using EnumsNET;
@@ -27,12 +28,31 @@ namespace Horse.Messaging.Server.Queues;
 /// </summary>
 public class QueueRider
 {
+    private static readonly ConcurrentDictionary<int, WeakReference<QueueRider>> ShutdownAwareRiders = new();
+    private static readonly object ShutdownHandlerSync = new();
+    private static readonly EventHandler ProcessExitHandler = (_, _) => ExecuteRegisteredShutdowns(false);
+    private static readonly ConsoleCancelEventHandler CancelKeyPressHandler = (_, args) =>
+    {
+        args.Cancel = true;
+        ExecuteRegisteredShutdowns(true);
+    };
+
+    private static int _shutdownRegistrationId;
+    private static int _shutdownHandlersRegistered;
+    private static int _explicitExitRequested;
+    private static PosixSignalRegistration _sigTermRegistration;
+    private static PosixSignalRegistration _sigIntRegistration;
+
     private readonly ConcurrentDictionary<string, HorseQueue> _queues = new ConcurrentDictionary<string, HorseQueue>();
+    private readonly object _shutdownSync = new();
+    private readonly int _shutdownRegistrationKey = Interlocked.Increment(ref _shutdownRegistrationId);
 
     /// <summary>
     /// Locker object for preventing to create duplicated queues when requests are concurrent and auto queue creation is enabled
     /// </summary>
     private readonly SemaphoreSlim _createLock = new(1, 1);
+    private Task _shutdownTask;
+    private volatile bool _shuttingDown;
 
     /// <summary>
     /// Queue event handlers
@@ -116,6 +136,8 @@ public class QueueRider
     /// </summary>
     public IOptionsConfigurator<QueueConfiguration> OptionsConfigurator { get; set; }
 
+    internal bool IsShuttingDown => _shuttingDown;
+
     /// <summary>
     /// Creates new queue rider
     /// </summary>
@@ -133,6 +155,8 @@ public class QueueRider
 
     internal void Initialize()
     {
+        RegisterShutdownHandlers();
+
         if (OptionsConfigurator == null)
             return;
 
@@ -184,8 +208,6 @@ public class QueueRider
         // Partition sub-queues will be re-created with deterministic names when
         // clients subscribe. QueueRider.Create(returnIfExists:true) will pick up
         // existing HDB files since the queue name is the same.
-        var createTasks = new List<Task<HorseQueue>>();
-
         foreach (QueueConfiguration configuration in configurations)
         {
             QueueOptions options = new QueueOptions
@@ -229,29 +251,113 @@ public class QueueRider
             if (status == QueueStatus.NotInitialized)
                 nonInitializionMessage = new HorseMessage(MessageType.Server, configuration.Name, KnownContentTypes.QueueSubscribe);
 
-            var cfg = configuration;
-            var t = Create(cfg.Name, options, nonInitializionMessage, true, true, null, cfg.ManagerName)
-                .ContinueWith(o =>
-                {
-                    HorseQueue queue = o.Result;
-                    if (queue != null)
-                    {
-                        if (!string.IsNullOrEmpty(cfg.Topic))
-                            queue.Topic = cfg.Topic;
+            HorseQueue queue = Create(configuration.Name, options, nonInitializionMessage, true, true, null, configuration.ManagerName)
+                .GetAwaiter()
+                .GetResult();
 
-                        if (status != QueueStatus.NotInitialized)
-                            queue.SetStatus(status);
-                    }
+            if (queue == null)
+                continue;
 
-                    return queue;
-                });
-            createTasks.Add(t);
+            if (!string.IsNullOrEmpty(configuration.Topic))
+                queue.Topic = configuration.Topic;
+
+            if (status != QueueStatus.NotInitialized)
+                queue.SetStatus(status);
         }
-
-        Task.WhenAll(createTasks).GetAwaiter().GetResult();
 
         // Freeze the factory dictionary for optimal read performance after startup
         QueueManagerFactories = QueueManagerFactoriesMutable.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
+    }
+
+    internal Task BeginShutdownAsync(TimeSpan? gracePeriod = null)
+    {
+        lock (_shutdownSync)
+        {
+            _shuttingDown = true;
+            _shutdownTask ??= FlushPersistentQueuesAsync(gracePeriod ?? TimeSpan.FromSeconds(2));
+            return _shutdownTask;
+        }
+    }
+
+    private void RegisterShutdownHandlers()
+    {
+        ShutdownAwareRiders[_shutdownRegistrationKey] = new WeakReference<QueueRider>(this);
+
+        if (Interlocked.CompareExchange(ref _shutdownHandlersRegistered, 1, 0) != 0)
+            return;
+
+        lock (ShutdownHandlerSync)
+        {
+            AppDomain.CurrentDomain.ProcessExit += ProcessExitHandler;
+            Console.CancelKeyPress += CancelKeyPressHandler;
+
+            try
+            {
+                _sigTermRegistration = PosixSignalRegistration.Create(PosixSignal.SIGTERM, HandlePosixSignal);
+                _sigIntRegistration = PosixSignalRegistration.Create(PosixSignal.SIGINT, HandlePosixSignal);
+            }
+            catch
+            {
+                // Posix signal registration may not be available on all platforms.
+            }
+        }
+    }
+
+    private async Task FlushPersistentQueuesAsync(TimeSpan gracePeriod)
+    {
+        try
+        {
+            if (gracePeriod > TimeSpan.Zero)
+                await Task.Delay(gracePeriod);
+
+            foreach (HorseQueue queue in Queues.ToArray())
+            {
+                if (queue.Manager == null)
+                    continue;
+
+                try
+                {
+                    await queue.Manager.Flush();
+                }
+                catch (Exception e)
+                {
+                    Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueShutdownFlush, $"Flush Queue On Shutdown: {queue.Name}", e);
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueShutdownFlush, "Queue rider shutdown flush", e);
+        }
+    }
+
+    private static void HandlePosixSignal(PosixSignalContext context)
+    {
+        context.Cancel = true;
+        ExecuteRegisteredShutdowns(true);
+    }
+
+    private static void ExecuteRegisteredShutdowns(bool terminateProcess)
+    {
+        foreach (var pair in ShutdownAwareRiders.ToArray())
+        {
+            if (!pair.Value.TryGetTarget(out QueueRider rider))
+            {
+                ShutdownAwareRiders.TryRemove(pair.Key, out _);
+                continue;
+            }
+
+            try
+            {
+                rider.BeginShutdownAsync().GetAwaiter().GetResult();
+            }
+            catch
+            {
+            }
+        }
+
+        if (terminateProcess && Interlocked.Exchange(ref _explicitExitRequested, 1) == 0)
+            Environment.Exit(0);
     }
 
     #region Actions

@@ -93,6 +93,28 @@ public class DatabaseFile
     }
 
     /// <summary>
+    /// Flushes file stream and asks the OS to persist buffered data to disk.
+    /// </summary>
+    public async Task FlushToDisk(bool dblock = true)
+    {
+        if (_file == null)
+            return;
+
+        if (dblock)
+            await _database.WaitForLock();
+
+        try
+        {
+            _file.Flush(true);
+        }
+        finally
+        {
+            if (dblock)
+                _database.ReleaseLock();
+        }
+    }
+
+    /// <summary>
     /// Opens database file and seeks to end
     /// </summary>
     public async Task Open()
@@ -153,7 +175,7 @@ public class DatabaseFile
 
         try
         {
-            await _file.FlushAsync();
+            _file.Flush(true);
             await _file.DisposeAsync();
             _file = null;
 

@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Horse.Messaging.Data")]
+[assembly: InternalsVisibleTo("Test.Queues")]
 
 namespace Horse.Messaging.Server;
 

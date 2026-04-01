@@ -105,6 +105,7 @@ public class LinkedMessageStoreTest
         public Task<bool> RemoveMessage(QueueMessage message) => Task.FromResult(true);
         public Task<bool> RemoveMessage(string messageId) => Task.FromResult(true);
         public Task<bool> SaveMessage(QueueMessage message) => Task.FromResult(false);
+        public Task Flush() => Task.CompletedTask;
         public Task<bool> ChangeMessagePriority(QueueMessage message, bool priority) => Task.FromResult(false);
     }
 }

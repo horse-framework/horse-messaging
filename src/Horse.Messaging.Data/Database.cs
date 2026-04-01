@@ -117,13 +117,10 @@ public class Database
         {
             Stream stream = File.GetStream();
             stream.Seek(0, SeekOrigin.Begin);
-            await using MemoryStream ms = new MemoryStream();
-            await stream.CopyToAsync(ms);
-            ms.Position = 0;
 
-            while (ms.Position < ms.Length)
+            while (stream.Position < stream.Length)
             {
-                DataMessage message = await _serializer.Read(ms);
+                DataMessage message = await _serializer.Read(stream);
                 if (string.IsNullOrEmpty(message.Id))
                     continue;
 
@@ -160,6 +157,20 @@ public class Database
 
         _shrinkManager.Stop();
         await Shrink();
+        await File.Close();
+    }
+
+    /// <summary>
+    /// Closes the database without running shrink.
+    /// Used during process shutdown to flush buffered writes quickly.
+    /// </summary>
+    public async Task CloseWithoutShrink()
+    {
+        lock (File)
+            IsOpen = false;
+
+        _shrinkManager.Stop();
+        await File.FlushToDisk();
         await File.Close();
     }
 

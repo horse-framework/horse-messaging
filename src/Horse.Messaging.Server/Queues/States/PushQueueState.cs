@@ -48,6 +48,9 @@ internal class PushQueueState : IQueueState
 
     private async Task<PushResult> ProcessMessage(QueueMessage message)
     {
+        if (_queue.Rider.Queue.IsShuttingDown)
+            return PushResult.StatusNotSupported;
+
         //if we need acknowledge from receiver, it has a deadline.
         DateTime? ackDeadline = null;
         if (_queue.Options.Acknowledge != QueueAckDecision.None)

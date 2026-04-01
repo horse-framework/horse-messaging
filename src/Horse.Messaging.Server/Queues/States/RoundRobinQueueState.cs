@@ -56,6 +56,9 @@ internal class RoundRobinQueueState : IQueueState
     {
         try
         {
+            if (_queue.Rider.Queue.IsShuttingDown)
+                return PushResult.StatusNotSupported;
+
             if (!message.Deadline.HasValue && _queue.Options.MessageTimeout.Policy != MessageTimeoutPolicy.NoTimeout && _queue.Options.MessageTimeout.MessageDuration > 0)
                 message.Deadline = DateTime.UtcNow.AddSeconds(_queue.Options.MessageTimeout.MessageDuration);
 

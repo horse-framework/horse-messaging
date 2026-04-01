@@ -92,11 +92,26 @@ namespace Horse.Messaging.Server.Queues.Delivery
         /// </summary>
         public async Task Destroy()
         {
+            if (_destroyed)
+                return;
+
             Reset();
             _destroyed = true;
-            _cts?.Cancel();
-            _periodicTimer?.Dispose();
-            _cts?.Dispose();
+            CancellationTokenSource cts = _cts;
+            PeriodicTimer periodicTimer = _periodicTimer;
+            _cts = null;
+            _periodicTimer = null;
+
+            try
+            {
+                cts?.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+
+            periodicTimer?.Dispose();
+            cts?.Dispose();
             await Task.CompletedTask;
         }
 

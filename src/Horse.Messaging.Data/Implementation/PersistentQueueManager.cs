@@ -107,11 +107,20 @@ public class PersistentQueueManager : IHorseQueueManager
         if (messages.Count == 0)
             return;
 
+        MessageTimeoutStrategy timeout = Queue.Options.MessageTimeout;
+        bool resetDeadline =
+            timeout != null &&
+            timeout.Policy != MessageTimeoutPolicy.NoTimeout &&
+            timeout.MessageDuration > 0;
+
         QueueFiller filler = new QueueFiller(Queue);
         PushResult result = filler.FillMessage(messages,
             true,
             qm =>
             {
+                if (resetDeadline)
+                    qm.Deadline = DateTime.UtcNow.AddSeconds(timeout.MessageDuration);
+
                 if (!UseRedelivery ||
                     deliveries == null ||
                     deliveries.Count == 0 ||
@@ -248,5 +257,19 @@ public class PersistentQueueManager : IHorseQueueManager
             message.Message.HighPriority = oldValue;
             return Task.FromResult(false);
         }
+    }
+
+    /// <inheritdoc />
+    public async Task Flush()
+    {
+        PriorityMessageStore.TimeoutTracker.Stop();
+        MessageStore.TimeoutTracker.Stop();
+        await DeliveryHandler.Tracker.Destroy();
+
+        if (UseRedelivery && RedeliveryService != null)
+            await RedeliveryService.Close();
+
+        await _priorityMessageStore.CloseAsync();
+        await _messageStore.CloseAsync();
     }
 }

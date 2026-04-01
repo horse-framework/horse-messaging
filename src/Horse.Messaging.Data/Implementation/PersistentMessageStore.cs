@@ -31,6 +31,11 @@ public class PersistentMessageStore : LinkedMessageStore
         return Database.Open();
     }
 
+    internal Task CloseAsync()
+    {
+        return Database.CloseWithoutShrink();
+    }
+
     /// <inheritdoc />
     public override bool Remove(string messageId)
     {

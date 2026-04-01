@@ -81,4 +81,47 @@ public class MessageIdUniqueCheckTest
 
         producer.Disconnect();
     }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("persistent")]
+    public async Task UniqueCheck_TimeoutRemovedMessageId_CanBeReused(string mode)
+    {
+        await using var ctx = await QueueTestServer.Create(mode, o =>
+        {
+            o.CommitWhen = CommitWhen.AfterReceived;
+            o.Acknowledge = QueueAckDecision.None;
+        });
+
+        await ctx.Rider.Queue.Create("uid-timeout-reuse", o =>
+        {
+            o.Type = QueueType.Push;
+            o.MessageIdUniqueCheck = true;
+            o.MessageTimeout = new MessageTimeoutStrategy
+            {
+                MessageDuration = 2,
+                Policy = MessageTimeoutPolicy.Delete
+            };
+        });
+
+        HorseClient producer = new HorseClient();
+        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+
+        HorseResult r1 = await producer.Queue.Push("uid-timeout-reuse", new MemoryStream("first"u8.ToArray()), "reuse-id-001", true, CancellationToken.None);
+        Assert.Equal(HorseResultCode.Ok, r1.Code);
+
+        HorseQueue queue = ctx.Rider.Queue.Find("uid-timeout-reuse");
+        for (int i = 0; i < 50 && !queue.IsEmpty; i++)
+            await Task.Delay(200);
+
+        Assert.True(queue.IsEmpty, "First message should have timed out and been removed");
+
+        await producer.Queue.Push("uid-timeout-reuse", new MemoryStream("second"u8.ToArray()), "reuse-id-001", false, CancellationToken.None);
+        await Task.Delay(500);
+
+        int storeCount = queue.Manager.MessageStore.Count() + queue.Manager.PriorityMessageStore.Count();
+        Assert.Equal(1, storeCount);
+
+        producer.Disconnect();
+    }
 }

@@ -87,6 +87,9 @@ internal class PullQueueState : IQueueState
 
     public async Task<PullResult> Pull(QueueClient client, HorseMessage request)
     {
+        if (_queue.Rider.Queue.IsShuttingDown)
+            return PullResult.StatusNotSupported;
+
         int index = 1;
         int count = FindCount(request);
         if (count < 1)
