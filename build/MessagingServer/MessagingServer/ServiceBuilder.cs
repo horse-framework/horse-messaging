@@ -67,7 +67,7 @@ public class ServiceBuilder
                 if (_options.QueueUsePersistentManagerAsDefault)
                 {
                     if (_options.QueueUsePersistent)
-                        c.UsePersistentQueues("Persistent", d => { d.UseAutoFlush(TimeSpan.FromMilliseconds(250)); });
+                        c.UsePersistentQueues("Persistent", d => {  d.UseAutoFlush(TimeSpan.FromMilliseconds(250)); });
 
                     if (_options.QueueUseMemory)
                         c.UseMemoryQueues("Memory");

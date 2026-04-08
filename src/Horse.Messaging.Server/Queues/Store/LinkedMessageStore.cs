@@ -13,7 +13,7 @@ namespace Horse.Messaging.Server.Queues.Store;
 /// </summary>
 public class LinkedMessageStore : IQueueMessageStore
 {
-    private readonly object _sync = new();
+    private readonly Lock _sync = new();
     private readonly LinkedList<QueueMessage> _messages = new();
     private readonly Dictionary<string, LinkedListNode<QueueMessage>> _index = new(StringComparer.Ordinal);
     private int _count;
