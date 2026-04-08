@@ -57,12 +57,20 @@ public class ScheduleRider
 
     private async Task Run()
     {
+        bool stopSubscription = false;
         CancellationTokenSource cts = new CancellationTokenSource();
-        Rider.Server.OnStopped += s => cts.Cancel();
 
         //wait for start
-        if (!Rider.Server.IsRunning)
-            Rider.Server.OnStarted += s => _ = Run();
+        while (Rider.Server == null || Rider.Server is { IsRunning: false })
+        {
+            if (Rider.Server != null && !stopSubscription)
+            {
+                stopSubscription = true;
+                Rider.Server?.OnStopped += s => cts.Cancel();
+            }
+
+            await Task.Delay(100, cts.Token);
+        }
 
         //run while running
         while (Rider.Server.IsRunning)
@@ -132,7 +140,7 @@ public class ScheduleRider
         catch (Exception e)
         {
             task.LastExecutionResult = false;
-            
+
             if (!string.IsNullOrEmpty(task.ErrorQueue))
             {
                 try
@@ -169,7 +177,7 @@ public class ScheduleRider
         task.LastExecution = DateTime.UtcNow;
         task.NextExecution = CalculateNextExecutionTime(task);
     }
-    
+
     private DateTime CalculateNextExecutionTime(ScheduledTask task)
     {
         try
@@ -334,6 +342,23 @@ public class ScheduleRider
         task.RetryCount = retryCount;
         task.ErrorQueue = errorQueue;
         task.NextExecution = CalculateNextExecutionTime(task);
+
+        Save();
+        return true;
+    }
+
+    /// <summary>
+    /// Sets the enabled status of a scheduled task.
+    /// Returns false if the task is not found.
+    /// </summary>
+    public bool SetStatus(string name, bool isEnabled)
+    {
+        ScheduledTask task = _tasks.FirstOrDefault(x => x.Name == name);
+        if (task == null)
+            return false;
+
+        task.IsEnabled = isEnabled;
+        task.NextExecution = isEnabled ? CalculateNextExecutionTime(task) : DateTime.MaxValue;
 
         Save();
         return true;
