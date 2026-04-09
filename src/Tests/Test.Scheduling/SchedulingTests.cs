@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Horse.Messaging.Server.Helpers;
 using Horse.Messaging.Server.Scheduling;
 using Test.Common;
 using Xunit;
@@ -9,6 +10,17 @@ namespace Test.Scheduling;
 
 public class SchedulingTests
 {
+    [Fact]
+    public void ToUnixDate_ShouldReturnUtcDateTime()
+    {
+        long unixMilliseconds = DateTimeOffset.Parse("2023-10-01T00:00:00Z").ToUnixTimeMilliseconds();
+
+        DateTime result = unixMilliseconds.ToUnixDate();
+
+        Assert.Equal(DateTimeKind.Utc, result.Kind);
+        Assert.Equal(new DateTime(2023, 10, 1, 0, 0, 0, DateTimeKind.Utc), result);
+    }
+
     [Fact]
     public async Task CronCalculation_ShouldBeCorrect()
     {

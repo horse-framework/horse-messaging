@@ -26,7 +26,7 @@ internal static class DateHelper
     /// </summary>
     public static DateTime ToUnixDate(this long unixMilliseconds)
     {
-        return new DateTime(1970, 1, 1).AddMilliseconds(unixMilliseconds);
+        return DateTimeOffset.FromUnixTimeMilliseconds(unixMilliseconds).UtcDateTime;
     }
 
     /// <summary>
