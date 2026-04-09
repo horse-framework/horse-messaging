@@ -21,6 +21,9 @@ internal class ScheduleTaskDataItem
     [JsonPropertyName("executionCount")]
     public long ExecutionCount { get; set; }
 
+    [JsonPropertyName("skipCount")]
+    public long SkipCount { get; set; }
+
     [JsonPropertyName("lastExecution")]
     public long LastExecution { get; set; }
 
@@ -42,8 +45,8 @@ internal class ScheduleTaskDataItem
     [JsonPropertyName("retryCount")]
     public int RetryCount { get; set; }
 
-    [JsonPropertyName("errorQueue")]
-    public string ErrorQueue { get; set; }
+    [JsonPropertyName("skipQueue")]
+    public string SkipQueue { get; set; }
 
     public static ScheduleTaskDataItem Create(ScheduledTask task)
     {
@@ -61,7 +64,7 @@ internal class ScheduleTaskDataItem
             Target = task.Target,
             Parameters = task.Parameters,
             RetryCount = task.RetryCount,
-            ErrorQueue = task.ErrorQueue
+            SkipQueue = task.SkipQueue
         };
     }
 
@@ -81,7 +84,7 @@ internal class ScheduleTaskDataItem
             Target = Target,
             Parameters = Parameters,
             RetryCount = RetryCount,
-            ErrorQueue = ErrorQueue
+            SkipQueue = SkipQueue
         };
     }
 }

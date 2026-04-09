@@ -43,6 +43,11 @@ public class ScheduledTask
     public long ExecutionCount { get; set; }
 
     /// <summary>
+    /// Total skip count of the task.
+    /// </summary>
+    public long SkipCount { get; set; }
+    
+    /// <summary>
     /// Last execution time of the task.
     /// </summary>
     public DateTime? LastExecution { get; set; }
@@ -78,9 +83,9 @@ public class ScheduledTask
     public int RetryCount { get; set; }
 
     /// <summary>
-    /// Error queue name to push the error message if the task fails after all retries.
+    /// Skip queue name to push the error message if the task fails after all retries.
     /// </summary>
-    public string ErrorQueue { get; set; }
+    public string SkipQueue { get; set; }
 
     /// <summary>
     /// Executes the task.

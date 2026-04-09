@@ -125,6 +125,7 @@ public class ScheduleRider
                 {
                     await task.Execute(Rider);
                     task.LastExecutionResult = true;
+                    task.ExecutionCount++;
                     break;
                 }
                 catch
@@ -140,20 +141,21 @@ public class ScheduleRider
         catch (Exception e)
         {
             task.LastExecutionResult = false;
+            task.SkipCount++;
 
-            if (!string.IsNullOrEmpty(task.ErrorQueue))
+            if (!string.IsNullOrEmpty(task.SkipQueue))
             {
                 try
                 {
-                    HorseQueue queue = Rider.Queue.Find(task.ErrorQueue);
+                    HorseQueue queue = Rider.Queue.Find(task.SkipQueue);
 
                     if (queue == null)
-                        queue = await Rider.Queue.Create(task.ErrorQueue);
+                        queue = await Rider.Queue.Create(task.SkipQueue);
 
                     if (queue != null)
                     {
                         var messageItem = ScheduleTaskDataItem.Create(task);
-                        HorseMessage message = new HorseMessage(MessageType.QueueMessage, task.ErrorQueue);
+                        HorseMessage message = new HorseMessage(MessageType.QueueMessage, task.SkipQueue);
                         message.SetStringContent(JsonSerializer.Serialize(messageItem));
                         message.SetStringAdditionalContent(JsonSerializer.Serialize(new
                         {
@@ -173,7 +175,6 @@ public class ScheduleRider
             Rider.SendError(HorseLogLevel.Error, HorseLogEvents.ScheduleTaskRun, "ScheduleRider.RunTask", e);
         }
 
-        task.ExecutionCount++;
         task.LastExecution = DateTime.UtcNow;
         task.NextExecution = CalculateNextExecutionTime(task);
     }
@@ -281,7 +282,7 @@ public class ScheduleRider
             Target = target,
             Parameters = parameters,
             RetryCount = retryCount,
-            ErrorQueue = errorQueue,
+            SkipQueue = errorQueue,
             IsEnabled = true
         };
 
@@ -340,7 +341,7 @@ public class ScheduleRider
         task.Target = target;
         task.Parameters = parameters;
         task.RetryCount = retryCount;
-        task.ErrorQueue = errorQueue;
+        task.SkipQueue = errorQueue;
         task.NextExecution = CalculateNextExecutionTime(task);
 
         Save();
