@@ -119,6 +119,7 @@ public class ScheduleRider
             {
                 Save();
                 saveRequired = false;
+                lastSave = DateTime.UtcNow;
             }
         }
         
