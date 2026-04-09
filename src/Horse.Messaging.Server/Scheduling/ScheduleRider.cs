@@ -57,6 +57,8 @@ public class ScheduleRider
 
     private async Task Run()
     {
+        bool saveRequired = false;
+        DateTime lastSave = DateTime.UtcNow;
         bool stopSubscription = false;
         CancellationTokenSource cts = new CancellationTokenSource();
 
@@ -94,6 +96,8 @@ public class ScheduleRider
                     TimeSpan leftDuration = task.NextExecution - now;
                     if (leftDuration.TotalMilliseconds > 0 && leftDuration.TotalMilliseconds < waitDelay)
                         waitDelay = Convert.ToInt32(leftDuration.TotalMilliseconds);
+
+                    saveRequired = true;
                 }
 
                 if (waitDelay < 100)
@@ -110,7 +114,15 @@ public class ScheduleRider
                 Rider.SendError(HorseLogLevel.Critical, HorseLogEvents.ScheduleSystemRun, "ScheduleRider.Run", e);
                 await Task.Delay(1000, cts.Token);
             }
+
+            if (saveRequired && DateTime.UtcNow - lastSave > TimeSpan.FromSeconds(60))
+            {
+                Save();
+                saveRequired = false;
+            }
         }
+        
+        Save();
     }
 
     private async Task RunTask(ScheduledTask task)
