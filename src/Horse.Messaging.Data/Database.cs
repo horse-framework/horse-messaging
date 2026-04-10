@@ -127,7 +127,7 @@ public class Database
                 switch (message.Type)
                 {
                     case DataType.Insert:
-                        if (message.Message?.Content == null || message.Message.Content.Length < 1)
+                        if (message.Message == null)
                             continue;
 
                         messages.Add(message.Message);

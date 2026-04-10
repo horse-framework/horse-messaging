@@ -1,6 +1,9 @@
 using System;
+using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
+using Horse.Messaging.Server;
 using Horse.Messaging.Server.Helpers;
 using Horse.Messaging.Server.Scheduling;
 using Test.Common;
@@ -19,6 +22,62 @@ public class SchedulingTests
 
         Assert.Equal(DateTimeKind.Utc, result.Kind);
         Assert.Equal(new DateTime(2023, 10, 1, 0, 0, 0, DateTimeKind.Utc), result);
+    }
+
+    [Fact]
+    public void ToUnixMilliseconds_ShouldClampDateTimeMaxValue()
+    {
+        long result = DateTime.MaxValue.ToUnixMilliseconds();
+
+        Assert.Equal(253402300799999, result);
+    }
+
+    [Fact]
+    public void LegacyScheduleFile_ShouldLoad_WhenNextExecutionExceededUnixMax()
+    {
+        string dataPath = Path.Combine(Path.GetTempPath(), $"horse-scheduling-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dataPath);
+
+        try
+        {
+            string tasksFilename = Path.Combine(dataPath, "tasks.json");
+            string json = JsonSerializer.Serialize(new[]
+            {
+                new
+                {
+                    name = "LegacyTask",
+                    category = "Tests",
+                    schedule = "*/5 * * * *",
+                    isEnabled = true,
+                    executionCount = 0L,
+                    skipCount = 0L,
+                    lastExecution = 0L,
+                    lastExecutionResult = (bool?) null,
+                    nextExecution = 253402300800000L,
+                    type = ScheduleType.QueuePush.ToString(),
+                    target = "legacy-queue",
+                    parameters = "hello",
+                    retryCount = 0,
+                    skipQueue = (string) null
+                }
+            });
+
+            File.WriteAllText(tasksFilename, json);
+
+            HorseRider rider = HorseRiderBuilder.Create()
+                .ConfigureOptions(o => o.DataPath = dataPath)
+                .Build();
+
+            ScheduledTask task = Assert.Single(rider.Schedule.GetTasks());
+            Assert.Equal("LegacyTask", task.Name);
+            Assert.True(task.IsEnabled);
+            Assert.True(task.NextExecution > DateTime.UtcNow);
+        }
+        finally
+        {
+            if (Directory.Exists(dataPath))
+                Directory.Delete(dataPath, true);
+        }
     }
 
     [Fact]

@@ -59,23 +59,15 @@ public class ScheduleRider
     {
         bool saveRequired = false;
         DateTime lastSave = DateTime.UtcNow;
-        bool stopSubscription = false;
         CancellationTokenSource cts = new CancellationTokenSource();
 
         //wait for start
         while (Rider.Server == null || Rider.Server is { IsRunning: false })
-        {
-            if (Rider.Server != null && !stopSubscription)
-            {
-                stopSubscription = true;
-                Rider.Server?.OnStopped += s => cts.Cancel();
-            }
-
             await Task.Delay(100, cts.Token);
-        }
 
-        //run while running
-        while (Rider.Server.IsRunning)
+        Rider.Server?.OnStopped += s => cts.Cancel();
+        
+        while (Rider.Server.IsRunning && !cts.IsCancellationRequested)
         {
             try
             {
@@ -103,7 +95,7 @@ public class ScheduleRider
                 if (waitDelay < 100)
                     waitDelay = 100;
 
-                await Task.Delay(waitDelay, cts.Token);
+                await Task.Delay(Math.Clamp(waitDelay, 100, 2000), cts.Token);
             }
             catch (OperationCanceledException)
             {
@@ -122,7 +114,7 @@ public class ScheduleRider
                 lastSave = DateTime.UtcNow;
             }
         }
-        
+
         Save();
     }
 
