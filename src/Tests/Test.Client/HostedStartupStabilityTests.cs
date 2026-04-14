@@ -85,12 +85,12 @@ internal sealed class HostedClientLifecycleTimeline
 
 public class HostedStartupStabilityTests
 {
-    private static async Task<(TestHorseRider server, int port)> StartServer(int pingInterval, int requestTimeout)
+    private static async Task RunWithServer(Func<TestHorseRider, int, Task> action)
     {
-        TestHorseRider server = new TestHorseRider();
+        await using var server = new TestHorseRider();
         await server.Initialize();
-        int port = server.Start(pingInterval, requestTimeout);
-        return (server, port);
+        int port = server.Start(300, 300);
+        await action(server, port);
     }
 
     private static async Task WaitUntil(Func<bool> condition, int timeoutMs = 5000, int pollMs = 50)
@@ -103,9 +103,7 @@ public class HostedStartupStabilityTests
     [Fact]
     public async Task HostApplicationBuilder_AddHorse_DefaultIdleClient_DoesNotReconnectDuringStartupWindow()
     {
-        (TestHorseRider server, int port) = await StartServer(pingInterval: 5, requestTimeout: 30);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HostApplicationBuilder builder = Host.CreateApplicationBuilder();
             builder.AddHorse(config =>
@@ -141,19 +139,13 @@ public class HostedStartupStabilityTests
                 timeline.Detach(client);
                 await host.StopAsync();
             }
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
     public async Task HostApplicationBuilder_WithAdditionalHostedService_DoesNotCycleConnectionOnStartup()
     {
-        (TestHorseRider server, int port) = await StartServer(pingInterval: 5, requestTimeout: 30);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HostApplicationBuilder builder = Host.CreateApplicationBuilder();
             builder.AddHorse(config =>
@@ -193,19 +185,13 @@ public class HostedStartupStabilityTests
                 await host.StopAsync();
                 Assert.True(probeState.StopCalled, "Additional hosted service should stop cleanly with the host");
             }
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
     public async Task HostApplicationBuilder_AggressiveServerHeartbeat_DoesNotDisconnectAndReconnect()
     {
-        (TestHorseRider server, int port) = await StartServer(pingInterval: 1, requestTimeout: 10);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HostApplicationBuilder builder = Host.CreateApplicationBuilder();
             builder.AddHorse(config =>
@@ -239,11 +225,6 @@ public class HostedStartupStabilityTests
                 timeline.Detach(client);
                 await host.StopAsync();
             }
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 }
-

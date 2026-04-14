@@ -182,34 +182,14 @@ internal class DenyChannelSubscribeAuthorization : IChannelAuthorization
 
 public class OptionMutationGuardTests
 {
-    private static async Task<(TestHorseRider server, int port)> StartServer(Action<TestHorseRider> configure = null)
-    {
-        var server = new TestHorseRider();
-        await server.Initialize();
-        configure?.Invoke(server);
-        int port = server.Start(300, 300);
-        return (server, port);
-    }
-
-    private static async Task WaitUntil(Func<bool> condition, int timeoutMs = 5000)
-    {
-        var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
-        while (!condition() && DateTime.UtcNow < deadline)
-            await Task.Delay(30);
-    }
-
     [Fact]
     public async Task QueueSubscribe_Unauthorized_DoesNotUpdateExistingQueueOptions()
     {
         const string queueName = "queue-subscribe-auth-guard";
 
-        var (server, port) = await StartServer(s =>
+        await TestHorseRider.RunWith(async (server, port) =>
         {
-            s.Rider.Queue.Authenticators.Add(new DenyQueueSubscribeAuthenticator(queueName));
-        });
-
-        try
-        {
+            server.Rider.Queue.Authenticators.Add(new DenyQueueSubscribeAuthenticator(queueName));
             await server.Rider.Queue.Create(queueName, options =>
             {
                 options.Type = QueueType.Push;
@@ -236,11 +216,7 @@ public class OptionMutationGuardTests
             Assert.Equal(TimeSpan.FromSeconds(2), queue.Options.AcknowledgeTimeout);
 
             client.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -248,13 +224,10 @@ public class OptionMutationGuardTests
     {
         const string queueName = "auth-message-timeout-queue";
 
-        var (server, port) = await StartServer(s =>
+        await TestHorseRider.RunWith(async (server, port) =>
         {
-            s.Rider.Client.Authorizations.Add(new DenyQueuePushAuthorization(queueName));
-        });
+            server.Rider.Client.Authorizations.Add(new DenyQueuePushAuthorization(queueName));
 
-        try
-        {
             await server.Rider.Queue.Create(queueName, options =>
             {
                 options.Type = QueueType.Push;
@@ -285,11 +258,7 @@ public class OptionMutationGuardTests
             Assert.True(queue.IsEmpty);
 
             client.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -297,17 +266,11 @@ public class OptionMutationGuardTests
     {
         const string channelName = "channel-subscribe-auth-guard";
 
-        var (server, port) = await StartServer(s =>
+        await TestHorseRider.RunWith(async (server, port) =>
         {
-            s.Rider.Channel.Authenticators.Add(new DenyChannelSubscribeAuthorization(channelName));
-        });
+            server.Rider.Channel.Authenticators.Add(new DenyChannelSubscribeAuthorization(channelName));
 
-        try
-        {
-            await server.Rider.Channel.Create(channelName, options =>
-            {
-                options.ClientLimit = 8;
-            });
+            await server.Rider.Channel.Create(channelName, options => { options.ClientLimit = 8; });
 
             HorseClient client = new HorseClient();
             await client.ConnectAsync($"horse://localhost:{port}");
@@ -324,11 +287,7 @@ public class OptionMutationGuardTests
             Assert.Equal(8, channel.Options.ClientLimit);
 
             client.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -336,9 +295,7 @@ public class OptionMutationGuardTests
     {
         const string queueName = "queue-limit-resize-existing";
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             await server.Rider.Queue.Create(queueName, options =>
             {
@@ -353,7 +310,7 @@ public class OptionMutationGuardTests
                 .Build();
 
             await consumer.ConnectAsync();
-            await WaitUntil(() => server.Rider.Queue.Find(queueName)?.Options.ClientLimit == 4);
+            await TestHorseRider.WaitUntil(() => server.Rider.Queue.Find(queueName)?.Options.ClientLimit == 4);
 
             HorseClient second = new HorseClient();
             HorseClient third = new HorseClient();
@@ -380,11 +337,7 @@ public class OptionMutationGuardTests
             fourth.Disconnect();
             fifth.Disconnect();
             consumer.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -392,14 +345,9 @@ public class OptionMutationGuardTests
     {
         const string channelName = "channel-limit-resize-existing";
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
-            await server.Rider.Channel.Create(channelName, options =>
-            {
-                options.ClientLimit = 2;
-            });
+            await server.Rider.Channel.Create(channelName, options => { options.ClientLimit = 2; });
 
             HorseClient consumer = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -408,7 +356,7 @@ public class OptionMutationGuardTests
                 .Build();
 
             await consumer.ConnectAsync();
-            await WaitUntil(() => server.Rider.Channel.Find(channelName)?.Options.ClientLimit == 4);
+            await TestHorseRider.WaitUntil(() => server.Rider.Channel.Find(channelName)?.Options.ClientLimit == 4);
 
             HorseClient second = new HorseClient();
             HorseClient third = new HorseClient();
@@ -425,11 +373,7 @@ public class OptionMutationGuardTests
             second.Disconnect();
             third.Disconnect();
             consumer.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -437,9 +381,7 @@ public class OptionMutationGuardTests
     {
         ChannelHeaderCaptureSubscriber.Reset();
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient subscriber = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -459,17 +401,13 @@ public class OptionMutationGuardTests
 
             Assert.Equal(HorseResultCode.Ok, result.Code);
 
-            await WaitUntil(() => ChannelHeaderCaptureSubscriber.Received);
+            await TestHorseRider.WaitUntil(() => ChannelHeaderCaptureSubscriber.Received);
 
             Assert.True(ChannelHeaderCaptureSubscriber.Received);
             Assert.False(ChannelHeaderCaptureSubscriber.HasClientLimitHeader);
 
             publisher.Disconnect();
             subscriber.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 }

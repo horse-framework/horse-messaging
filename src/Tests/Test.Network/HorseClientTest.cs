@@ -1,4 +1,6 @@
+using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Test.Common;
@@ -43,7 +45,7 @@ public class HorseClientTest
     {
         HorseClient client = new HorseClient();
         client.SetClientName("test-name");
-        client.SetClientName("updated-name"); // should update, not throw
+        client.SetClientName("updated-name");
     }
 
     [Fact]
@@ -51,7 +53,7 @@ public class HorseClientTest
     {
         HorseClient client = new HorseClient();
         client.SetClientType("worker");
-        client.SetClientType("consumer"); // should update, not throw
+        client.SetClientType("consumer");
     }
 
     [Fact]
@@ -59,7 +61,7 @@ public class HorseClientTest
     {
         HorseClient client = new HorseClient();
         client.SetClientToken("bearer-xyz");
-        client.SetClientToken("bearer-abc"); // should update, not throw
+        client.SetClientToken("bearer-abc");
     }
 
     [Fact]
@@ -68,7 +70,6 @@ public class HorseClientTest
         HorseClient client = new HorseClient();
         client.AddProperty("custom-key", "custom-value");
         client.RemoveProperty("custom-key");
-        // no throw = success
     }
 
     #endregion
@@ -81,7 +82,6 @@ public class HorseClientTest
         HorseClient client = new HorseClient();
         client.AddHost("horse://server1:2626");
         client.AddHost("horse://server2:2626");
-        // No exception = success
     }
 
     [Fact]
@@ -90,7 +90,6 @@ public class HorseClientTest
         HorseClient client = new HorseClient();
         client.AddHost("horse://server1:2626");
         client.AddHost("horse://server1:2626");
-        // No exception = success (internally deduplicates)
     }
 
     [Fact]
@@ -104,7 +103,7 @@ public class HorseClientTest
     public void AddHost_ThrowsOnEmpty()
     {
         HorseClient client = new HorseClient();
-        Assert.Throws<Exception>(() => client.AddHost(""));
+        Assert.Throws<Exception>(() => client.AddHost(string.Empty));
     }
 
     #endregion
@@ -147,13 +146,10 @@ public class HorseClientTest
     [Fact]
     public async Task ConnectedEvent_Fires()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 3, requestTimeout: 15);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             bool connected = false;
             HorseClient client = new HorseClient();
             client.Connected += _ => connected = true;
@@ -165,23 +161,16 @@ public class HorseClientTest
 
             Assert.True(connected);
             client.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 3, requestTimeout: 15);
     }
 
     [Fact]
     public async Task DisconnectedEvent_Fires()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 3, requestTimeout: 15);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             bool disconnected = false;
             HorseClient client = new HorseClient();
             client.Disconnected += _ => disconnected = true;
@@ -197,11 +186,7 @@ public class HorseClientTest
                 await Task.Delay(100);
 
             Assert.True(disconnected);
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 3, requestTimeout: 15);
     }
 
     [Fact]
@@ -211,12 +196,11 @@ public class HorseClientTest
         bool errorFired = false;
         client.Error += (_, _, _) => errorFired = true;
 
-        // Connect to invalid host - should fire error, not throw
         await client.ConnectAsync("horse://localhost:59998");
         await Task.Delay(500);
 
-        // ThrowExceptions = false by default, so no crash
         Assert.False(client.IsConnected);
+        _ = errorFired;
     }
 
     #endregion
@@ -255,19 +239,16 @@ public class HorseClientTest
     public void Dispose_DoesNotThrow()
     {
         HorseClient client = new HorseClient();
-        client.Dispose(); // should not throw
+        client.Dispose();
     }
 
     [Fact]
     public async Task Dispose_AfterConnect()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 3, requestTimeout: 15);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             HorseClient client = new HorseClient();
             await client.ConnectAsync($"horse://localhost:{port}");
             await Task.Delay(500);
@@ -275,11 +256,7 @@ public class HorseClientTest
 
             client.Disconnect();
             client.Dispose();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 3, requestTimeout: 15);
     }
 
     #endregion
@@ -289,13 +266,10 @@ public class HorseClientTest
     [Fact]
     public async Task SendDirectMessage_WithAck()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 3, requestTimeout: 15);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             HorseClient sender = new HorseClient();
             await sender.ConnectAsync($"horse://localhost:{port}");
 
@@ -310,17 +284,11 @@ public class HorseClientTest
             msg.SetStringContent("ack test");
 
             HorseResult result = await sender.SendAsync(msg, true, CancellationToken.None);
-
-            // Should succeed because receiver has AutoAcknowledge on
             Assert.Equal(HorseResultCode.Ok, result.Code);
 
             sender.Disconnect();
             receiver.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 3, requestTimeout: 15);
     }
 
     #endregion
@@ -330,15 +298,11 @@ public class HorseClientTest
     [Fact]
     public async Task ServerAssignsClientId()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 3, requestTimeout: 15);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             HorseClient client = new HorseClient();
-            // Do NOT set client id - let server assign one
             await client.ConnectAsync($"horse://localhost:{port}");
             await Task.Delay(500);
 
@@ -346,23 +310,16 @@ public class HorseClientTest
             Assert.False(string.IsNullOrEmpty(client.ClientId));
 
             client.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 3, requestTimeout: 15);
     }
 
     [Fact]
     public async Task CustomClientId_Preserved()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 3, requestTimeout: 15);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             string customId = "custom-" + Guid.NewGuid().ToString("N")[..8];
             HorseClient client = new HorseClient();
             client.SetClientId(customId);
@@ -370,17 +327,11 @@ public class HorseClientTest
             await Task.Delay(500);
 
             Assert.True(client.IsConnected);
-            // Server may reassign but initial value should be set
             Assert.False(string.IsNullOrEmpty(client.ClientId));
 
             client.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 3, requestTimeout: 15);
     }
 
     #endregion
 }
-

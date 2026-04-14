@@ -14,101 +14,92 @@ public class QueueEventTest
     [Fact]
     public async Task QueueCreate()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(300, 300);
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            HorseClient client = new HorseClient();
 
-        HorseClient client = new HorseClient();
+            EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
+            registrar.RegisterHandler<QueueCreateHandler>();
 
-        EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
-        registrar.RegisterHandler<QueueCreateHandler>();
+            await client.ConnectAsync($"horse://localhost:{port}");
 
-        await client.ConnectAsync($"horse://localhost:{port}");
+            HorseResult createResult = await client.Queue.Create("test-queue", CancellationToken.None);
+            Assert.Equal(HorseResultCode.Ok, createResult.Code);
 
-        HorseResult createResult = await client.Queue.Create("test-queue", CancellationToken.None);
-        Assert.Equal(HorseResultCode.Ok, createResult.Code);
-
-        await Task.Delay(250);
-        Assert.Equal(1, QueueCreateHandler.Count);
-        server.Stop();
+            await Task.Delay(250);
+            Assert.Equal(1, QueueCreateHandler.Count);
+        });
     }
 
     [Fact]
     public async Task QueueRemove()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(300, 300);
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            HorseClient client = new HorseClient();
 
-        HorseClient client = new HorseClient();
+            EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
+            registrar.RegisterHandler<QueueRemoveHandler>();
 
-        EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
-        registrar.RegisterHandler<QueueRemoveHandler>();
+            await client.ConnectAsync($"horse://localhost:{port}");
 
-        await client.ConnectAsync($"horse://localhost:{port}");
+            HorseResult createResult = await client.Queue.Create("test-queue", CancellationToken.None);
+            Assert.Equal(HorseResultCode.Ok, createResult.Code);
 
-        HorseResult createResult = await client.Queue.Create("test-queue", CancellationToken.None);
-        Assert.Equal(HorseResultCode.Ok, createResult.Code);
+            await Task.Delay(250);
+            Assert.Equal(0, QueueRemoveHandler.Count);
 
-        await Task.Delay(250);
-        Assert.Equal(0, QueueRemoveHandler.Count);
+            HorseResult removeResult = await client.Queue.Remove("test-queue", CancellationToken.None);
+            Assert.Equal(HorseResultCode.Ok, removeResult.Code);
 
-        HorseResult removeResult = await client.Queue.Remove("test-queue", CancellationToken.None);
-        Assert.Equal(HorseResultCode.Ok, removeResult.Code);
-
-        await Task.Delay(250);
-        Assert.Equal(1, QueueRemoveHandler.Count);
-        server.Stop();
+            await Task.Delay(250);
+            Assert.Equal(1, QueueRemoveHandler.Count);
+        });
     }
 
     [Fact]
     public async Task QueueSubscribe()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(300, 300);
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            HorseClient client = new HorseClient();
 
-        HorseClient client = new HorseClient();
+            EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
+            registrar.RegisterHandler<QueueSubscribeHandler>();
 
-        EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
-        registrar.RegisterHandler<QueueSubscribeHandler>();
+            await client.ConnectAsync($"horse://localhost:{port}");
 
-        await client.ConnectAsync($"horse://localhost:{port}");
+            HorseResult subscribeResult = await client.Queue.Subscribe("test-queue", true, CancellationToken.None);
+            Assert.Equal(HorseResultCode.Ok, subscribeResult.Code);
 
-        HorseResult subscribeResult = await client.Queue.Subscribe("test-queue", true, CancellationToken.None);
-        Assert.Equal(HorseResultCode.Ok, subscribeResult.Code);
-
-        await Task.Delay(250);
-        Assert.Equal(1, QueueSubscribeHandler.Count);
-        server.Stop();
+            await Task.Delay(250);
+            Assert.Equal(1, QueueSubscribeHandler.Count);
+        });
     }
 
     [Fact]
     public async Task QueueUnsubscribe()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(300, 300);
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            HorseClient client = new HorseClient();
 
-        HorseClient client = new HorseClient();
+            EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
+            registrar.RegisterHandler<QueueUnsubscribeHandler>();
 
-        EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
-        registrar.RegisterHandler<QueueUnsubscribeHandler>();
+            await client.ConnectAsync($"horse://localhost:{port}");
 
-        await client.ConnectAsync($"horse://localhost:{port}");
+            HorseResult subscribeResult = await client.Queue.Subscribe("test-queue", true, CancellationToken.None);
+            Assert.Equal(HorseResultCode.Ok, subscribeResult.Code);
 
-        HorseResult subscribeResult = await client.Queue.Subscribe("test-queue", true, CancellationToken.None);
-        Assert.Equal(HorseResultCode.Ok, subscribeResult.Code);
+            await Task.Delay(250);
+            Assert.Equal(0, QueueUnsubscribeHandler.Count);
 
-        await Task.Delay(250);
-        Assert.Equal(0, QueueUnsubscribeHandler.Count);
+            HorseResult unsubscribeResult = await client.Queue.Unsubscribe("test-queue", true, CancellationToken.None);
+            Assert.Equal(HorseResultCode.Ok, unsubscribeResult.Code);
 
-        HorseResult unsubscribeResult = await client.Queue.Unsubscribe("test-queue", true, CancellationToken.None);
-        Assert.Equal(HorseResultCode.Ok, unsubscribeResult.Code);
-
-        await Task.Delay(250);
-        Assert.Equal(1, QueueUnsubscribeHandler.Count);
-        server.Stop();
+            await Task.Delay(250);
+            Assert.Equal(1, QueueUnsubscribeHandler.Count);
+        });
     }
-        
 }

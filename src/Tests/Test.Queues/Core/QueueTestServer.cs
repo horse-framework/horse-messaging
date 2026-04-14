@@ -14,7 +14,8 @@ namespace Test.Queues.Core;
 /// <summary>
 /// Shared factory for queue tests.
 /// Creates either Memory or Persistent backed servers via mode string.
-/// Every test should use: await using var ctx = await QueueTestServer.Create(mode);
+/// Every test should use QueueTestServer.Create inside a try/finally and
+/// call ctx.Server.StopAsync() in the finally block before dispose cleanup runs.
 /// </summary>
 internal static class QueueTestServer
 {
@@ -139,7 +140,7 @@ internal class QueueTestContext : IAsyncDisposable
     {
         try
         {
-            if (Server != null)
+            if (Server is { IsRunning: true })
                 await Server.StopAsync();
         }
         catch { /* best effort */ }
@@ -155,4 +156,3 @@ internal class QueueTestContext : IAsyncDisposable
         }
     }
 }
-

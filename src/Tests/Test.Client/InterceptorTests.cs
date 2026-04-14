@@ -563,21 +563,6 @@ internal class ScopedDirectHandler : IDirectMessageHandler<ScopedDirectModel>
 
 public class InterceptorTests
 {
-    private static async Task<(TestHorseRider server, int port)> StartServer()
-    {
-        var server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(300, 300);
-        return (server, port);
-    }
-
-    private static async Task WaitUntil(Func<bool> condition, int timeoutMs = 5000)
-    {
-        var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
-        while (!condition() && DateTime.UtcNow < deadline)
-            await Task.Delay(30);
-    }
-
     // ===================================================================
     // QUEUE CONSUMER INTERCEPTOR TESTS
     // ===================================================================
@@ -588,9 +573,7 @@ public class InterceptorTests
         InterceptorState.Reset();
         InterceptedQueueConsumer.ConsumeCount = 0;
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient consumer = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -612,7 +595,7 @@ public class InterceptorTests
 
             Assert.Equal(HorseResultCode.Ok, pushResult.Code);
 
-            await WaitUntil(() => InterceptedQueueConsumer.ConsumeCount > 0);
+            await TestHorseRider.WaitUntil(() => InterceptedQueueConsumer.ConsumeCount > 0);
 
             Assert.True(InterceptedQueueConsumer.ConsumeCount > 0, "Consumer should have been called.");
 
@@ -624,11 +607,7 @@ public class InterceptorTests
                 "AfterInterceptor1 should have run after the consumer.");
             Assert.True(calls.Any(c => c.InterceptorName == nameof(ModelLevelInterceptor) && c.Phase == "Before"),
                 "ModelLevelInterceptor should have run (from model attribute).");
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -637,9 +616,7 @@ public class InterceptorTests
         InterceptorState.Reset();
         MultiInterceptorQueueConsumer.ConsumeCount = 0;
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient consumer = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -660,7 +637,7 @@ public class InterceptorTests
             await producer.Queue.Push("interceptor-multi-queue",
                 new SimpleQueueModel { Text = "order-test" }, true, CancellationToken.None);
 
-            await WaitUntil(() => MultiInterceptorQueueConsumer.ConsumeCount > 0);
+            await TestHorseRider.WaitUntil(() => MultiInterceptorQueueConsumer.ConsumeCount > 0);
 
             var calls = InterceptorState.GetOrderedCalls();
             var beforeCalls = calls.Where(c => c.Phase == "Before").ToList();
@@ -673,11 +650,7 @@ public class InterceptorTests
             Assert.Equal(2, afterCalls.Count);
             Assert.Equal(nameof(AfterInterceptor1), afterCalls[0].InterceptorName);
             Assert.Equal(nameof(AfterInterceptor2), afterCalls[1].InterceptorName);
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -686,9 +659,7 @@ public class InterceptorTests
         InterceptorState.Reset();
         MultiInterceptorQueueConsumer.ConsumeCount = 0;
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient consumer = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -709,7 +680,7 @@ public class InterceptorTests
             await producer.Queue.Push("interceptor-multi-queue",
                 new SimpleQueueModel { Text = "timing-test" }, true, CancellationToken.None);
 
-            await WaitUntil(() => MultiInterceptorQueueConsumer.ConsumeCount > 0);
+            await TestHorseRider.WaitUntil(() => MultiInterceptorQueueConsumer.ConsumeCount > 0);
 
             var calls = InterceptorState.GetOrderedCalls();
 
@@ -720,11 +691,7 @@ public class InterceptorTests
 
             Assert.True(lastBefore <= firstAfter,
                 "All before interceptors should complete before any after interceptor runs.");
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -733,9 +700,7 @@ public class InterceptorTests
         InterceptorState.Reset();
         NoInterceptorQueueConsumer.ConsumeCount = 0;
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient consumer = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -752,15 +717,11 @@ public class InterceptorTests
             await producer.Queue.Push("interceptor-noattr-queue",
                 new SimpleQueueModel { Text = "no-interceptor" }, true, CancellationToken.None);
 
-            await WaitUntil(() => NoInterceptorQueueConsumer.ConsumeCount > 0);
+            await TestHorseRider.WaitUntil(() => NoInterceptorQueueConsumer.ConsumeCount > 0);
 
             Assert.True(NoInterceptorQueueConsumer.ConsumeCount > 0, "Consumer should execute without interceptors.");
             Assert.Empty(InterceptorState.Calls);
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -769,9 +730,7 @@ public class InterceptorTests
         InterceptorState.Reset();
         ThrowingInterceptorQueueConsumer.ConsumeCount = 0;
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient consumer = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -790,7 +749,7 @@ public class InterceptorTests
             await producer.Queue.Push("interceptor-throw-queue",
                 new SimpleQueueModel { Text = "throw-test" }, true, CancellationToken.None);
 
-            await WaitUntil(() => InterceptorState.Calls.Count >= 2 || ThrowingInterceptorQueueConsumer.ConsumeCount > 0);
+            await TestHorseRider.WaitUntil(() => InterceptorState.Calls.Count >= 2 || ThrowingInterceptorQueueConsumer.ConsumeCount > 0);
 
             var calls = InterceptorState.GetOrderedCalls();
 
@@ -800,11 +759,7 @@ public class InterceptorTests
                 "BeforeInterceptor1 should still run after ThrowingInterceptor throws.");
             Assert.True(ThrowingInterceptorQueueConsumer.ConsumeCount > 0,
                 "Consumer should still execute even when an interceptor throws.");
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -813,9 +768,7 @@ public class InterceptorTests
         InterceptorState.Reset();
         InterceptedQueueConsumer.ConsumeCount = 0;
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient consumer = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -835,7 +788,7 @@ public class InterceptorTests
             await producer.Queue.Push("interceptor-queue",
                 new InterceptedQueueModel { Value = "context-test" }, true, CancellationToken.None);
 
-            await WaitUntil(() => InterceptedQueueConsumer.ConsumeCount > 0);
+            await TestHorseRider.WaitUntil(() => InterceptedQueueConsumer.ConsumeCount > 0);
 
             var calls = InterceptorState.GetOrderedCalls();
 
@@ -845,11 +798,7 @@ public class InterceptorTests
                 Assert.True(call.ClientWasConnected, "Interceptor should receive a connected client.");
                 Assert.False(call.TokenWasCancelled, "CancellationToken should not be cancelled during interception.");
             }
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -858,9 +807,7 @@ public class InterceptorTests
         InterceptorState.Reset();
         MultiInterceptorQueueConsumer.ConsumeCount = 0;
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient consumer = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -883,7 +830,7 @@ public class InterceptorTests
                 await producer.Queue.Push("interceptor-multi-queue",
                     new SimpleQueueModel { Text = $"msg-{i}" }, true, CancellationToken.None);
 
-            await WaitUntil(() => MultiInterceptorQueueConsumer.ConsumeCount >= messageCount);
+            await TestHorseRider.WaitUntil(() => MultiInterceptorQueueConsumer.ConsumeCount >= messageCount);
 
             Assert.Equal(messageCount, MultiInterceptorQueueConsumer.ConsumeCount);
 
@@ -892,11 +839,7 @@ public class InterceptorTests
 
             Assert.Equal(messageCount * 2, beforeCalls.Count);
             Assert.Equal(messageCount * 2, afterCalls.Count);
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -904,9 +847,7 @@ public class InterceptorTests
     {
         const string queueName = "builder-config-q";
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient consumer = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -927,7 +868,7 @@ public class InterceptorTests
                 .Build();
 
             await consumer.ConnectAsync();
-            await WaitUntil(() => server.Rider.Queue.Find(queueName) != null);
+            await TestHorseRider.WaitUntil(() => server.Rider.Queue.Find(queueName) != null);
 
             HorseQueue queue = server.Rider.Queue.Find(queueName);
 
@@ -943,11 +884,7 @@ public class InterceptorTests
             Assert.NotNull(queue.Options.MessageTimeout);
             Assert.Equal(17, queue.Options.MessageTimeout.MessageDuration);
             Assert.Equal(MessageTimeoutPolicy.Delete, queue.Options.MessageTimeout.Policy);
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -955,9 +892,7 @@ public class InterceptorTests
     {
         const string queueName = "builder-config-uninitialized-q";
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient consumer = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -973,7 +908,7 @@ public class InterceptorTests
                 .Build();
 
             await consumer.ConnectAsync();
-            await WaitUntil(() => server.Rider.Queue.Find(queueName) != null);
+            await TestHorseRider.WaitUntil(() => server.Rider.Queue.Find(queueName) != null);
 
             HorseQueue queue = server.Rider.Queue.Find(queueName);
 
@@ -982,11 +917,7 @@ public class InterceptorTests
             Assert.Equal(PutBackDecision.Regular, queue.Options.PutBack);
             Assert.Equal(90000, queue.Options.PutBackDelay);
             Assert.Equal(TimeSpan.FromSeconds(90), queue.Options.AcknowledgeTimeout);
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -994,30 +925,28 @@ public class InterceptorTests
     {
         const string queueName = "builder-config-recreate-q";
 
-        var (server, port) = await StartServer();
-
-        async Task<HorseClient> BuildConsumer()
+        await TestHorseRider.RunWith(async (server, port) =>
         {
-            HorseClient consumer = new HorseClientBuilder()
-                .AddHost("horse://localhost:" + port)
-                .AddScopedConsumer<QueueConfigBuilderOptionConsumer>(cfg =>
-                {
-                    cfg.QueueName = queueName;
-                    cfg.PutBackDecision = PutBack.Regular;
-                    cfg.PutBackDelay = TimeSpan.FromSeconds(90);
-                    cfg.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
-                })
-                .AutoSubscribe(true)
-                .Build();
+            async Task<HorseClient> BuildConsumer()
+            {
+                HorseClient consumer = new HorseClientBuilder()
+                    .AddHost("horse://localhost:" + port)
+                    .AddScopedConsumer<QueueConfigBuilderOptionConsumer>(cfg =>
+                    {
+                        cfg.QueueName = queueName;
+                        cfg.PutBackDecision = PutBack.Regular;
+                        cfg.PutBackDelay = TimeSpan.FromSeconds(90);
+                        cfg.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
+                    })
+                    .AutoSubscribe(true)
+                    .Build();
 
-            await consumer.ConnectAsync();
-            return consumer;
-        }
+                await consumer.ConnectAsync();
+                return consumer;
+            }
 
-        try
-        {
             HorseClient firstConsumer = await BuildConsumer();
-            await WaitUntil(() => server.Rider.Queue.Find(queueName) != null);
+            await TestHorseRider.WaitUntil(() => server.Rider.Queue.Find(queueName) != null);
 
             HorseQueue firstQueue = server.Rider.Queue.Find(queueName);
             Assert.NotNull(firstQueue);
@@ -1026,10 +955,10 @@ public class InterceptorTests
 
             firstConsumer.Disconnect();
             await server.Rider.Queue.Remove(queueName);
-            await WaitUntil(() => server.Rider.Queue.Find(queueName) == null);
+            await TestHorseRider.WaitUntil(() => server.Rider.Queue.Find(queueName) == null);
 
             HorseClient secondConsumer = await BuildConsumer();
-            await WaitUntil(() => server.Rider.Queue.Find(queueName) != null);
+            await TestHorseRider.WaitUntil(() => server.Rider.Queue.Find(queueName) != null);
 
             HorseQueue secondQueue = server.Rider.Queue.Find(queueName);
             Assert.NotNull(secondQueue);
@@ -1038,11 +967,7 @@ public class InterceptorTests
             Assert.Equal(TimeSpan.FromSeconds(90), secondQueue.Options.AcknowledgeTimeout);
 
             secondConsumer.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -1050,9 +975,7 @@ public class InterceptorTests
     {
         const string queueName = "QueueConfigBuilderOptionConsumer-plural-builder-q";
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient consumer = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -1070,7 +993,7 @@ public class InterceptorTests
                 .Build();
 
             await consumer.ConnectAsync();
-            await WaitUntil(() => server.Rider.Queue.Find(queueName) != null);
+            await TestHorseRider.WaitUntil(() => server.Rider.Queue.Find(queueName) != null);
 
             HorseQueue queue = server.Rider.Queue.Find(queueName);
 
@@ -1081,11 +1004,7 @@ public class InterceptorTests
             Assert.Equal(TimeSpan.FromSeconds(90), queue.Options.AcknowledgeTimeout);
 
             consumer.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -1093,9 +1012,7 @@ public class InterceptorTests
     {
         const string queueName = "QueueConfigBuilderOptionConsumer-client-limit-q";
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient consumer = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -1109,7 +1026,7 @@ public class InterceptorTests
                 .Build();
 
             await consumer.ConnectAsync();
-            await WaitUntil(() => server.Rider.Queue.Find(queueName) != null);
+            await TestHorseRider.WaitUntil(() => server.Rider.Queue.Find(queueName) != null);
 
             HorseQueue queue = server.Rider.Queue.Find(queueName);
             Assert.NotNull(queue);
@@ -1130,11 +1047,7 @@ public class InterceptorTests
             secondConsumer.Disconnect();
             thirdConsumer.Disconnect();
             consumer.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -1142,9 +1055,7 @@ public class InterceptorTests
     {
         const string queueName = "QueueConfigBuilderOptionConsumer-existing-update-q";
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             await server.Rider.Queue.Create(queueName, options =>
             {
@@ -1183,7 +1094,7 @@ public class InterceptorTests
                 .Build();
 
             await consumer.ConnectAsync();
-            await WaitUntil(() =>
+            await TestHorseRider.WaitUntil(() =>
             {
                 HorseQueue queue = server.Rider.Queue.Find(queueName);
                 return queue != null &&
@@ -1224,11 +1135,7 @@ public class InterceptorTests
             secondConsumer.Disconnect();
             thirdConsumer.Disconnect();
             consumer.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -1236,9 +1143,7 @@ public class InterceptorTests
     {
         const string queueName = "client-limit-attribute-queue";
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             await server.Rider.Queue.Create(queueName, options =>
             {
@@ -1253,7 +1158,7 @@ public class InterceptorTests
                 .Build();
 
             await consumer.ConnectAsync();
-            await WaitUntil(() =>
+            await TestHorseRider.WaitUntil(() =>
             {
                 HorseQueue existing = server.Rider.Queue.Find(queueName);
                 return existing?.Options.ClientLimit == 2 &&
@@ -1279,11 +1184,7 @@ public class InterceptorTests
             secondConsumer.Disconnect();
             thirdConsumer.Disconnect();
             consumer.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -1291,14 +1192,9 @@ public class InterceptorTests
     {
         const string channelName = "client-limit-attribute-channel";
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
-            await server.Rider.Channel.Create(channelName, options =>
-            {
-                options.ClientLimit = 8;
-            });
+            await server.Rider.Channel.Create(channelName, options => { options.ClientLimit = 8; });
 
             HorseClient consumer = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -1307,18 +1203,14 @@ public class InterceptorTests
                 .Build();
 
             await consumer.ConnectAsync();
-            await WaitUntil(() => server.Rider.Channel.Find(channelName)?.Options.ClientLimit == 2);
+            await TestHorseRider.WaitUntil(() => server.Rider.Channel.Find(channelName)?.Options.ClientLimit == 2);
 
             HorseChannel channel = server.Rider.Channel.Find(channelName);
             Assert.NotNull(channel);
             Assert.Equal(2, channel.Options.ClientLimit);
 
             consumer.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -1329,9 +1221,7 @@ public class InterceptorTests
         QueueConfigBuilderInterceptorState.Reset();
         QueueConfigBuilderQueueConsumer.ConsumeCount = 0;
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient consumer = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -1345,7 +1235,7 @@ public class InterceptorTests
                 .Build();
 
             await consumer.ConnectAsync();
-            await WaitUntil(() => server.Rider.Queue.Find(queueName) != null);
+            await TestHorseRider.WaitUntil(() => server.Rider.Queue.Find(queueName) != null);
 
             HorseClient producer = new HorseClient();
             await producer.ConnectAsync("horse://localhost:" + port);
@@ -1355,17 +1245,13 @@ public class InterceptorTests
                 true,
                 CancellationToken.None);
 
-            await WaitUntil(() =>
+            await TestHorseRider.WaitUntil(() =>
                 QueueConfigBuilderQueueConsumer.ConsumeCount > 0 &&
                 QueueConfigBuilderInterceptorState.Calls.Count >= 2);
 
             Assert.Equal(1, QueueConfigBuilderQueueConsumer.ConsumeCount);
             Assert.Equal(new[] { "before", "after" }, QueueConfigBuilderInterceptorState.Calls.ToArray());
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -1379,9 +1265,7 @@ public class InterceptorTests
         var services = new ServiceCollection();
         services.AddSingleton<QueueConfigBuilderDependency>();
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient consumer = new HorseClientBuilder(services)
                 .AddHost("horse://localhost:" + port)
@@ -1394,7 +1278,7 @@ public class InterceptorTests
                 .Build();
 
             await consumer.ConnectAsync();
-            await WaitUntil(() => server.Rider.Queue.Find(queueName) != null);
+            await TestHorseRider.WaitUntil(() => server.Rider.Queue.Find(queueName) != null);
 
             HorseClient producer = new HorseClient();
             await producer.ConnectAsync("horse://localhost:" + port);
@@ -1404,17 +1288,13 @@ public class InterceptorTests
                 true,
                 CancellationToken.None);
 
-            await WaitUntil(() =>
+            await TestHorseRider.WaitUntil(() =>
                 QueueConfigBuilderQueueConsumer.ConsumeCount > 0 &&
                 QueueConfigBuilderInterceptorState.Calls.Count > 0);
 
             Assert.Equal(1, QueueConfigBuilderQueueConsumer.ConsumeCount);
             Assert.Equal(new[] { "dependency" }, QueueConfigBuilderInterceptorState.Calls.ToArray());
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     // ===================================================================
@@ -1427,9 +1307,7 @@ public class InterceptorTests
         InterceptorState.Reset();
         InterceptedDirectHandler.HandleCount = 0;
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient receiver = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -1453,7 +1331,7 @@ public class InterceptorTests
                 new InterceptedDirectModel { Value = "hello" },
                 false, CancellationToken.None);
 
-            await WaitUntil(() => InterceptedDirectHandler.HandleCount > 0);
+            await TestHorseRider.WaitUntil(() => InterceptedDirectHandler.HandleCount > 0);
 
             Assert.True(InterceptedDirectHandler.HandleCount > 0, "Direct handler should have been called.");
 
@@ -1465,11 +1343,7 @@ public class InterceptorTests
                 "AfterInterceptor1 should have run after the handler.");
             Assert.True(calls.Any(c => c.InterceptorName == nameof(ModelLevelInterceptor) && c.Phase == "Before"),
                 "ModelLevelInterceptor should have run (from model attribute).");
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -1478,9 +1352,7 @@ public class InterceptorTests
         InterceptorState.Reset();
         MultiInterceptorDirectHandler.HandleCount = 0;
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient receiver = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -1502,7 +1374,7 @@ public class InterceptorTests
                 "multi-direct-receiver", 502,
                 new SimpleDirectModel { Text = "order-test" }, false, CancellationToken.None);
 
-            await WaitUntil(() => MultiInterceptorDirectHandler.HandleCount > 0);
+            await TestHorseRider.WaitUntil(() => MultiInterceptorDirectHandler.HandleCount > 0);
 
             var calls = InterceptorState.GetOrderedCalls();
             var beforeCalls = calls.Where(c => c.Phase == "Before").ToList();
@@ -1515,11 +1387,7 @@ public class InterceptorTests
             Assert.Equal(2, afterCalls.Count);
             Assert.Equal(nameof(AfterInterceptor1), afterCalls[0].InterceptorName);
             Assert.Equal(nameof(AfterInterceptor2), afterCalls[1].InterceptorName);
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -1528,9 +1396,7 @@ public class InterceptorTests
         InterceptorState.Reset();
         MultiInterceptorDirectHandler.HandleCount = 0;
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient receiver = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -1552,7 +1418,7 @@ public class InterceptorTests
                 "timing-direct-receiver", 502,
                 new SimpleDirectModel { Text = "timing-test" }, false, CancellationToken.None);
 
-            await WaitUntil(() => MultiInterceptorDirectHandler.HandleCount > 0);
+            await TestHorseRider.WaitUntil(() => MultiInterceptorDirectHandler.HandleCount > 0);
 
             var calls = InterceptorState.GetOrderedCalls();
 
@@ -1563,11 +1429,7 @@ public class InterceptorTests
 
             Assert.True(lastBefore <= firstAfter,
                 "All before interceptors should complete before any after interceptor runs.");
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -1576,9 +1438,7 @@ public class InterceptorTests
         InterceptorState.Reset();
         NoInterceptorDirectHandler.HandleCount = 0;
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient receiver = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -1596,15 +1456,11 @@ public class InterceptorTests
                 "no-interceptor-receiver", 503,
                 new SimpleDirectModel2 { Text = "no-interceptor" }, false, CancellationToken.None);
 
-            await WaitUntil(() => NoInterceptorDirectHandler.HandleCount > 0);
+            await TestHorseRider.WaitUntil(() => NoInterceptorDirectHandler.HandleCount > 0);
 
             Assert.True(NoInterceptorDirectHandler.HandleCount > 0, "Handler should execute without interceptors.");
             Assert.Empty(InterceptorState.Calls);
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -1613,9 +1469,7 @@ public class InterceptorTests
         InterceptorState.Reset();
         ThrowingInterceptorDirectHandler.HandleCount = 0;
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient receiver = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -1635,7 +1489,7 @@ public class InterceptorTests
                 "throwing-direct-receiver", 504,
                 new SimpleDirectModel3 { Text = "throw-test" }, false, CancellationToken.None);
 
-            await WaitUntil(() => InterceptorState.Calls.Count >= 2 || ThrowingInterceptorDirectHandler.HandleCount > 0);
+            await TestHorseRider.WaitUntil(() => InterceptorState.Calls.Count >= 2 || ThrowingInterceptorDirectHandler.HandleCount > 0);
 
             var calls = InterceptorState.GetOrderedCalls();
 
@@ -1645,11 +1499,7 @@ public class InterceptorTests
                 "BeforeInterceptor1 should still run after ThrowingInterceptor throws.");
             Assert.True(ThrowingInterceptorDirectHandler.HandleCount > 0,
                 "Handler should still execute even when an interceptor throws.");
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -1658,9 +1508,7 @@ public class InterceptorTests
         InterceptorState.Reset();
         InterceptedDirectHandler.HandleCount = 0;
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient receiver = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -1682,7 +1530,7 @@ public class InterceptorTests
                 new InterceptedDirectModel { Value = "ctx" },
                 false, CancellationToken.None);
 
-            await WaitUntil(() => InterceptedDirectHandler.HandleCount > 0);
+            await TestHorseRider.WaitUntil(() => InterceptedDirectHandler.HandleCount > 0);
 
             var calls = InterceptorState.GetOrderedCalls();
 
@@ -1692,11 +1540,7 @@ public class InterceptorTests
                 Assert.True(call.ClientWasConnected, "Interceptor should receive a connected client.");
                 Assert.False(call.TokenWasCancelled, "CancellationToken should not be cancelled during interception.");
             }
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -1705,9 +1549,7 @@ public class InterceptorTests
         InterceptorState.Reset();
         MultiInterceptorDirectHandler.HandleCount = 0;
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient receiver = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -1731,7 +1573,7 @@ public class InterceptorTests
                     "multi-msg-receiver", 502,
                     new SimpleDirectModel { Text = $"msg-{i}" }, false, CancellationToken.None);
 
-            await WaitUntil(() => MultiInterceptorDirectHandler.HandleCount >= messageCount);
+            await TestHorseRider.WaitUntil(() => MultiInterceptorDirectHandler.HandleCount >= messageCount);
 
             Assert.Equal(messageCount, MultiInterceptorDirectHandler.HandleCount);
 
@@ -1740,11 +1582,7 @@ public class InterceptorTests
 
             Assert.Equal(messageCount * 2, beforeCalls.Count);
             Assert.Equal(messageCount * 2, afterCalls.Count);
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     // ===================================================================
@@ -1757,9 +1595,7 @@ public class InterceptorTests
         InterceptorState.Reset();
         TransientQueueConsumer.ConsumeCount = 0;
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient consumer = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -1778,7 +1614,7 @@ public class InterceptorTests
             await producer.Queue.Push("interceptor-transient-queue",
                 new TransientQueueModel { Text = "transient-test" }, true, CancellationToken.None);
 
-            await WaitUntil(() => TransientQueueConsumer.ConsumeCount > 0);
+            await TestHorseRider.WaitUntil(() => TransientQueueConsumer.ConsumeCount > 0);
 
             Assert.True(TransientQueueConsumer.ConsumeCount > 0, "Consumer should have been called.");
 
@@ -1787,11 +1623,7 @@ public class InterceptorTests
                 "Before interceptor should have run.");
             Assert.True(calls.Any(c => c.InterceptorName == nameof(InstanceTrackingAfterInterceptor) && c.Phase == "After"),
                 "After interceptor should have run.");
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -1800,9 +1632,7 @@ public class InterceptorTests
         InterceptorState.Reset();
         TransientQueueConsumer.ConsumeCount = 0;
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient consumer = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -1823,7 +1653,7 @@ public class InterceptorTests
                 await producer.Queue.Push("interceptor-transient-queue",
                     new TransientQueueModel { Text = $"transient-{i}" }, true, CancellationToken.None);
 
-            await WaitUntil(() => TransientQueueConsumer.ConsumeCount >= messageCount);
+            await TestHorseRider.WaitUntil(() => TransientQueueConsumer.ConsumeCount >= messageCount);
 
             var beforeCalls = InterceptorState.Calls
                 .Where(c => c.InterceptorName == nameof(InstanceTrackingBeforeInterceptor))
@@ -1833,11 +1663,7 @@ public class InterceptorTests
 
             var distinctInstances = beforeCalls.Select(c => c.InstanceId).Distinct().Count();
             Assert.Equal(messageCount, distinctInstances);
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -1846,9 +1672,7 @@ public class InterceptorTests
         InterceptorState.Reset();
         TransientDirectHandler.HandleCount = 0;
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient receiver = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -1868,7 +1692,7 @@ public class InterceptorTests
                 "transient-direct-receiver", 510,
                 new TransientDirectModel { Text = "transient-test" }, false, CancellationToken.None);
 
-            await WaitUntil(() => TransientDirectHandler.HandleCount > 0);
+            await TestHorseRider.WaitUntil(() => TransientDirectHandler.HandleCount > 0);
 
             Assert.True(TransientDirectHandler.HandleCount > 0, "Handler should have been called.");
 
@@ -1877,11 +1701,7 @@ public class InterceptorTests
                 "Before interceptor should have run.");
             Assert.True(calls.Any(c => c.InterceptorName == nameof(InstanceTrackingAfterInterceptor) && c.Phase == "After"),
                 "After interceptor should have run.");
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -1890,9 +1710,7 @@ public class InterceptorTests
         InterceptorState.Reset();
         TransientDirectHandler.HandleCount = 0;
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient receiver = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -1914,7 +1732,7 @@ public class InterceptorTests
                     "transient-multi-direct", 510,
                     new TransientDirectModel { Text = $"transient-{i}" }, false, CancellationToken.None);
 
-            await WaitUntil(() => TransientDirectHandler.HandleCount >= messageCount);
+            await TestHorseRider.WaitUntil(() => TransientDirectHandler.HandleCount >= messageCount);
 
             var beforeCalls = InterceptorState.Calls
                 .Where(c => c.InterceptorName == nameof(InstanceTrackingBeforeInterceptor))
@@ -1924,11 +1742,7 @@ public class InterceptorTests
 
             var distinctInstances = beforeCalls.Select(c => c.InstanceId).Distinct().Count();
             Assert.Equal(messageCount, distinctInstances);
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     // ===================================================================
@@ -1941,9 +1755,7 @@ public class InterceptorTests
         InterceptorState.Reset();
         ScopedQueueConsumer.ConsumeCount = 0;
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient consumer = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -1962,7 +1774,7 @@ public class InterceptorTests
             await producer.Queue.Push("interceptor-scoped-queue",
                 new ScopedQueueModel { Text = "scoped-test" }, true, CancellationToken.None);
 
-            await WaitUntil(() => ScopedQueueConsumer.ConsumeCount > 0);
+            await TestHorseRider.WaitUntil(() => ScopedQueueConsumer.ConsumeCount > 0);
 
             Assert.True(ScopedQueueConsumer.ConsumeCount > 0, "Consumer should have been called.");
 
@@ -1971,11 +1783,7 @@ public class InterceptorTests
                 "Before interceptor should have run.");
             Assert.True(calls.Any(c => c.InterceptorName == nameof(InstanceTrackingAfterInterceptor) && c.Phase == "After"),
                 "After interceptor should have run.");
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -1984,9 +1792,7 @@ public class InterceptorTests
         InterceptorState.Reset();
         ScopedQueueConsumer.ConsumeCount = 0;
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient consumer = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -2007,7 +1813,7 @@ public class InterceptorTests
                 await producer.Queue.Push("interceptor-scoped-queue",
                     new ScopedQueueModel { Text = $"scoped-{i}" }, true, CancellationToken.None);
 
-            await WaitUntil(() => ScopedQueueConsumer.ConsumeCount >= messageCount);
+            await TestHorseRider.WaitUntil(() => ScopedQueueConsumer.ConsumeCount >= messageCount);
 
             var beforeCalls = InterceptorState.Calls
                 .Where(c => c.InterceptorName == nameof(InstanceTrackingBeforeInterceptor))
@@ -2018,11 +1824,7 @@ public class InterceptorTests
             // Each message should get a new scope, so a new interceptor instance
             var distinctInstances = beforeCalls.Select(c => c.InstanceId).Distinct().Count();
             Assert.Equal(messageCount, distinctInstances);
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -2031,9 +1833,7 @@ public class InterceptorTests
         InterceptorState.Reset();
         ScopedQueueConsumer.ConsumeCount = 0;
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient consumer = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -2052,7 +1852,7 @@ public class InterceptorTests
             await producer.Queue.Push("interceptor-scoped-queue",
                 new ScopedQueueModel { Text = "scope-share-test" }, true, CancellationToken.None);
 
-            await WaitUntil(() => ScopedQueueConsumer.ConsumeCount > 0);
+            await TestHorseRider.WaitUntil(() => ScopedQueueConsumer.ConsumeCount > 0);
 
             var calls = InterceptorState.GetOrderedCalls();
             var beforeCall = calls.First(c => c.InterceptorName == nameof(InstanceTrackingBeforeInterceptor));
@@ -2066,11 +1866,7 @@ public class InterceptorTests
             Assert.NotNull(afterCall);
             Assert.True(beforeCall.Timestamp < afterCall.Timestamp,
                 "Before interceptor should run before after interceptor.");
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -2079,9 +1875,7 @@ public class InterceptorTests
         InterceptorState.Reset();
         ScopedDirectHandler.HandleCount = 0;
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient receiver = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -2101,7 +1895,7 @@ public class InterceptorTests
                 "scoped-direct-receiver", 520,
                 new ScopedDirectModel { Text = "scoped-test" }, false, CancellationToken.None);
 
-            await WaitUntil(() => ScopedDirectHandler.HandleCount > 0);
+            await TestHorseRider.WaitUntil(() => ScopedDirectHandler.HandleCount > 0);
 
             Assert.True(ScopedDirectHandler.HandleCount > 0, "Handler should have been called.");
 
@@ -2110,11 +1904,7 @@ public class InterceptorTests
                 "Before interceptor should have run.");
             Assert.True(calls.Any(c => c.InterceptorName == nameof(InstanceTrackingAfterInterceptor) && c.Phase == "After"),
                 "After interceptor should have run.");
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -2123,9 +1913,7 @@ public class InterceptorTests
         InterceptorState.Reset();
         ScopedDirectHandler.HandleCount = 0;
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient receiver = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -2147,7 +1935,7 @@ public class InterceptorTests
                     "scoped-multi-direct", 520,
                     new ScopedDirectModel { Text = $"scoped-{i}" }, false, CancellationToken.None);
 
-            await WaitUntil(() => ScopedDirectHandler.HandleCount >= messageCount);
+            await TestHorseRider.WaitUntil(() => ScopedDirectHandler.HandleCount >= messageCount);
 
             var beforeCalls = InterceptorState.Calls
                 .Where(c => c.InterceptorName == nameof(InstanceTrackingBeforeInterceptor))
@@ -2158,11 +1946,7 @@ public class InterceptorTests
             // Each message should get a new scope, so a new interceptor instance
             var distinctInstances = beforeCalls.Select(c => c.InstanceId).Distinct().Count();
             Assert.Equal(messageCount, distinctInstances);
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 
     [Fact]
@@ -2171,9 +1955,7 @@ public class InterceptorTests
         InterceptorState.Reset();
         TransientQueueConsumer.ConsumeCount = 0;
 
-        var (server, port) = await StartServer();
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
             HorseClient consumer = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
@@ -2194,7 +1976,7 @@ public class InterceptorTests
                 await producer.Queue.Push("interceptor-transient-queue",
                     new TransientQueueModel { Text = $"singleton-{i}" }, true, CancellationToken.None);
 
-            await WaitUntil(() => TransientQueueConsumer.ConsumeCount >= messageCount);
+            await TestHorseRider.WaitUntil(() => TransientQueueConsumer.ConsumeCount >= messageCount);
 
             var beforeCalls = InterceptorState.Calls
                 .Where(c => c.InterceptorName == nameof(InstanceTrackingBeforeInterceptor))
@@ -2205,10 +1987,6 @@ public class InterceptorTests
             // Singleton: same instance across all messages
             var distinctInstances = beforeCalls.Select(c => c.InstanceId).Distinct().Count();
             Assert.Equal(1, distinctInstances);
-        }
-        finally
-        {
-            server.Stop();
-        }
+        });
     }
 }

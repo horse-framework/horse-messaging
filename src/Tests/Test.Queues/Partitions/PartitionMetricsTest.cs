@@ -1,7 +1,7 @@
-using System.Text;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
@@ -19,13 +19,11 @@ namespace Test.Queues.Partitions;
 /// </summary>
 public class PartitionMetricsTest
 {
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
     private static async Task<(HorseRider rider, int port, HorseQueue queue)> CreateSimpleQueue(
         int maxPartitions = 10,
         string name = "met-q")
     {
-        var (rider, port, server) = await PartitionTestServer.Create();
+        var (rider, port, _) = await PartitionTestServer.Create();
 
         await rider.Queue.Create(name, opts =>
         {
@@ -42,8 +40,6 @@ public class PartitionMetricsTest
         HorseQueue queue = rider.Queue.Find(name);
         return (rider, port, queue);
     }
-
-    // ── GetMetrics ────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task GetMetrics_NoPartitions_ReturnsEmpty()
@@ -78,7 +74,6 @@ public class PartitionMetricsTest
     {
         var (_, port, queue) = await CreateSimpleQueue();
 
-        // Subscribe then disconnect so label partition has no consumer
         HorseClient worker = new HorseClient();
         worker.AutoAcknowledge = false;
         await worker.ConnectAsync("horse://localhost:" + port);
@@ -122,8 +117,6 @@ public class PartitionMetricsTest
         Assert.Equal(3, snapshots.Count);
     }
 
-    // ── RefreshPartitionMetrics on QueueInfo ──────────────────────────────────
-
     [Fact]
     public async Task QueueInfo_RefreshPartitionMetrics_UpdatesPartitionCount()
     {
@@ -145,19 +138,15 @@ public class PartitionMetricsTest
     [Fact]
     public async Task QueueInfo_NonPartitioned_PartitionCountIsZero()
     {
-        var server = new TestHorseRider();
-        await server.Initialize();
-        server.Start(300, 300);
-
-        HorseQueue queue = server.Rider.Queue.Find("push-a");
-        Assert.NotNull(queue);
-        Assert.Equal(0, queue.Info.PartitionCount);
-        Assert.Empty(queue.Info.PartitionMetrics);
-
-        server.Stop();
+        await TestHorseRider.RunWith(async (server, _) =>
+        {
+            HorseQueue queue = server.Rider.Queue.Find("push-a");
+            Assert.NotNull(queue);
+            Assert.Equal(0, queue.Info.PartitionCount);
+            Assert.Empty(queue.Info.PartitionMetrics);
+            await Task.CompletedTask;
+        });
     }
-
-    // ── CreatedAt / LastMessageAt ─────────────────────────────────────────────
 
     [Fact]
     public async Task PartitionEntry_CreatedAt_IsReasonablyRecent()

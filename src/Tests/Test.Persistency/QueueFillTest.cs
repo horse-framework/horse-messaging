@@ -1,10 +1,9 @@
 using System.Collections.Generic;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
+using Horse.Messaging.Server.Queues;
 using Test.Common;
 using Test.Common.Models;
-using Horse.Messaging.Server.Queues;
 using Xunit;
 
 namespace Test.Persistency;
@@ -18,20 +17,17 @@ public class QueueFillTest
         for (int i = 0; i < 10; i++)
             items.Add(new QueueMessageA("No #" + i));
 
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        server.Start(300, 300);
+        await TestHorseRider.RunWith(async (server, _) =>
+        {
+            HorseQueue push = server.Rider.Queue.Find("push-a");
+            Assert.NotNull(push);
 
-        HorseQueue push = server.Rider.Queue.Find("push-a");
-        Assert.NotNull(push);
+            QueueFiller fillerPushA = new QueueFiller(push);
+            fillerPushA.FillJson(items, false, false);
 
-        QueueFiller fillerPushA = new QueueFiller(push);
-
-        fillerPushA.FillJson(items, false, false);
-
-        await Task.Delay(500);
-        Assert.NotEqual(0, push.Manager.MessageStore.Count());
-        server.Stop();
+            await Task.Delay(500);
+            Assert.NotEqual(0, push.Manager.MessageStore.Count());
+        });
     }
 
     [Fact]
@@ -41,21 +37,19 @@ public class QueueFillTest
         for (int i = 0; i < 10; i++)
             items.Add("No #" + i);
 
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        server.Start(300, 300);
+        await TestHorseRider.RunWith(async (server, _) =>
+        {
+            HorseQueue queue = server.Rider.Queue.Find("push-a");
+            Assert.NotNull(queue);
 
-        HorseQueue queue = server.Rider.Queue.Find("push-a");
-        Assert.NotNull(queue);
+            QueueFiller filler = new QueueFiller(queue);
+            filler.FillString(items, false, true);
+            filler.FillString(items, false, false);
 
-        QueueFiller filler = new QueueFiller(queue);
-        filler.FillString(items, false, true);
-        filler.FillString(items, false, false);
-
-        await Task.Delay(500);
-        Assert.NotEqual(0, queue.Manager.PriorityMessageStore.Count());
-        Assert.NotEqual(0, queue.Manager.MessageStore.Count());
-        server.Stop();
+            await Task.Delay(500);
+            Assert.NotEqual(0, queue.Manager.PriorityMessageStore.Count());
+            Assert.NotEqual(0, queue.Manager.MessageStore.Count());
+        });
     }
 
     [Fact]
@@ -65,20 +59,18 @@ public class QueueFillTest
         for (int i = 0; i < 10; i++)
             items.Add(Encoding.UTF8.GetBytes("No #" + i));
 
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        server.Start(300, 300);
+        await TestHorseRider.RunWith(async (server, _) =>
+        {
+            HorseQueue queue = server.Rider.Queue.Find("push-a");
+            Assert.NotNull(queue);
 
-        HorseQueue queue = server.Rider.Queue.Find("push-a");
-        Assert.NotNull(queue);
+            QueueFiller filler = new QueueFiller(queue);
+            filler.FillData(items, false, true);
+            filler.FillData(items, false, false);
 
-        QueueFiller filler = new QueueFiller(queue);
-        filler.FillData(items, false, true);
-        filler.FillData(items, false, false);
-
-        await Task.Delay(500);
-        Assert.NotEqual(0, queue.Manager.PriorityMessageStore.Count());
-        Assert.NotEqual(0, queue.Manager.MessageStore.Count());
-        server.Stop();
+            await Task.Delay(500);
+            Assert.NotEqual(0, queue.Manager.PriorityMessageStore.Count());
+            Assert.NotEqual(0, queue.Manager.MessageStore.Count());
+        });
     }
 }

@@ -16,33 +16,31 @@ public class DirectMessageTest
     [Fact]
     public async Task WithoutAnyResponse()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start();
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            HorseClient client1 = new HorseClient();
+            HorseClient client2 = new HorseClient();
 
-        HorseClient client1 = new HorseClient();
-        HorseClient client2 = new HorseClient();
+            client1.ClientId = "client-1";
+            client2.ClientId = "client-2";
 
-        client1.ClientId = "client-1";
-        client2.ClientId = "client-2";
+            await client1.ConnectAsync("horse://localhost:" + port);
+            await client2.ConnectAsync("horse://localhost:" + port);
 
-        await client1.ConnectAsync("horse://localhost:" + port);
-        await client2.ConnectAsync("horse://localhost:" + port);
+            Assert.True(client1.IsConnected);
+            Assert.True(client2.IsConnected);
 
-        Assert.True(client1.IsConnected);
-        Assert.True(client2.IsConnected);
+            bool received = false;
+            client2.MessageReceived += (c, m) => received = m.Source == "client-1";
 
-        bool received = false;
-        client2.MessageReceived += (c, m) => received = m.Source == "client-1";
+            HorseMessage message = new HorseMessage(MessageType.DirectMessage, "client-2");
+            message.SetStringContent("Hello, World!");
 
-        HorseMessage message = new HorseMessage(MessageType.DirectMessage, "client-2");
-        message.SetStringContent("Hello, World!");
-
-        HorseResult sent = await client1.SendAsync(message, CancellationToken.None);
-        Assert.Equal(HorseResultCode.Ok, sent.Code);
-        await Task.Delay(1000);
-        Assert.True(received);
-        server.Stop();
+            HorseResult sent = await client1.SendAsync(message, CancellationToken.None);
+            Assert.Equal(HorseResultCode.Ok, sent.Code);
+            await Task.Delay(1000);
+            Assert.True(received);
+        });
     }
 
     /// <summary>
@@ -51,34 +49,32 @@ public class DirectMessageTest
     [Fact]
     public async Task WithAcknowledge()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start();
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            HorseClient client1 = new HorseClient();
+            HorseClient client2 = new HorseClient();
 
-        HorseClient client1 = new HorseClient();
-        HorseClient client2 = new HorseClient();
+            client1.ClientId = "client-1";
+            client2.ClientId = "client-2";
+            client2.AutoAcknowledge = true;
+            client1.ResponseTimeout = TimeSpan.FromSeconds(14);
 
-        client1.ClientId = "client-1";
-        client2.ClientId = "client-2";
-        client2.AutoAcknowledge = true;
-        client1.ResponseTimeout = TimeSpan.FromSeconds(14);
+            await client1.ConnectAsync("horse://localhost:" + port);
+            await client2.ConnectAsync("horse://localhost:" + port);
 
-        await client1.ConnectAsync("horse://localhost:" + port);
-        await client2.ConnectAsync("horse://localhost:" + port);
+            Assert.True(client1.IsConnected);
+            Assert.True(client2.IsConnected);
 
-        Assert.True(client1.IsConnected);
-        Assert.True(client2.IsConnected);
+            bool received = false;
+            client2.MessageReceived += (c, m) => received = m.Source == "client-1";
 
-        bool received = false;
-        client2.MessageReceived += (c, m) => received = m.Source == "client-1";
+            HorseMessage message = new HorseMessage(MessageType.DirectMessage, "client-2");
+            message.SetStringContent("Hello, World!");
 
-        HorseMessage message = new HorseMessage(MessageType.DirectMessage, "client-2");
-        message.SetStringContent("Hello, World!");
-
-        HorseResult sent = await client1.SendAsync(message, true, CancellationToken.None);
-        Assert.Equal(HorseResultCode.Ok, sent.Code);
-        Assert.True(received);
-        server.Stop();
+            HorseResult sent = await client1.SendAsync(message, true, CancellationToken.None);
+            Assert.Equal(HorseResultCode.Ok, sent.Code);
+            Assert.True(received);
+        });
     }
 
     /// <summary>
@@ -87,39 +83,37 @@ public class DirectMessageTest
     [Fact]
     public async Task WithResponse()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start();
-
-        HorseClient client1 = new HorseClient();
-        HorseClient client2 = new HorseClient();
-
-        client1.ClientId = "client-1";
-        client2.ClientId = "client-2";
-        client2.AutoAcknowledge = true;
-
-        await client1.ConnectAsync("horse://localhost:" + port);
-        await client2.ConnectAsync("horse://localhost:" + port);
-
-        Assert.True(client1.IsConnected);
-        Assert.True(client2.IsConnected);
-
-        client2.MessageReceived += async (c, m) =>
+        await TestHorseRider.RunWith(async (server, port) =>
         {
-            if (m.Source == "client-1")
+            HorseClient client1 = new HorseClient();
+            HorseClient client2 = new HorseClient();
+
+            client1.ClientId = "client-1";
+            client2.ClientId = "client-2";
+            client2.AutoAcknowledge = true;
+
+            await client1.ConnectAsync("horse://localhost:" + port);
+            await client2.ConnectAsync("horse://localhost:" + port);
+
+            Assert.True(client1.IsConnected);
+            Assert.True(client2.IsConnected);
+
+            client2.MessageReceived += async (c, m) =>
             {
-                HorseMessage rmsg = m.CreateResponse(HorseResultCode.Ok);
-                rmsg.SetStringContent("Hello, World Response!");
-                await ((HorseClient) c).SendAsync(rmsg, CancellationToken.None);
-            }
-        };
+                if (m.Source == "client-1")
+                {
+                    HorseMessage rmsg = m.CreateResponse(HorseResultCode.Ok);
+                    rmsg.SetStringContent("Hello, World Response!");
+                    await ((HorseClient)c).SendAsync(rmsg, CancellationToken.None);
+                }
+            };
 
-        HorseMessage message = new HorseMessage(MessageType.DirectMessage, "client-2");
-        message.SetStringContent("Hello, World!");
+            HorseMessage message = new HorseMessage(MessageType.DirectMessage, "client-2");
+            message.SetStringContent("Hello, World!");
 
-        HorseMessage response = await client1.Request(message, CancellationToken.None);
-        Assert.NotNull(response);
-        Assert.Equal(0, response.ContentType);
-        server.Stop();
+            HorseMessage response = await client1.Request(message, CancellationToken.None);
+            Assert.NotNull(response);
+            Assert.Equal(0, response.ContentType);
+        });
     }
 }

@@ -11,8 +11,10 @@ using Horse.Server;
 
 namespace Test.Common;
 
-public class TestHorseRider
+public class TestHorseRider : IAsyncDisposable
 {
+    private bool _stopped;
+
     public HorseRider Rider { get; private set; }
 
     public int OnQueueCreated { get; set; }
@@ -43,6 +45,21 @@ public class TestHorseRider
 
     public HorseServer Server { get; private set; }
 
+    public static async Task RunWith(Func<TestHorseRider, int, Task> action, int pingInterval = 300, int requestTimeout = 300)
+    {
+        await using var server = new TestHorseRider();
+        await server.Initialize();
+        int port = server.Start(pingInterval, requestTimeout);
+        await action(server, port);
+    }
+
+    public static async Task WaitUntil(Func<bool> condition, int timeoutMs = 3000)
+    {
+        var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+        while (!condition() && DateTime.UtcNow < deadline)
+            await Task.Delay(30);
+    }
+    
     public async Task Initialize()
     {
         Rider = HorseRiderBuilder.Create()
@@ -54,7 +71,7 @@ public class TestHorseRider
             .ConfigureQueues(q =>
             {
                 q.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
-                q.Options.MessageTimeout = new MessageTimeoutStrategy {MessageDuration = 12, Policy = MessageTimeoutPolicy.Delete};
+                q.Options.MessageTimeout = new MessageTimeoutStrategy { MessageDuration = 12, Policy = MessageTimeoutPolicy.Delete };
                 q.Options.Type = QueueType.Push;
                 q.Options.AutoQueueCreation = true;
 
@@ -110,17 +127,27 @@ public class TestHorseRider
             }
         }
 
-        Task.Run(async () =>
-        {
-            await Task.Delay(30000);
-            Stop();
-        });
-
         return 0;
     }
 
     public void Stop()
     {
-        Server.StopAsync().GetAwaiter().GetResult();
+        StopAsync().GetAwaiter().GetResult();
+    }
+
+    public async Task StopAsync()
+    {
+        if (_stopped)
+            return;
+
+        _stopped = true;
+
+        if (Server != null)
+            await Server.StopAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await StopAsync();
     }
 }

@@ -22,22 +22,29 @@ public class MessageSizeLimitTest
             o.CommitWhen = CommitWhen.AfterReceived;
             o.Acknowledge = QueueAckDecision.None;
         });
-
-        await ctx.Rider.Queue.Create("sz-under", o =>
+        try
         {
-            o.Type = QueueType.Push;
-            o.MessageSizeLimit = 1000; // 1000 bytes limit
-        });
 
-        HorseClient producer = new HorseClient();
-        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await ctx.Rider.Queue.Create("sz-under", o =>
+            {
+                o.Type = QueueType.Push;
+                o.MessageSizeLimit = 1000; // 1000 bytes limit
+            });
 
-        // 50 bytes — well under limit
-        byte[] data = new byte[50];
-        HorseResult result = await producer.Queue.Push("sz-under", new MemoryStream(data), true, CancellationToken.None);
-        Assert.Equal(HorseResultCode.Ok, result.Code);
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
-        producer.Disconnect();
+            // 50 bytes — well under limit
+            byte[] data = new byte[50];
+            HorseResult result = await producer.Queue.Push("sz-under", new MemoryStream(data), true, CancellationToken.None);
+            Assert.Equal(HorseResultCode.Ok, result.Code);
+
+            producer.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -50,22 +57,29 @@ public class MessageSizeLimitTest
             o.CommitWhen = CommitWhen.AfterReceived;
             o.Acknowledge = QueueAckDecision.None;
         });
-
-        await ctx.Rider.Queue.Create("sz-over", o =>
+        try
         {
-            o.Type = QueueType.Push;
-            o.MessageSizeLimit = 100; // 100 bytes limit
-        });
 
-        HorseClient producer = new HorseClient();
-        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await ctx.Rider.Queue.Create("sz-over", o =>
+            {
+                o.Type = QueueType.Push;
+                o.MessageSizeLimit = 100; // 100 bytes limit
+            });
 
-        // 200 bytes — over the limit
-        byte[] data = new byte[200];
-        HorseResult result = await producer.Queue.Push("sz-over", new MemoryStream(data), true, CancellationToken.None);
-        Assert.NotEqual(HorseResultCode.Ok, result.Code);
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
-        producer.Disconnect();
+            // 200 bytes — over the limit
+            byte[] data = new byte[200];
+            HorseResult result = await producer.Queue.Push("sz-over", new MemoryStream(data), true, CancellationToken.None);
+            Assert.NotEqual(HorseResultCode.Ok, result.Code);
+
+            producer.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -78,22 +92,29 @@ public class MessageSizeLimitTest
             o.CommitWhen = CommitWhen.AfterReceived;
             o.Acknowledge = QueueAckDecision.None;
         });
-
-        await ctx.Rider.Queue.Create("sz-unlim", o =>
+        try
         {
-            o.Type = QueueType.Push;
-            o.MessageSizeLimit = 0; // unlimited
-        });
 
-        HorseClient producer = new HorseClient();
-        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await ctx.Rider.Queue.Create("sz-unlim", o =>
+            {
+                o.Type = QueueType.Push;
+                o.MessageSizeLimit = 0; // unlimited
+            });
 
-        // 100KB — should be accepted with no limit
-        byte[] data = new byte[100 * 1024];
-        HorseResult result = await producer.Queue.Push("sz-unlim", new MemoryStream(data), true, CancellationToken.None);
-        Assert.Equal(HorseResultCode.Ok, result.Code);
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
-        producer.Disconnect();
+            // 100KB — should be accepted with no limit
+            byte[] data = new byte[100 * 1024];
+            HorseResult result = await producer.Queue.Push("sz-unlim", new MemoryStream(data), true, CancellationToken.None);
+            Assert.Equal(HorseResultCode.Ok, result.Code);
+
+            producer.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 }
 

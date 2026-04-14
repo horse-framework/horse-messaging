@@ -1,6 +1,6 @@
-using System.Threading;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Events;
@@ -16,50 +16,43 @@ public class DirectEventTest
     [Fact]
     public async Task DirectMessage()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(300, 300);
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            HorseClient client = new HorseClient();
+            client.SetClientName("test-client");
 
-        HorseClient client = new HorseClient();
-        client.SetClientName("test-client");
+            EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
+            registrar.RegisterHandler<DirectMessageHandler>();
 
-        EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
-        registrar.RegisterHandler<DirectMessageHandler>();
+            await client.ConnectAsync($"horse://localhost:{port}");
 
-        await client.ConnectAsync($"horse://localhost:{port}");
+            HorseResult directResult = await client.Direct.SendByName("test-client", 0, new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!")), false, CancellationToken.None);
+            Assert.Equal(HorseResultCode.Ok, directResult.Code);
 
-        HorseResult directResult = await client.Direct.SendByName("test-client", 0, new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!")), false, CancellationToken.None);
-        Assert.Equal(HorseResultCode.Ok, directResult.Code);
-
-        await Task.Delay(250);
-        Assert.Equal(1, DirectMessageHandler.Count);
-        server.Stop();
+            await Task.Delay(250);
+            Assert.Equal(1, DirectMessageHandler.Count);
+        });
     }
 
     [Fact]
     public async Task ResponseMessage()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(300, 300);
-
-        HorseClient client = new HorseClient();
-        client.SetClientName("test-client");
-        client.CatchResponseMessages = false;
-        client.CatchEventMessages = false;
-        client.MessageReceived += (c, m) =>
+        await TestHorseRider.RunWith(async (server, port) =>
         {
-            c.SendAsync(m.CreateResponse(HorseResultCode.Ok), CancellationToken.None);
-        };
+            HorseClient client = new HorseClient();
+            client.SetClientName("test-client");
+            client.CatchResponseMessages = false;
+            client.CatchEventMessages = false;
+            client.MessageReceived += (c, m) => { c.SendAsync(m.CreateResponse(HorseResultCode.Ok), CancellationToken.None); };
 
-        EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
-        registrar.RegisterHandler<DirectResponseHandler>();
+            EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
+            registrar.RegisterHandler<DirectResponseHandler>();
 
-        await client.ConnectAsync($"horse://localhost:{port}");
-        await client.Direct.Request("@name:test-client", 0, new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!")), CancellationToken.None);
+            await client.ConnectAsync($"horse://localhost:{port}");
+            await client.Direct.Request("@name:test-client", 0, new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!")), CancellationToken.None);
 
-        await Task.Delay(250);
-        Assert.Equal(1, DirectResponseHandler.Count);
-        server.Stop();
+            await Task.Delay(250);
+            Assert.Equal(1, DirectResponseHandler.Count);
+        });
     }
 }

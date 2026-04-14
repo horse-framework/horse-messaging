@@ -1,5 +1,4 @@
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Cache;
@@ -22,29 +21,6 @@ internal class SecondConnection;
 
 public class ExtensionRegistrationTests
 {
-    // -----------------------------------------------------------------------
-    // Helpers
-    // -----------------------------------------------------------------------
-
-    private static async Task<(TestHorseRider server, int port)> StartServer()
-    {
-        var server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(300, 300);
-        return (server, port);
-    }
-
-    private static async Task WaitUntil(Func<bool> condition, int timeoutMs = 3000)
-    {
-        var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
-        while (!condition() && DateTime.UtcNow < deadline)
-            await Task.Delay(30);
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // IServiceCollection — Registration
-    // ─────────────────────────────────────────────────────────────────────────
-
     // -----------------------------------------------------------------------
     // 1. AddHorse registers HorseClient as singleton
     // -----------------------------------------------------------------------
@@ -111,80 +87,78 @@ public class ExtensionRegistrationTests
     [Fact]
     public async Task UseHorse_ConnectsClient()
     {
-        var (server, port) = await StartServer();
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            var services = new ServiceCollection();
+            services.AddHorse(b => b.AddHost($"horse://localhost:{port}"));
 
-        var services = new ServiceCollection();
-        services.AddHorse(b => b.AddHost($"horse://localhost:{port}"));
+            var provider = services.BuildServiceProvider();
+            provider.UseHorse();
 
-        var provider = services.BuildServiceProvider();
-        provider.UseHorse();
+            var client = provider.GetRequiredService<HorseClient>();
+            await TestHorseRider.WaitUntil(() => client.IsConnected, 3000);
 
-        var client = provider.GetRequiredService<HorseClient>();
-        await WaitUntil(() => client.IsConnected, 3000);
+            Assert.True(client.IsConnected);
 
-        Assert.True(client.IsConnected);
-
-        client.Disconnect();
-        server.Stop();
+            client.Disconnect();
+        });
     }
 
-    // -----------------------------------------------------------------------
-    // 5. UseHorse connects the client and it works
-    // -----------------------------------------------------------------------
-
+// -----------------------------------------------------------------------
+// 5. UseHorse connects the client and it works
+// -----------------------------------------------------------------------
     [Fact]
     public async Task UseHorse_ClientIsFullyOperational()
     {
-        var (server, port) = await StartServer();
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            var services = new ServiceCollection();
+            services.AddHorse(b => b.AddHost($"horse://localhost:{port}"));
 
-        var services = new ServiceCollection();
-        services.AddHorse(b => b.AddHost($"horse://localhost:{port}"));
+            var provider = services.BuildServiceProvider();
+            provider.UseHorse();
 
-        var provider = services.BuildServiceProvider();
-        provider.UseHorse();
+            var client = provider.GetRequiredService<HorseClient>();
+            await TestHorseRider.WaitUntil(() => client.IsConnected, 3000);
+            Assert.True(client.IsConnected);
 
-        var client = provider.GetRequiredService<HorseClient>();
-        await WaitUntil(() => client.IsConnected, 3000);
-        Assert.True(client.IsConnected);
+            // Verify bus abstractions are also resolvable
+            Assert.NotNull(provider.GetService<IHorseQueueBus>());
 
-        // Verify bus abstractions are also resolvable
-        Assert.NotNull(provider.GetService<IHorseQueueBus>());
-
-        client.Disconnect();
-        server.Stop();
+            client.Disconnect();
+        });
     }
 
-    // -----------------------------------------------------------------------
-    // 6. Without UseHorse, client is NOT connected
-    // -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// 6. Without UseHorse, client is NOT connected
+// -----------------------------------------------------------------------
 
     [Fact]
     public async Task WithoutUseHorse_ClientNotConnected()
     {
-        var (server, port) = await StartServer();
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            var services = new ServiceCollection();
+            services.AddHorse(b => b.AddHost($"horse://localhost:{port}"));
 
-        var services = new ServiceCollection();
-        services.AddHorse(b => b.AddHost($"horse://localhost:{port}"));
+            var provider = services.BuildServiceProvider();
+            // NOT calling provider.UseHorse()
 
-        var provider = services.BuildServiceProvider();
-        // NOT calling provider.UseHorse()
+            var client = provider.GetRequiredService<HorseClient>();
+            await Task.Delay(500);
 
-        var client = provider.GetRequiredService<HorseClient>();
-        await Task.Delay(500);
-
-        Assert.False(client.IsConnected,
-            "Client must NOT connect automatically when using IServiceCollection overloads");
-
-        server.Stop();
+            Assert.False(client.IsConnected,
+                "Client must NOT connect automatically when using IServiceCollection overloads");
+        });
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // IServiceCollection — Keyed registration
-    // ─────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────
+// IServiceCollection — Keyed registration
+// ─────────────────────────────────────────────────────────────────────────
 
-    // -----------------------------------------------------------------------
-    // 7. AddKeyedHorse registers keyed client
-    // -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// 7. AddKeyedHorse registers keyed client
+// -----------------------------------------------------------------------
 
     [Fact]
     public void AddKeyedHorse_RegistersKeyedClient()
@@ -198,37 +172,37 @@ public class ExtensionRegistrationTests
         Assert.NotNull(client);
     }
 
-    // -----------------------------------------------------------------------
-    // 8. UseHorse with key connects the keyed client
-    // -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// 8. UseHorse with key connects the keyed client
+// -----------------------------------------------------------------------
 
     [Fact]
     public async Task UseHorse_Keyed_ConnectsClient()
     {
-        var (server, port) = await StartServer();
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            var services = new ServiceCollection();
+            services.AddKeyedHorse("my-key", b => b.AddHost($"horse://localhost:{port}"));
 
-        var services = new ServiceCollection();
-        services.AddKeyedHorse("my-key", b => b.AddHost($"horse://localhost:{port}"));
+            var provider = services.BuildServiceProvider();
+            provider.UseHorse("my-key");
 
-        var provider = services.BuildServiceProvider();
-        provider.UseHorse("my-key");
+            var client = provider.GetRequiredKeyedService<HorseClient>("my-key");
+            await TestHorseRider.WaitUntil(() => client.IsConnected, 3000);
 
-        var client = provider.GetRequiredKeyedService<HorseClient>("my-key");
-        await WaitUntil(() => client.IsConnected, 3000);
+            Assert.True(client.IsConnected);
 
-        Assert.True(client.IsConnected);
-
-        client.Disconnect();
-        server.Stop();
+            client.Disconnect();
+        });
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // IServiceCollection — Typed registration
-    // ─────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────
+// IServiceCollection — Typed registration
+// ─────────────────────────────────────────────────────────────────────────
 
-    // -----------------------------------------------------------------------
-    // 9. AddHorse<T> registers typed client
-    // -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// 9. AddHorse<T> registers typed client
+// -----------------------------------------------------------------------
 
     [Fact]
     public void AddHorse_Typed_RegistersTypedClient()
@@ -242,89 +216,89 @@ public class ExtensionRegistrationTests
         Assert.NotNull(client);
     }
 
-    // -----------------------------------------------------------------------
-    // 10. UseHorse<T> connects typed client
-    // -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// 10. UseHorse<T> connects typed client
+// -----------------------------------------------------------------------
 
     [Fact]
     public async Task UseHorse_Typed_ConnectsClient()
     {
-        var (server, port) = await StartServer();
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            var services = new ServiceCollection();
+            services.AddHorse<SecondConnection>(b => b.AddHost($"horse://localhost:{port}"));
 
-        var services = new ServiceCollection();
-        services.AddHorse<SecondConnection>(b => b.AddHost($"horse://localhost:{port}"));
+            var provider = services.BuildServiceProvider();
+            provider.UseHorse<SecondConnection>();
 
-        var provider = services.BuildServiceProvider();
-        provider.UseHorse<SecondConnection>();
+            var client = provider.GetRequiredService<HorseClient<SecondConnection>>();
+            await TestHorseRider.WaitUntil(() => client.IsConnected, 3000);
 
-        var client = provider.GetRequiredService<HorseClient<SecondConnection>>();
-        await WaitUntil(() => client.IsConnected, 3000);
+            Assert.True(client.IsConnected);
 
-        Assert.True(client.IsConnected);
-
-        client.Disconnect();
-        server.Stop();
+            client.Disconnect();
+        });
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // IHostBuilder — Registration & AutoConnect
-    // ─────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────
+// IHostBuilder — Registration & AutoConnect
+// ─────────────────────────────────────────────────────────────────────────
 
-    // -----------------------------------------------------------------------
-    // 11. IHostBuilder AddHorse auto-connects (default)
-    // -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// 11. IHostBuilder AddHorse auto-connects (default)
+// -----------------------------------------------------------------------
 
     [Fact]
     public async Task HostBuilder_AddHorse_AutoConnectsByDefault()
     {
-        var (server, port) = await StartServer();
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            var hostBuilder = Host.CreateDefaultBuilder();
+            hostBuilder.AddHorse(b => b.AddHost($"horse://localhost:{port}"));
 
-        var hostBuilder = Host.CreateDefaultBuilder();
-        hostBuilder.AddHorse(b => b.AddHost($"horse://localhost:{port}"));
+            using var host = hostBuilder.Build();
+            await host.StartAsync();
 
-        using var host = hostBuilder.Build();
-        await host.StartAsync();
+            var client = host.Services.GetRequiredService<HorseClient>();
+            await TestHorseRider.WaitUntil(() => client.IsConnected, 3000);
 
-        var client = host.Services.GetRequiredService<HorseClient>();
-        await WaitUntil(() => client.IsConnected, 3000);
+            Assert.True(client.IsConnected);
 
-        Assert.True(client.IsConnected);
-
-        await host.StopAsync();
-        server.Stop();
+            await host.StopAsync();
+        });
     }
 
-    // -----------------------------------------------------------------------
-    // 12. IHostBuilder AddHorse autoConnect=false → UseHorse needed
-    // -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// 12. IHostBuilder AddHorse autoConnect=false → UseHorse needed
+// -----------------------------------------------------------------------
 
     [Fact]
     public async Task HostBuilder_AddHorse_AutoConnectFalse_NotConnected()
     {
-        var (server, port) = await StartServer();
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            var hostBuilder = Host.CreateDefaultBuilder();
+            hostBuilder.AddHorse(b => b.AddHost($"horse://localhost:{port}"), autoConnect: false);
 
-        var hostBuilder = Host.CreateDefaultBuilder();
-        hostBuilder.AddHorse(b => b.AddHost($"horse://localhost:{port}"), autoConnect: false);
+            using var host = hostBuilder.Build();
+            await host.StartAsync();
 
-        using var host = hostBuilder.Build();
-        await host.StartAsync();
+            var client = host.Services.GetRequiredService<HorseClient>();
+            await Task.Delay(500);
 
-        var client = host.Services.GetRequiredService<HorseClient>();
-        await Task.Delay(500);
+            Assert.False(client.IsConnected, "Client must NOT auto-connect when autoConnect=false");
 
-        Assert.False(client.IsConnected, "Client must NOT auto-connect when autoConnect=false");
+            host.Services.UseHorse();
+            await TestHorseRider.WaitUntil(() => client.IsConnected, 3000);
+            Assert.True(client.IsConnected);
 
-        host.Services.UseHorse();
-        await WaitUntil(() => client.IsConnected, 3000);
-        Assert.True(client.IsConnected);
-
-        await host.StopAsync();
-        server.Stop();
+            await host.StopAsync();
+        });
     }
 
-    // -----------------------------------------------------------------------
-    // 13. IHostBuilder registers all bus abstractions
-    // -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// 13. IHostBuilder registers all bus abstractions
+// -----------------------------------------------------------------------
 
     [Fact]
     public void HostBuilder_AddHorse_RegistersAllBusAbstractions()
@@ -342,9 +316,9 @@ public class ExtensionRegistrationTests
         Assert.NotNull(host.Services.GetService<IHorseCache>());
     }
 
-    // -----------------------------------------------------------------------
-    // 14. IHostBuilder registers HorseConnectService when autoConnect=true
-    // -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// 14. IHostBuilder registers HorseConnectService when autoConnect=true
+// -----------------------------------------------------------------------
 
     [Fact]
     public void HostBuilder_AutoConnectTrue_RegistersConnectService()
@@ -365,9 +339,9 @@ public class ExtensionRegistrationTests
         Assert.True(found, "HorseConnectService must be registered when autoConnect=true");
     }
 
-    // -----------------------------------------------------------------------
-    // 15. IHostBuilder does NOT register HorseConnectService when autoConnect=false
-    // -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// 15. IHostBuilder does NOT register HorseConnectService when autoConnect=false
+// -----------------------------------------------------------------------
 
     [Fact]
     public void HostBuilder_AutoConnectFalse_DoesNotRegisterConnectService()
@@ -383,195 +357,193 @@ public class ExtensionRegistrationTests
                 "HorseConnectService must NOT be registered when autoConnect=false");
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Multiple connections — same provider
-    // ─────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────
+// Multiple connections — same provider
+// ─────────────────────────────────────────────────────────────────────────
 
-    // -----------------------------------------------------------------------
-    // 16. Two keyed clients in same provider are independent
-    // -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// 16. Two keyed clients in same provider are independent
+// -----------------------------------------------------------------------
 
     [Fact]
     public async Task TwoKeyedClients_AreIndependent()
     {
-        var (server, port) = await StartServer();
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            var services = new ServiceCollection();
+            services.AddKeyedHorse("alpha", b => b.AddHost($"horse://localhost:{port}"));
+            services.AddKeyedHorse("beta", b => b.AddHost($"horse://localhost:{port}"));
 
-        var services = new ServiceCollection();
-        services.AddKeyedHorse("alpha", b => b.AddHost($"horse://localhost:{port}"));
-        services.AddKeyedHorse("beta", b => b.AddHost($"horse://localhost:{port}"));
+            var provider = services.BuildServiceProvider();
+            provider.UseHorse("alpha");
+            provider.UseHorse("beta");
 
-        var provider = services.BuildServiceProvider();
-        provider.UseHorse("alpha");
-        provider.UseHorse("beta");
+            var alpha = provider.GetRequiredKeyedService<HorseClient>("alpha");
+            var beta = provider.GetRequiredKeyedService<HorseClient>("beta");
 
-        var alpha = provider.GetRequiredKeyedService<HorseClient>("alpha");
-        var beta = provider.GetRequiredKeyedService<HorseClient>("beta");
+            await TestHorseRider.WaitUntil(() => alpha.IsConnected && beta.IsConnected, 3000);
 
-        await WaitUntil(() => alpha.IsConnected && beta.IsConnected, 3000);
+            Assert.True(alpha.IsConnected);
+            Assert.True(beta.IsConnected);
+            Assert.NotSame(alpha, beta);
 
-        Assert.True(alpha.IsConnected);
-        Assert.True(beta.IsConnected);
-        Assert.NotSame(alpha, beta);
+            alpha.Disconnect();
+            Assert.False(alpha.IsConnected);
+            Assert.True(beta.IsConnected);
 
-        alpha.Disconnect();
-        Assert.False(alpha.IsConnected);
-        Assert.True(beta.IsConnected);
-
-        beta.Disconnect();
-        server.Stop();
+            beta.Disconnect();
+        });
     }
 
-    // -----------------------------------------------------------------------
-    // 17. Typed + default client in same provider are independent
-    // -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// 17. Typed + default client in same provider are independent
+// -----------------------------------------------------------------------
 
     [Fact]
     public async Task TypedAndDefaultClients_AreIndependent()
     {
-        var (server, port) = await StartServer();
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            var services = new ServiceCollection();
+            services.AddHorse(b => b.AddHost($"horse://localhost:{port}"));
+            services.AddHorse<SecondConnection>(b => b.AddHost($"horse://localhost:{port}"));
 
-        var services = new ServiceCollection();
-        services.AddHorse(b => b.AddHost($"horse://localhost:{port}"));
-        services.AddHorse<SecondConnection>(b => b.AddHost($"horse://localhost:{port}"));
+            var provider = services.BuildServiceProvider();
+            provider.UseHorse();
+            provider.UseHorse<SecondConnection>();
 
-        var provider = services.BuildServiceProvider();
-        provider.UseHorse();
-        provider.UseHorse<SecondConnection>();
+            var defaultClient = provider.GetRequiredService<HorseClient>();
+            var typedClient = provider.GetRequiredService<HorseClient<SecondConnection>>();
 
-        var defaultClient = provider.GetRequiredService<HorseClient>();
-        var typedClient = provider.GetRequiredService<HorseClient<SecondConnection>>();
+            await TestHorseRider.WaitUntil(() => defaultClient.IsConnected, 3000);
+            await TestHorseRider.WaitUntil(() => typedClient.IsConnected, 3000);
 
-        await WaitUntil(() => defaultClient.IsConnected, 3000);
-        await WaitUntil(() => typedClient.IsConnected, 3000);
+            Assert.True(defaultClient.IsConnected);
+            Assert.True(typedClient.IsConnected);
 
-        Assert.True(defaultClient.IsConnected);
-        Assert.True(typedClient.IsConnected);
+            defaultClient.Disconnect();
+            Assert.False(defaultClient.IsConnected);
+            Assert.True(typedClient.IsConnected);
 
-        defaultClient.Disconnect();
-        Assert.False(defaultClient.IsConnected);
-        Assert.True(typedClient.IsConnected);
-
-        typedClient.Disconnect();
-        server.Stop();
+            typedClient.Disconnect();
+        });
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Builder configuration flows through
-    // ─────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────
+// Builder configuration flows through
+// ─────────────────────────────────────────────────────────────────────────
 
-    // -----------------------------------------------------------------------
-    // 18. Client configuration flows through registration
-    // -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// 18. Client configuration flows through registration
+// -----------------------------------------------------------------------
 
     [Fact]
     public async Task AddHorse_BuilderConfig_FlowsThrough()
     {
-        var (server, port) = await StartServer();
-
-        var services = new ServiceCollection();
-        services.AddHorse(b =>
+        await TestHorseRider.RunWith(async (server, port) =>
         {
-            b.AddHost($"horse://localhost:{port}");
-            b.SetClientId("my-custom-id");
+            var services = new ServiceCollection();
+            services.AddHorse(b =>
+            {
+                b.AddHost($"horse://localhost:{port}");
+                b.SetClientId("my-custom-id");
+            });
+
+            var provider = services.BuildServiceProvider();
+            provider.UseHorse();
+
+            var client = provider.GetRequiredService<HorseClient>();
+            await TestHorseRider.WaitUntil(() => client.IsConnected, 3000);
+
+            Assert.Equal("my-custom-id", client.ClientId);
+
+            client.Disconnect();
         });
-
-        var provider = services.BuildServiceProvider();
-        provider.UseHorse();
-
-        var client = provider.GetRequiredService<HorseClient>();
-        await WaitUntil(() => client.IsConnected, 3000);
-
-        Assert.Equal("my-custom-id", client.ClientId);
-
-        client.Disconnect();
-        server.Stop();
     }
 
-    // -----------------------------------------------------------------------
-    // 19. Reconnect wait flows through
-    // -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// 19. Reconnect wait flows through
+// -----------------------------------------------------------------------
 
     [Fact]
     public async Task AddHorse_ReconnectWait_FlowsThrough()
     {
-        var (server, port) = await StartServer();
-
-        var services = new ServiceCollection();
-        services.AddHorse(b =>
+        await TestHorseRider.RunWith(async (server, port) =>
         {
-            b.AddHost($"horse://localhost:{port}");
-            b.SetReconnectWait(TimeSpan.FromSeconds(10));
+            var services = new ServiceCollection();
+            services.AddHorse(b =>
+            {
+                b.AddHost($"horse://localhost:{port}");
+                b.SetReconnectWait(TimeSpan.FromSeconds(10));
+            });
+
+            var provider = services.BuildServiceProvider();
+            provider.UseHorse();
+
+            var client = provider.GetRequiredService<HorseClient>();
+            await TestHorseRider.WaitUntil(() => client.IsConnected, 3000);
+
+            // We can't directly read ReconnectWait, but we verify the client is alive
+            Assert.True(client.IsConnected);
+
+            client.Disconnect();
         });
-
-        var provider = services.BuildServiceProvider();
-        provider.UseHorse();
-
-        var client = provider.GetRequiredService<HorseClient>();
-        await WaitUntil(() => client.IsConnected, 3000);
-
-        // We can't directly read ReconnectWait, but we verify the client is alive
-        Assert.True(client.IsConnected);
-
-        client.Disconnect();
-        server.Stop();
     }
 
-    // -----------------------------------------------------------------------
-    // 20. Connected / Disconnected callbacks fire
-    // -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// 20. Connected / Disconnected callbacks fire
+// -----------------------------------------------------------------------
 
     [Fact]
     public async Task AddHorse_ConnectedCallback_Fires()
     {
-        var (server, port) = await StartServer();
-
-        bool connectedFired = false;
-
-        var services = new ServiceCollection();
-        services.AddHorse(b =>
+        await TestHorseRider.RunWith(async (server, port) =>
         {
-            b.AddHost($"horse://localhost:{port}");
-            b.OnConnected(_ => connectedFired = true);
+            bool connectedFired = false;
+
+            var services = new ServiceCollection();
+            services.AddHorse(b =>
+            {
+                b.AddHost($"horse://localhost:{port}");
+                b.OnConnected(_ => connectedFired = true);
+            });
+
+            var provider = services.BuildServiceProvider();
+            provider.UseHorse();
+
+            var client = provider.GetRequiredService<HorseClient>();
+            await TestHorseRider.WaitUntil(() => client.IsConnected, 3000);
+
+            Assert.True(connectedFired, "OnConnected callback must fire");
+
+            client.Disconnect();
         });
-
-        var provider = services.BuildServiceProvider();
-        provider.UseHorse();
-
-        var client = provider.GetRequiredService<HorseClient>();
-        await WaitUntil(() => client.IsConnected, 3000);
-
-        Assert.True(connectedFired, "OnConnected callback must fire");
-
-        client.Disconnect();
-        server.Stop();
     }
 
     [Fact]
     public async Task AddHorse_DisconnectedCallback_Fires()
     {
-        var (server, port) = await StartServer();
-
-        bool disconnectedFired = false;
-
-        var services = new ServiceCollection();
-        services.AddHorse(b =>
+        await TestHorseRider.RunWith(async (server, port) =>
         {
-            b.AddHost($"horse://localhost:{port}");
-            b.OnDisconnected(_ => disconnectedFired = true);
+            bool disconnectedFired = false;
+
+            var services = new ServiceCollection();
+            services.AddHorse(b =>
+            {
+                b.AddHost($"horse://localhost:{port}");
+                b.OnDisconnected(_ => disconnectedFired = true);
+            });
+
+            var provider = services.BuildServiceProvider();
+            provider.UseHorse();
+
+            var client = provider.GetRequiredService<HorseClient>();
+            await TestHorseRider.WaitUntil(() => client.IsConnected, 3000);
+
+            client.Disconnect();
+            await TestHorseRider.WaitUntil(() => disconnectedFired, 3000);
+
+            Assert.True(disconnectedFired, "OnDisconnected callback must fire");
         });
-
-        var provider = services.BuildServiceProvider();
-        provider.UseHorse();
-
-        var client = provider.GetRequiredService<HorseClient>();
-        await WaitUntil(() => client.IsConnected, 3000);
-
-        client.Disconnect();
-        await WaitUntil(() => disconnectedFired, 3000);
-
-        Assert.True(disconnectedFired, "OnDisconnected callback must fire");
-
-        server.Stop();
     }
 }
-

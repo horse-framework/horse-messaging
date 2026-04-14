@@ -1,6 +1,9 @@
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Test.Common;
@@ -51,13 +54,13 @@ public class HeartbeatStressTest
         hello.CalculateLengths();
         HorseProtocolWriter.Write(hello, netStream);
 
-        // Read the server's protocol handshake response
         byte[] protocolResponse = new byte[PredefinedMessages.PROTOCOL_BYTES_V4.Length];
         int totalRead = 0;
         while (totalRead < protocolResponse.Length)
         {
             int r = await netStream.ReadAsync(protocolResponse, totalRead, protocolResponse.Length - totalRead);
-            if (r == 0) break;
+            if (r == 0)
+                break;
             totalRead += r;
         }
 
@@ -68,26 +71,13 @@ public class HeartbeatStressTest
 
     #region ISSUE 1: Read Loop Blocking — PONG Delayed Under Message Processing Load
 
-    /// <summary>
-    /// ISSUE 1 (CRITICAL): PONG is delayed by 1.5s due to message processing on the read loop thread.
-    /// Server's 1-tick window (1s) expires before PONG arrives.
-    ///
-    /// Edge-case: Processing delay (1.5s) slightly exceeds tick interval (1s).
-    /// A well-designed heartbeat should tolerate this — but it doesn't.
-    ///
-    /// Expectation: Client should stay connected (1.5s delay is reasonable).
-    /// Reality: Server disconnects → TEST FAILS.
-    /// </summary>
     [Fact]
     public async Task Issue1_ReadLoopBlocking_PongDelayedByMessageProcessing()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 2, requestTimeout: 30);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             TcpClient rawClient = new TcpClient();
             await rawClient.ConnectAsync("127.0.0.1", port);
             NetworkStream netStream = await HandshakeRawClient(rawClient, port, $"slow-reader-{port}");
@@ -106,7 +96,11 @@ public class HeartbeatStressTest
                     while (!disconnected && rawClient.Connected)
                     {
                         HorseMessage msg = await reader.Read(netStream);
-                        if (msg == null) { disconnected = true; break; }
+                        if (msg == null)
+                        {
+                            disconnected = true;
+                            break;
+                        }
 
                         if (msg.Type == MessageType.Ping)
                         {
@@ -119,7 +113,6 @@ public class HeartbeatStressTest
                             }
                             else
                             {
-                                // 1.5s delay BEFORE PONG → exceeds 1s tick → disconnect
                                 Thread.Sleep(1500);
                                 try { netStream.Write(PredefinedMessages.PONG); Interlocked.Increment(ref pongCount); }
                                 catch { disconnected = true; }
@@ -127,7 +120,10 @@ public class HeartbeatStressTest
                         }
                     }
                 }
-                catch { disconnected = true; }
+                catch
+                {
+                    disconnected = true;
+                }
             });
 
             await Task.Delay(15_000);
@@ -140,36 +136,20 @@ public class HeartbeatStressTest
                 "A 1.5s PONG delay caused by message processing should be tolerable.");
 
             rawClient.Dispose();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 2, requestTimeout: 30);
     }
 
     #endregion
 
     #region ISSUE 2: Single-Tick Pong Window Too Narrow
 
-    /// <summary>
-    /// ISSUE 2 (MEDIUM): Every PONG is delayed by 1.5s — server disconnects on the first one.
-    /// The 1-tick window between PongRequired=true and the disconnect check is too narrow.
-    ///
-    /// Edge-case: Consistent 1.5s network/processing latency on every PONG.
-    ///
-    /// Expectation: Client should stay connected (PONG IS sent, just delayed).
-    /// Reality: Server disconnects → TEST FAILS.
-    /// </summary>
     [Fact]
     public async Task Issue2_SingleTickPongWindow_TooNarrow()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 2, requestTimeout: 30);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             TcpClient rawClient = new TcpClient();
             await rawClient.ConnectAsync("127.0.0.1", port);
             NetworkStream stream = await HandshakeRawClient(rawClient, port, $"delayed-pong-{port}");
@@ -188,13 +168,16 @@ public class HeartbeatStressTest
                     while (!disconnected && rawClient.Connected)
                     {
                         HorseMessage msg = await reader.Read(stream);
-                        if (msg == null) { disconnected = true; break; }
+                        if (msg == null)
+                        {
+                            disconnected = true;
+                            break;
+                        }
 
                         if (msg.Type == MessageType.Ping)
                         {
                             Interlocked.Increment(ref pingReceived);
 
-                            // Every PONG delayed by 1.5s
                             await Task.Delay(1500);
 
                             if (!disconnected && rawClient.Connected)
@@ -204,12 +187,18 @@ public class HeartbeatStressTest
                                     stream.Write(PredefinedMessages.PONG);
                                     Interlocked.Increment(ref pongSent);
                                 }
-                                catch { disconnected = true; }
+                                catch
+                                {
+                                    disconnected = true;
+                                }
                             }
                         }
                     }
                 }
-                catch { disconnected = true; }
+                catch
+                {
+                    disconnected = true;
+                }
             });
 
             await Task.Delay(12_000);
@@ -222,40 +211,20 @@ public class HeartbeatStressTest
                 "1-tick pong window is too narrow for even minor processing delays.");
 
             rawClient.Dispose();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 2, requestTimeout: 30);
     }
 
     #endregion
 
     #region ISSUE 3: Read Loop Completely Blocked — PING Never Read
 
-    /// <summary>
-    /// ISSUE 3 (MEDIUM): Read loop is blocked by heavy processing. PING sits in TCP buffer
-    /// unread, PONG is never sent, server disconnects.
-    ///
-    /// Edge-case: Client does a long synchronous operation (DB migration, file I/O, heavy computation)
-    /// that blocks the read loop thread. During this time, PING arrives but cannot be read.
-    ///
-    /// This is deterministic: after warm-up, client STOPS reading entirely for 10s.
-    /// Server MUST disconnect because no PONG arrives within the tick window.
-    ///
-    /// Expectation: Heartbeat should be independent of the read loop.
-    /// Reality: Heartbeat is coupled to read loop → client disconnects → TEST FAILS.
-    /// </summary>
     [Fact]
     public async Task Issue3_ReadLoopBlocked_NoPongDuringProcessing()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 3, requestTimeout: 30);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             TcpClient rawClient = new TcpClient();
             await rawClient.ConnectAsync("127.0.0.1", port);
             NetworkStream netStream = await HandshakeRawClient(rawClient, port, $"blocked-reader-{port}");
@@ -287,17 +256,9 @@ public class HeartbeatStressTest
                         {
                             int current = Interlocked.Increment(ref pingCount);
 
-                            // Send PONG immediately
                             try { netStream.Write(PredefinedMessages.PONG); Interlocked.Increment(ref pongCount); }
                             catch { disconnected = true; }
 
-                            // After 2nd PONG: block the read loop completely for 10s.
-                            // No more reads = no more PINGs read = no more PONGs sent.
-                            // Server timeline (PingInterval=3s, tick=1.5s):
-                            //   T=0: PONG sent → KeepAlive(T=0)
-                            //   ~T+4.5: SmartHealthCheck expired → PongRequired=true, PING sent
-                            //   ~T+6: PongRequired still true → Disconnect
-                            //   T+10: Client wakes at T+10 — too late.
                             if (current == 2)
                             {
                                 blockStartTime = DateTime.UtcNow;
@@ -324,52 +285,26 @@ public class HeartbeatStressTest
             _output.WriteLine($"[ISSUE3] PINGs: {pingCount}, PONGs: {pongCount}, Disconnected: {disconnected}");
             _output.WriteLine($"[ISSUE3] Time from block start to disconnect: {blockToDisconnect:F1}s");
 
-            // The client SHOULD stay connected — heartbeat should be independent of read loop.
-            // But because PING/PONG depends on the read loop, client WILL be disconnected.
             Assert.False(disconnected,
                 $"[ISSUE3-FAIL] Client disconnected {blockToDisconnect:F1}s after read loop was blocked. " +
                 $"PINGs: {pingCount}, PONGs: {pongCount}. " +
                 "Heartbeat is coupled to the read loop — blocking it for 10s causes disconnect.");
 
             rawClient.Dispose();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 3, requestTimeout: 30);
     }
 
     #endregion
 
     #region ISSUE 4: Silent Write Failure — Server Correctly Disconnects Unresponsive Client
 
-    /// <summary>
-    /// ISSUE 4 (MEDIUM): When PONG write silently fails (BeginWrite returns true but data never
-    /// reaches the server), the server correctly detects the unresponsive client and disconnects it.
-    ///
-    /// This is EXPECTED BEHAVIOR — the server's heartbeat mechanism works as designed here.
-    /// The architectural limitation is on the CLIENT side: SocketBase.Send() uses fire-and-forget
-    /// BeginWrite which returns true before the write completes. If the write fails in EndWrite,
-    /// the client has no way to know PONG wasn't delivered.
-    ///
-    /// Scenario:
-    /// - Raw TCP client connects. Server PingInterval=2s (tick=1s).
-    /// - First 2 PINGs: client sends real PONG (warm-up).
-    /// - From PING 3 onwards: client reads PING but does NOT send PONG (simulating silent failure).
-    /// - Server's grace period expires → Disconnect.
-    ///
-    /// Expectation: Server MUST disconnect the client — this validates heartbeat correctness.
-    /// </summary>
     [Fact]
     public async Task Issue4_SilentWriteFailure_ServerCorrectlyDisconnects()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 2, requestTimeout: 30);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             TcpClient rawClient = new TcpClient();
             await rawClient.ConnectAsync("127.0.0.1", port);
             NetworkStream netStream = await HandshakeRawClient(rawClient, port, $"silent-fail-{port}");
@@ -404,15 +339,14 @@ public class HeartbeatStressTest
 
                             if (current <= 2)
                             {
-                                // Warm-up: send real PONG
                                 try { netStream.Write(PredefinedMessages.PONG); Interlocked.Increment(ref pongCount); }
                                 catch { disconnected = true; }
                             }
                             else
                             {
-                                // Simulate silent write failure: PONG is never sent.
                                 int fails = Interlocked.Increment(ref silentFailCount);
-                                if (fails == 1) firstSilentFail = DateTime.UtcNow;
+                                if (fails == 1)
+                                    firstSilentFail = DateTime.UtcNow;
                             }
                         }
                     }
@@ -433,50 +367,28 @@ public class HeartbeatStressTest
             _output.WriteLine($"[ISSUE4] PINGs: {pingCount}, PONGs: {pongCount}, SilentFails: {silentFailCount}, Disconnected: {disconnected}");
             _output.WriteLine($"[ISSUE4] Time from first silent fail to disconnect: {timeToDisconnect:F1}s");
 
-            // Server MUST disconnect a client that never sends PONG — this is correct heartbeat behavior.
             Assert.True(disconnected,
                 $"[ISSUE4-FAIL] Server did NOT disconnect client after {silentFailCount} missed PONGs. " +
                 "When PONG is silently lost, the server's heartbeat must detect and disconnect the client.");
 
-            // Verify disconnect happened within a reasonable grace window (not too fast, not too slow)
             Assert.True(timeToDisconnect > 0 && timeToDisconnect < 15,
                 $"[ISSUE4-FAIL] Disconnect took {timeToDisconnect:F1}s — expected within 15s grace window.");
 
             rawClient.Dispose();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 2, requestTimeout: 30);
     }
 
     #endregion
 
     #region ISSUE 5: Write Contention — PONG Delayed By Stream Lock
 
-    /// <summary>
-    /// ISSUE 5 (LOW): PONG write is blocked because another thread holds the stream write lock.
-    ///
-    /// Edge-case: Client is sending large messages on a background thread. When PING arrives,
-    /// the PONG response must wait for the current write to complete. The write takes > 1 tick.
-    ///
-    /// This test is deterministic: PONG is delayed by 1.5s BEFORE sending (same mechanism as
-    /// Issue 2, but the root cause is write contention rather than processing delay).
-    /// After warm-up, every PONG is held for 1.5s before being sent.
-    ///
-    /// Expectation: PONG should have priority over data writes.
-    /// Reality: All writes are serialized, PONG waits → server disconnects → TEST FAILS.
-    /// </summary>
     [Fact]
     public async Task Issue5_WriteContention_PongDelayedBehindLargeWrites()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 2, requestTimeout: 30);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             TcpClient rawClient = new TcpClient();
             await rawClient.ConnectAsync("127.0.0.1", port);
             NetworkStream netStream = await HandshakeRawClient(rawClient, port, $"write-contention-{port}");
@@ -495,7 +407,11 @@ public class HeartbeatStressTest
                     while (!disconnected && rawClient.Connected)
                     {
                         HorseMessage msg = await reader.Read(netStream);
-                        if (msg == null) { disconnected = true; break; }
+                        if (msg == null)
+                        {
+                            disconnected = true;
+                            break;
+                        }
 
                         if (msg.Type == MessageType.Ping)
                         {
@@ -503,16 +419,11 @@ public class HeartbeatStressTest
 
                             if (current <= 2)
                             {
-                                // Warm-up: immediate PONG
                                 try { netStream.Write(PredefinedMessages.PONG); Interlocked.Increment(ref pongCount); }
                                 catch { disconnected = true; }
                             }
                             else
                             {
-                                // Simulate write contention: another thread is writing a large message,
-                                // PONG must wait 1.5s for the lock. This exceeds the 1s tick interval.
-                                // In production: SocketBase uses SemaphoreSlim(1,1) for SSL streams,
-                                // and BeginWrite serializes writes — PONG waits behind data.
                                 Thread.Sleep(1500);
                                 try { netStream.Write(PredefinedMessages.PONG); Interlocked.Increment(ref pongCount); }
                                 catch { disconnected = true; }
@@ -520,7 +431,10 @@ public class HeartbeatStressTest
                         }
                     }
                 }
-                catch { disconnected = true; }
+                catch
+                {
+                    disconnected = true;
+                }
             });
 
             await Task.Delay(15_000);
@@ -534,36 +448,20 @@ public class HeartbeatStressTest
                 "PONG has no priority mechanism — it waits in the FIFO write queue.");
 
             rawClient.Dispose();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 2, requestTimeout: 30);
     }
 
     #endregion
 
     #region ISSUE 1+2 Combined: Processing Delay Exceeds PING Interval
 
-    /// <summary>
-    /// ISSUE 1+2 COMBINED: Processing takes 3.5s before PONG — exceeds the 2s PING interval.
-    /// SmartHealthCheck can't save the client because no data is sent during the 3.5s window.
-    ///
-    /// Edge-case: Batch processing after reading a PING takes longer than the full PING interval.
-    ///
-    /// Expectation: Server should handle transient processing spikes.
-    /// Reality: Instant disconnect → TEST FAILS.
-    /// </summary>
     [Fact]
     public async Task Issue1_2_ProgressiveLoadIncrease_PongDelayExceedsPingInterval()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 2, requestTimeout: 30);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             TcpClient rawClient = new TcpClient();
             await rawClient.ConnectAsync("127.0.0.1", port);
             NetworkStream netStream = await HandshakeRawClient(rawClient, port, $"progressive-load-{port}");
@@ -582,7 +480,11 @@ public class HeartbeatStressTest
                     while (!disconnected && rawClient.Connected)
                     {
                         HorseMessage msg = await reader.Read(netStream);
-                        if (msg == null) { disconnected = true; break; }
+                        if (msg == null)
+                        {
+                            disconnected = true;
+                            break;
+                        }
 
                         if (msg.Type == MessageType.Ping)
                         {
@@ -595,8 +497,6 @@ public class HeartbeatStressTest
                             }
                             else
                             {
-                                // 3.5s > PingInterval (2s). During this delay, SmartHealthCheck
-                                // alive window expires (last PONG was 3.5s+ ago).
                                 Thread.Sleep(3500);
                                 try { netStream.Write(PredefinedMessages.PONG); Interlocked.Increment(ref pongCount); }
                                 catch { disconnected = true; }
@@ -604,7 +504,10 @@ public class HeartbeatStressTest
                         }
                     }
                 }
-                catch { disconnected = true; }
+                catch
+                {
+                    disconnected = true;
+                }
             });
 
             await Task.Delay(20_000);
@@ -617,37 +520,20 @@ public class HeartbeatStressTest
                 "No data sent during 3.5s window → SmartHealthCheck expired → disconnect.");
 
             rawClient.Dispose();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 2, requestTimeout: 30);
     }
 
     #endregion
 
     #region ISSUE 6: HorseTime Drift Under Load
 
-    /// <summary>
-    /// ISSUE 6 (LOW): HorseTime drift under CPU stress.
-    /// HorseTime.ServerTicks is updated by a PeriodicTimer(50ms) on the ThreadPool.
-    /// Under CPU stress, the ThreadPool callback is delayed → HorseTime drifts.
-    ///
-    /// Edge-case: All CPU cores are saturated by Highest-priority spin threads.
-    ///
-    /// Expectation: HorseTime drift should be < 50ms.
-    /// Reality: Under CPU saturation, drift exceeds 50ms → TEST FAILS.
-    /// </summary>
     [Fact]
     public async Task Issue6_HorseTimeDrift_CausesIncorrectHeartbeatDecisions()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 2, requestTimeout: 30);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             var clients = new List<HorseClient>();
             for (int i = 0; i < 5; i++)
             {
@@ -659,7 +545,8 @@ public class HeartbeatStressTest
             }
 
             await Task.Delay(500);
-            foreach (var c in clients) Assert.True(c.IsConnected);
+            foreach (var c in clients)
+                Assert.True(c.IsConnected);
 
             CancellationTokenSource stressCts = new();
             int spinCount = Environment.ProcessorCount * 3;
@@ -714,44 +601,22 @@ public class HeartbeatStressTest
 
             Assert.Equal(0, disconnectedCount);
 
-            foreach (var c in clients) c.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+            foreach (var c in clients)
+                c.Disconnect();
+        }, pingInterval: 2, requestTimeout: 30);
     }
 
     #endregion
 
     #region COMBINED: Production Scenario Replay
 
-    /// <summary>
-    /// PRODUCTION REPLAY: 4 clients connected, each blocks its read loop after warm-up.
-    /// This reproduces the exact production disconnect cycle.
-    ///
-    /// Each client: responds to first 2 PINGs normally, then blocks read loop for 10s.
-    /// During the 10s block, server sends PING but client can't read it → disconnect.
-    ///
-    /// PingInterval=3s, tick=1.5s. After last PONG:
-    ///   T=0:   PONG → KeepAlive(0)
-    ///   T+4.5: SmartHealthCheck expired → PongRequired=true, PING sent
-    ///   T+6:   PongRequired=true → Disconnect
-    ///   T+10:  Client wakes up — too late
-    ///
-    /// Expectation: All clients should stay connected (they're processing, not dead).
-    /// Reality: All 4 clients disconnect → TEST FAILS.
-    /// </summary>
     [Fact]
     public async Task ProductionReplay_MultipleClients_ReadLoopBlocked_DisconnectCycle()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 3, requestTimeout: 30);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             int clientCount = 4;
             int totalDisconnects = 0;
             var disconnectTimes = new List<double>();
@@ -784,7 +649,8 @@ public class HeartbeatStressTest
                         while (client.Connected)
                         {
                             HorseMessage msg = await reader.Read(stream);
-                            if (msg == null) break;
+                            if (msg == null)
+                                break;
 
                             if (msg.Type == MessageType.Ping)
                             {
@@ -793,19 +659,19 @@ public class HeartbeatStressTest
                                 try { stream.Write(PredefinedMessages.PONG); }
                                 catch { break; }
 
-                                // After 2nd PONG, block read loop for 10s.
-                                // Server's SmartHealthCheck window (3s) + PongRequired cycle (3s)
-                                // = ~6s until disconnect. 10s > 6s → guaranteed disconnect.
                                 if (pingsSeen >= 2)
                                     Thread.Sleep(10_000);
                             }
                         }
                     }
-                    catch { }
+                    catch
+                    {
+                    }
 
                     Interlocked.Increment(ref totalDisconnects);
                     double elapsed = (DateTime.UtcNow - startTime).TotalSeconds;
-                    lock (disconnectTimes) disconnectTimes.Add(elapsed);
+                    lock (disconnectTimes)
+                        disconnectTimes.Add(elapsed);
                     _output.WriteLine($"[PROD-REPLAY] Consumer-{clientIdx} disconnected at {elapsed:F1}s");
                 });
             }
@@ -825,14 +691,10 @@ public class HeartbeatStressTest
                 "10s read-loop blocking after PONG → SmartHealthCheck expired → PING missed → disconnect. " +
                 "Production scenario: heavy message processing blocks read loop → heartbeat fails.");
 
-            foreach (var c in clients) c.Dispose();
-        }
-        finally
-        {
-            server.Stop();
-        }
+            foreach (var c in clients)
+                c.Dispose();
+        }, pingInterval: 3, requestTimeout: 30);
     }
 
     #endregion
 }
-

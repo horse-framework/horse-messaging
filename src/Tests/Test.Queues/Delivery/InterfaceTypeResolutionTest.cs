@@ -139,44 +139,51 @@ public class InterfaceTypeResolutionTest
             o.Acknowledge = QueueAckDecision.None;
             o.AutoQueueCreation = true;
         });
-
-        // Producer client
-        var producer = new HorseClient();
-        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        Assert.True(producer.IsConnected);
-
-        // Consumer subscribes to "OrderCreatedEvent" queue (the concrete type name)
-        var concreteConsumer = new HorseClient();
-        await concreteConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await concreteConsumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
-
-        List<HorseMessage> concreteMessages = new();
-        concreteConsumer.MessageReceived += (_, m) =>
+        try
         {
-            lock (concreteMessages) concreteMessages.Add(m);
-        };
 
-        await Task.Delay(300);
+            // Producer client
+            var producer = new HorseClient();
+            await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            Assert.True(producer.IsConnected);
 
-        // Act: Push using interface type parameter - Push<IEvent>(...)
-        var order = new OrderCreatedEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
-        var payment = new PaymentCompletedEvent { EventId = "evt-2", Amount = 99.99m };
+            // Consumer subscribes to "OrderCreatedEvent" queue (the concrete type name)
+            var concreteConsumer = new HorseClient();
+            await concreteConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await concreteConsumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
 
-        // T is IEvent, but runtime type resolution routes to concrete type queues
-        await producer.Queue.Push<IEvent>(order, true, CancellationToken.None);
-        await producer.Queue.Push<IEvent>(payment, true, CancellationToken.None);
+            List<HorseMessage> concreteMessages = new();
+            concreteConsumer.MessageReceived += (_, m) =>
+            {
+                lock (concreteMessages) concreteMessages.Add(m);
+            };
 
-        await Task.Delay(1000);
+            await Task.Delay(300);
 
-        // Messages should go to concrete type queues, NOT the interface queue
-        Assert.NotEmpty(concreteMessages);
+            // Act: Push using interface type parameter - Push<IEvent>(...)
+            var order = new OrderCreatedEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
+            var payment = new PaymentCompletedEvent { EventId = "evt-2", Amount = 99.99m };
 
-        // No "IEvent" queue should have been created
-        var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
-        Assert.DoesNotContain("IEvent", allQueues);
+            // T is IEvent, but runtime type resolution routes to concrete type queues
+            await producer.Queue.Push<IEvent>(order, true, CancellationToken.None);
+            await producer.Queue.Push<IEvent>(payment, true, CancellationToken.None);
 
-        producer.Disconnect();
-        concreteConsumer.Disconnect();
+            await Task.Delay(1000);
+
+            // Messages should go to concrete type queues, NOT the interface queue
+            Assert.NotEmpty(concreteMessages);
+
+            // No "IEvent" queue should have been created
+            var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
+            Assert.DoesNotContain("IEvent", allQueues);
+
+            producer.Disconnect();
+            concreteConsumer.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -192,56 +199,63 @@ public class InterfaceTypeResolutionTest
             o.Acknowledge = QueueAckDecision.None;
             o.AutoQueueCreation = true;
         });
-
-        var producer = new HorseClient();
-        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        Assert.True(producer.IsConnected);
-
-        // Subscribe to concrete queue names
-        var orderConsumer = new HorseClient();
-        await orderConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await orderConsumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
-
-        List<HorseMessage> orderMessages = new();
-        orderConsumer.MessageReceived += (_, m) =>
+        try
         {
-            lock (orderMessages) orderMessages.Add(m);
-        };
 
-        var paymentConsumer = new HorseClient();
-        await paymentConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await paymentConsumer.Queue.Subscribe("PaymentCompletedEvent", true, CancellationToken.None);
+            var producer = new HorseClient();
+            await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            Assert.True(producer.IsConnected);
 
-        List<HorseMessage> paymentMessages = new();
-        paymentConsumer.MessageReceived += (_, m) =>
+            // Subscribe to concrete queue names
+            var orderConsumer = new HorseClient();
+            await orderConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await orderConsumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
+
+            List<HorseMessage> orderMessages = new();
+            orderConsumer.MessageReceived += (_, m) =>
+            {
+                lock (orderMessages) orderMessages.Add(m);
+            };
+
+            var paymentConsumer = new HorseClient();
+            await paymentConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await paymentConsumer.Queue.Subscribe("PaymentCompletedEvent", true, CancellationToken.None);
+
+            List<HorseMessage> paymentMessages = new();
+            paymentConsumer.MessageReceived += (_, m) =>
+            {
+                lock (paymentMessages) paymentMessages.Add(m);
+            };
+
+            await Task.Delay(300);
+
+            // Push both models as IEvent
+            var order = new OrderCreatedEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
+            var payment = new PaymentCompletedEvent { EventId = "evt-2", Amount = 99.99m };
+
+            await producer.Queue.Push<IEvent>(order, true, CancellationToken.None);
+            await producer.Queue.Push<IEvent>(payment, true, CancellationToken.None);
+
+            await Task.Delay(1000);
+
+            // Each model goes to its own concrete type queue
+            Assert.Single(orderMessages);
+            Assert.Single(paymentMessages);
+
+            // Concrete queues exist, interface queue does NOT
+            var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
+            Assert.Contains("OrderCreatedEvent", allQueues);
+            Assert.Contains("PaymentCompletedEvent", allQueues);
+            Assert.DoesNotContain("IEvent", allQueues);
+
+            producer.Disconnect();
+            orderConsumer.Disconnect();
+            paymentConsumer.Disconnect();
+        }
+        finally
         {
-            lock (paymentMessages) paymentMessages.Add(m);
-        };
-
-        await Task.Delay(300);
-
-        // Push both models as IEvent
-        var order = new OrderCreatedEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
-        var payment = new PaymentCompletedEvent { EventId = "evt-2", Amount = 99.99m };
-
-        await producer.Queue.Push<IEvent>(order, true, CancellationToken.None);
-        await producer.Queue.Push<IEvent>(payment, true, CancellationToken.None);
-
-        await Task.Delay(1000);
-
-        // Each model goes to its own concrete type queue
-        Assert.Single(orderMessages);
-        Assert.Single(paymentMessages);
-
-        // Concrete queues exist, interface queue does NOT
-        var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
-        Assert.Contains("OrderCreatedEvent", allQueues);
-        Assert.Contains("PaymentCompletedEvent", allQueues);
-        Assert.DoesNotContain("IEvent", allQueues);
-
-        producer.Disconnect();
-        orderConsumer.Disconnect();
-        paymentConsumer.Disconnect();
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -257,56 +271,63 @@ public class InterfaceTypeResolutionTest
             o.Acknowledge = QueueAckDecision.None;
             o.AutoQueueCreation = true;
         });
-
-        var producer = new HorseClient();
-        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        Assert.True(producer.IsConnected);
-
-        // Subscribe to concrete queue names
-        var orderConsumer = new HorseClient();
-        await orderConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await orderConsumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
-
-        List<HorseMessage> orderMessages = new();
-        orderConsumer.MessageReceived += (_, m) =>
+        try
         {
-            lock (orderMessages) orderMessages.Add(m);
-        };
 
-        var paymentConsumer = new HorseClient();
-        await paymentConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await paymentConsumer.Queue.Subscribe("PaymentCompletedEvent", true, CancellationToken.None);
+            var producer = new HorseClient();
+            await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            Assert.True(producer.IsConnected);
 
-        List<HorseMessage> paymentMessages = new();
-        paymentConsumer.MessageReceived += (_, m) =>
+            // Subscribe to concrete queue names
+            var orderConsumer = new HorseClient();
+            await orderConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await orderConsumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
+
+            List<HorseMessage> orderMessages = new();
+            orderConsumer.MessageReceived += (_, m) =>
+            {
+                lock (orderMessages) orderMessages.Add(m);
+            };
+
+            var paymentConsumer = new HorseClient();
+            await paymentConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await paymentConsumer.Queue.Subscribe("PaymentCompletedEvent", true, CancellationToken.None);
+
+            List<HorseMessage> paymentMessages = new();
+            paymentConsumer.MessageReceived += (_, m) =>
+            {
+                lock (paymentMessages) paymentMessages.Add(m);
+            };
+
+            await Task.Delay(300);
+
+            // Push with concrete type parameters
+            var order = new OrderCreatedEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
+            var payment = new PaymentCompletedEvent { EventId = "evt-2", Amount = 99.99m };
+
+            await producer.Queue.Push(order, true, CancellationToken.None);
+            await producer.Queue.Push(payment, true, CancellationToken.None);
+
+            await Task.Delay(1000);
+
+            // Each message goes to its own queue
+            Assert.Single(orderMessages);
+            Assert.Single(paymentMessages);
+
+            // Both queues exist separately
+            var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
+            Assert.Contains("OrderCreatedEvent", allQueues);
+            Assert.Contains("PaymentCompletedEvent", allQueues);
+            Assert.DoesNotContain("IEvent", allQueues);
+
+            producer.Disconnect();
+            orderConsumer.Disconnect();
+            paymentConsumer.Disconnect();
+        }
+        finally
         {
-            lock (paymentMessages) paymentMessages.Add(m);
-        };
-
-        await Task.Delay(300);
-
-        // Push with concrete type parameters
-        var order = new OrderCreatedEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
-        var payment = new PaymentCompletedEvent { EventId = "evt-2", Amount = 99.99m };
-
-        await producer.Queue.Push(order, true, CancellationToken.None);
-        await producer.Queue.Push(payment, true, CancellationToken.None);
-
-        await Task.Delay(1000);
-
-        // Each message goes to its own queue
-        Assert.Single(orderMessages);
-        Assert.Single(paymentMessages);
-
-        // Both queues exist separately
-        var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
-        Assert.Contains("OrderCreatedEvent", allQueues);
-        Assert.Contains("PaymentCompletedEvent", allQueues);
-        Assert.DoesNotContain("IEvent", allQueues);
-
-        producer.Disconnect();
-        orderConsumer.Disconnect();
-        paymentConsumer.Disconnect();
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -322,43 +343,50 @@ public class InterfaceTypeResolutionTest
             o.Acknowledge = QueueAckDecision.None;
             o.AutoQueueCreation = true;
         });
-
-        var client = new HorseClient();
-        await client.ConnectAsync($"horse://localhost:{ctx.Port}");
-        Assert.True(client.IsConnected);
-
-        IHorseQueueBus bus = new HorseQueueBus(client);
-
-        // Subscribe to concrete type queue
-        var concreteConsumer = new HorseClient();
-        await concreteConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await concreteConsumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
-
-        List<HorseMessage> concreteMessages = new();
-        concreteConsumer.MessageReceived += (_, m) =>
+        try
         {
-            lock (concreteMessages) concreteMessages.Add(m);
-        };
 
-        await Task.Delay(300);
+            var client = new HorseClient();
+            await client.ConnectAsync($"horse://localhost:{ctx.Port}");
+            Assert.True(client.IsConnected);
 
-        // Push via bus with IEvent as T
-        var order = new OrderCreatedEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
-        var headers = new List<KeyValuePair<string, string>> { new("X-Test", "value") };
+            IHorseQueueBus bus = new HorseQueueBus(client);
 
-        await bus.Push<IEvent>(order, true, headers);
+            // Subscribe to concrete type queue
+            var concreteConsumer = new HorseClient();
+            await concreteConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await concreteConsumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
 
-        await Task.Delay(1000);
+            List<HorseMessage> concreteMessages = new();
+            concreteConsumer.MessageReceived += (_, m) =>
+            {
+                lock (concreteMessages) concreteMessages.Add(m);
+            };
 
-        // Message goes to concrete "OrderCreatedEvent" queue, not "IEvent"
-        Assert.NotEmpty(concreteMessages);
+            await Task.Delay(300);
 
-        // No "IEvent" queue should have been created
-        var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
-        Assert.DoesNotContain("IEvent", allQueues);
+            // Push via bus with IEvent as T
+            var order = new OrderCreatedEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
+            var headers = new List<KeyValuePair<string, string>> { new("X-Test", "value") };
 
-        client.Disconnect();
-        concreteConsumer.Disconnect();
+            await bus.Push<IEvent>(order, true, headers);
+
+            await Task.Delay(1000);
+
+            // Message goes to concrete "OrderCreatedEvent" queue, not "IEvent"
+            Assert.NotEmpty(concreteMessages);
+
+            // No "IEvent" queue should have been created
+            var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
+            Assert.DoesNotContain("IEvent", allQueues);
+
+            client.Disconnect();
+            concreteConsumer.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -374,48 +402,55 @@ public class InterfaceTypeResolutionTest
             o.Acknowledge = QueueAckDecision.None;
             o.AutoQueueCreation = true;
         });
-
-        var producer = new HorseClient();
-        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        Assert.True(producer.IsConnected);
-
-        // Subscribe to concrete type queue
-        var concreteConsumer = new HorseClient();
-        await concreteConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await concreteConsumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
-
-        List<HorseMessage> concreteMessages = new();
-        concreteConsumer.MessageReceived += (_, m) =>
+        try
         {
-            lock (concreteMessages) concreteMessages.Add(m);
-        };
 
-        await Task.Delay(300);
+            var producer = new HorseClient();
+            await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            Assert.True(producer.IsConnected);
 
-        // PushBulk with interface type parameter — NO explicit queue name
-        // Runtime type of items[0] is OrderCreatedEvent, so queue name should resolve to "OrderCreatedEvent"
-        var items = new List<IEvent>
+            // Subscribe to concrete type queue
+            var concreteConsumer = new HorseClient();
+            await concreteConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await concreteConsumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
+
+            List<HorseMessage> concreteMessages = new();
+            concreteConsumer.MessageReceived += (_, m) =>
+            {
+                lock (concreteMessages) concreteMessages.Add(m);
+            };
+
+            await Task.Delay(300);
+
+            // PushBulk with interface type parameter — NO explicit queue name
+            // Runtime type of items[0] is OrderCreatedEvent, so queue name should resolve to "OrderCreatedEvent"
+            var items = new List<IEvent>
+                    {
+                        new OrderCreatedEvent { EventId = "evt-1", OrderNumber = "ORD-1" },
+                        new OrderCreatedEvent { EventId = "evt-2", OrderNumber = "ORD-2" },
+                        new OrderCreatedEvent { EventId = "evt-3", OrderNumber = "ORD-3" }
+                    };
+
+            producer.Queue.PushBulk(items, null);
+
+            for (int i = 0; i < 50 && concreteMessages.Count < 3; i++)
+                await Task.Delay(100);
+
+            // All messages should go to concrete "OrderCreatedEvent" queue
+            Assert.Equal(3, concreteMessages.Count);
+
+            // No "IEvent" queue should have been created by PushBulk
+            var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
+            Assert.Contains("OrderCreatedEvent", allQueues);
+            Assert.DoesNotContain("IEvent", allQueues);
+
+            producer.Disconnect();
+            concreteConsumer.Disconnect();
+        }
+        finally
         {
-            new OrderCreatedEvent { EventId = "evt-1", OrderNumber = "ORD-1" },
-            new OrderCreatedEvent { EventId = "evt-2", OrderNumber = "ORD-2" },
-            new OrderCreatedEvent { EventId = "evt-3", OrderNumber = "ORD-3" }
-        };
-
-        producer.Queue.PushBulk(items, null);
-
-        for (int i = 0; i < 50 && concreteMessages.Count < 3; i++)
-            await Task.Delay(100);
-
-        // All messages should go to concrete "OrderCreatedEvent" queue
-        Assert.Equal(3, concreteMessages.Count);
-
-        // No "IEvent" queue should have been created by PushBulk
-        var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
-        Assert.Contains("OrderCreatedEvent", allQueues);
-        Assert.DoesNotContain("IEvent", allQueues);
-
-        producer.Disconnect();
-        concreteConsumer.Disconnect();
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -432,55 +467,62 @@ public class InterfaceTypeResolutionTest
             o.Acknowledge = QueueAckDecision.None;
             o.AutoQueueCreation = true;
         });
-
-        var producer = new HorseClient();
-        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        Assert.True(producer.IsConnected);
-
-        // Subscribe to the QueueName attribute value
-        var orderConsumer = new HorseClient();
-        await orderConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await orderConsumer.Queue.Subscribe("OrderQueue", true, CancellationToken.None);
-
-        List<HorseMessage> orderMessages = new();
-        orderConsumer.MessageReceived += (_, m) =>
+        try
         {
-            lock (orderMessages) orderMessages.Add(m);
-        };
 
-        var paymentConsumer = new HorseClient();
-        await paymentConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await paymentConsumer.Queue.Subscribe("PaymentQueue", true, CancellationToken.None);
+            var producer = new HorseClient();
+            await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            Assert.True(producer.IsConnected);
 
-        List<HorseMessage> paymentMessages = new();
-        paymentConsumer.MessageReceived += (_, m) =>
+            // Subscribe to the QueueName attribute value
+            var orderConsumer = new HorseClient();
+            await orderConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await orderConsumer.Queue.Subscribe("OrderQueue", true, CancellationToken.None);
+
+            List<HorseMessage> orderMessages = new();
+            orderConsumer.MessageReceived += (_, m) =>
+            {
+                lock (orderMessages) orderMessages.Add(m);
+            };
+
+            var paymentConsumer = new HorseClient();
+            await paymentConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await paymentConsumer.Queue.Subscribe("PaymentQueue", true, CancellationToken.None);
+
+            List<HorseMessage> paymentMessages = new();
+            paymentConsumer.MessageReceived += (_, m) =>
+            {
+                lock (paymentMessages) paymentMessages.Add(m);
+            };
+
+            await Task.Delay(300);
+
+            // Push as IEvent — runtime type has [QueueName] attribute
+            IEvent order = new OrderCreatedWithQueueNameEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
+            IEvent payment = new PaymentCompletedWithQueueNameEvent { EventId = "evt-2", Amount = 99.99m };
+
+            await producer.Queue.Push<IEvent>(order, true, CancellationToken.None);
+            await producer.Queue.Push<IEvent>(payment, true, CancellationToken.None);
+
+            await Task.Delay(1000);
+
+            // Messages must go to [QueueName] values, NOT "IEvent"
+            Assert.Single(orderMessages);
+            Assert.Single(paymentMessages);
+
+            var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
+            Assert.Contains("OrderQueue", allQueues);
+            Assert.Contains("PaymentQueue", allQueues);
+            Assert.DoesNotContain("IEvent", allQueues);
+
+            producer.Disconnect();
+            orderConsumer.Disconnect();
+            paymentConsumer.Disconnect();
+        }
+        finally
         {
-            lock (paymentMessages) paymentMessages.Add(m);
-        };
-
-        await Task.Delay(300);
-
-        // Push as IEvent — runtime type has [QueueName] attribute
-        IEvent order = new OrderCreatedWithQueueNameEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
-        IEvent payment = new PaymentCompletedWithQueueNameEvent { EventId = "evt-2", Amount = 99.99m };
-
-        await producer.Queue.Push<IEvent>(order, true, CancellationToken.None);
-        await producer.Queue.Push<IEvent>(payment, true, CancellationToken.None);
-
-        await Task.Delay(1000);
-
-        // Messages must go to [QueueName] values, NOT "IEvent"
-        Assert.Single(orderMessages);
-        Assert.Single(paymentMessages);
-
-        var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
-        Assert.Contains("OrderQueue", allQueues);
-        Assert.Contains("PaymentQueue", allQueues);
-        Assert.DoesNotContain("IEvent", allQueues);
-
-        producer.Disconnect();
-        orderConsumer.Disconnect();
-        paymentConsumer.Disconnect();
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -496,43 +538,50 @@ public class InterfaceTypeResolutionTest
             o.Acknowledge = QueueAckDecision.None;
             o.AutoQueueCreation = true;
         });
-
-        var producer = new HorseClient();
-        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        Assert.True(producer.IsConnected);
-
-        var concreteConsumer = new HorseClient();
-        await concreteConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await concreteConsumer.Queue.Subscribe("OrderQueue", true, CancellationToken.None);
-
-        List<HorseMessage> concreteMessages = new();
-        concreteConsumer.MessageReceived += (_, m) =>
+        try
         {
-            lock (concreteMessages) concreteMessages.Add(m);
-        };
 
-        await Task.Delay(300);
+            var producer = new HorseClient();
+            await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            Assert.True(producer.IsConnected);
 
-        var items = new List<IEvent>
+            var concreteConsumer = new HorseClient();
+            await concreteConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await concreteConsumer.Queue.Subscribe("OrderQueue", true, CancellationToken.None);
+
+            List<HorseMessage> concreteMessages = new();
+            concreteConsumer.MessageReceived += (_, m) =>
+            {
+                lock (concreteMessages) concreteMessages.Add(m);
+            };
+
+            await Task.Delay(300);
+
+            var items = new List<IEvent>
+                    {
+                        new OrderCreatedWithQueueNameEvent { EventId = "evt-1", OrderNumber = "ORD-1" },
+                        new OrderCreatedWithQueueNameEvent { EventId = "evt-2", OrderNumber = "ORD-2" },
+                        new OrderCreatedWithQueueNameEvent { EventId = "evt-3", OrderNumber = "ORD-3" }
+                    };
+
+            producer.Queue.PushBulk(items, null);
+
+            for (int i = 0; i < 50 && concreteMessages.Count < 3; i++)
+                await Task.Delay(100);
+
+            Assert.Equal(3, concreteMessages.Count);
+
+            var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
+            Assert.Contains("OrderQueue", allQueues);
+            Assert.DoesNotContain("IEvent", allQueues);
+
+            producer.Disconnect();
+            concreteConsumer.Disconnect();
+        }
+        finally
         {
-            new OrderCreatedWithQueueNameEvent { EventId = "evt-1", OrderNumber = "ORD-1" },
-            new OrderCreatedWithQueueNameEvent { EventId = "evt-2", OrderNumber = "ORD-2" },
-            new OrderCreatedWithQueueNameEvent { EventId = "evt-3", OrderNumber = "ORD-3" }
-        };
-
-        producer.Queue.PushBulk(items, null);
-
-        for (int i = 0; i < 50 && concreteMessages.Count < 3; i++)
-            await Task.Delay(100);
-
-        Assert.Equal(3, concreteMessages.Count);
-
-        var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
-        Assert.Contains("OrderQueue", allQueues);
-        Assert.DoesNotContain("IEvent", allQueues);
-
-        producer.Disconnect();
-        concreteConsumer.Disconnect();
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -548,40 +597,47 @@ public class InterfaceTypeResolutionTest
             o.Acknowledge = QueueAckDecision.None;
             o.AutoQueueCreation = true;
         });
-
-        var client = new HorseClient();
-        await client.ConnectAsync($"horse://localhost:{ctx.Port}");
-        Assert.True(client.IsConnected);
-
-        IHorseQueueBus bus = new HorseQueueBus(client);
-
-        var concreteConsumer = new HorseClient();
-        await concreteConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await concreteConsumer.Queue.Subscribe("OrderQueue", true, CancellationToken.None);
-
-        List<HorseMessage> concreteMessages = new();
-        concreteConsumer.MessageReceived += (_, m) =>
+        try
         {
-            lock (concreteMessages) concreteMessages.Add(m);
-        };
 
-        await Task.Delay(300);
+            var client = new HorseClient();
+            await client.ConnectAsync($"horse://localhost:{ctx.Port}");
+            Assert.True(client.IsConnected);
 
-        IEvent order = new OrderCreatedWithQueueNameEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
-        var headers = new List<KeyValuePair<string, string>> { new("X-Test", "value") };
+            IHorseQueueBus bus = new HorseQueueBus(client);
 
-        await bus.Push<IEvent>(order, true, headers);
+            var concreteConsumer = new HorseClient();
+            await concreteConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await concreteConsumer.Queue.Subscribe("OrderQueue", true, CancellationToken.None);
 
-        await Task.Delay(1000);
+            List<HorseMessage> concreteMessages = new();
+            concreteConsumer.MessageReceived += (_, m) =>
+            {
+                lock (concreteMessages) concreteMessages.Add(m);
+            };
 
-        Assert.Single(concreteMessages);
+            await Task.Delay(300);
 
-        var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
-        Assert.Contains("OrderQueue", allQueues);
-        Assert.DoesNotContain("IEvent", allQueues);
+            IEvent order = new OrderCreatedWithQueueNameEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
+            var headers = new List<KeyValuePair<string, string>> { new("X-Test", "value") };
 
-        client.Disconnect();
-        concreteConsumer.Disconnect();
+            await bus.Push<IEvent>(order, true, headers);
+
+            await Task.Delay(1000);
+
+            Assert.Single(concreteMessages);
+
+            var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
+            Assert.Contains("OrderQueue", allQueues);
+            Assert.DoesNotContain("IEvent", allQueues);
+
+            client.Disconnect();
+            concreteConsumer.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     #region Generic Publisher Wrapper Tests
@@ -635,35 +691,42 @@ public class InterfaceTypeResolutionTest
             o.Acknowledge = QueueAckDecision.None;
             o.AutoQueueCreation = true;
         });
+        try
+        {
 
-        var client = new HorseClient();
-        await client.ConnectAsync($"horse://localhost:{ctx.Port}");
-        Assert.True(client.IsConnected);
+            var client = new HorseClient();
+            await client.ConnectAsync($"horse://localhost:{ctx.Port}");
+            Assert.True(client.IsConnected);
 
-        var consumer = new HorseClient();
-        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
+            var consumer = new HorseClient();
+            await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await consumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
 
-        List<HorseMessage> received = new();
-        consumer.MessageReceived += (_, m) => { lock (received) received.Add(m); };
+            List<HorseMessage> received = new();
+            consumer.MessageReceived += (_, m) => { lock (received) received.Add(m); };
 
-        await Task.Delay(300);
+            await Task.Delay(300);
 
-        var publisher = new TestPublisher(client.Queue);
+            var publisher = new TestPublisher(client.Queue);
 
-        // TEvent is inferred as OrderCreatedEvent at compile-time
-        await publisher.RaiseEvent(new OrderCreatedEvent { EventId = "e1", OrderNumber = "ORD-1" }, CancellationToken.None);
+            // TEvent is inferred as OrderCreatedEvent at compile-time
+            await publisher.RaiseEvent(new OrderCreatedEvent { EventId = "e1", OrderNumber = "ORD-1" }, CancellationToken.None);
 
-        await Task.Delay(1000);
+            await Task.Delay(1000);
 
-        Assert.Single(received);
+            Assert.Single(received);
 
-        var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
-        Assert.Contains("OrderCreatedEvent", allQueues);
-        Assert.DoesNotContain("IEvent", allQueues);
+            var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
+            Assert.Contains("OrderCreatedEvent", allQueues);
+            Assert.DoesNotContain("IEvent", allQueues);
 
-        client.Disconnect();
-        consumer.Disconnect();
+            client.Disconnect();
+            consumer.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -680,49 +743,56 @@ public class InterfaceTypeResolutionTest
             o.Acknowledge = QueueAckDecision.None;
             o.AutoQueueCreation = true;
         });
+        try
+        {
 
-        var client = new HorseClient();
-        await client.ConnectAsync($"horse://localhost:{ctx.Port}");
-        Assert.True(client.IsConnected);
+            var client = new HorseClient();
+            await client.ConnectAsync($"horse://localhost:{ctx.Port}");
+            Assert.True(client.IsConnected);
 
-        var orderConsumer = new HorseClient();
-        await orderConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await orderConsumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
+            var orderConsumer = new HorseClient();
+            await orderConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await orderConsumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
 
-        List<HorseMessage> orderMsgs = new();
-        orderConsumer.MessageReceived += (_, m) => { lock (orderMsgs) orderMsgs.Add(m); };
+            List<HorseMessage> orderMsgs = new();
+            orderConsumer.MessageReceived += (_, m) => { lock (orderMsgs) orderMsgs.Add(m); };
 
-        var paymentConsumer = new HorseClient();
-        await paymentConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await paymentConsumer.Queue.Subscribe("PaymentCompletedEvent", true, CancellationToken.None);
+            var paymentConsumer = new HorseClient();
+            await paymentConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await paymentConsumer.Queue.Subscribe("PaymentCompletedEvent", true, CancellationToken.None);
 
-        List<HorseMessage> paymentMsgs = new();
-        paymentConsumer.MessageReceived += (_, m) => { lock (paymentMsgs) paymentMsgs.Add(m); };
+            List<HorseMessage> paymentMsgs = new();
+            paymentConsumer.MessageReceived += (_, m) => { lock (paymentMsgs) paymentMsgs.Add(m); };
 
-        await Task.Delay(300);
+            await Task.Delay(300);
 
-        var publisher = new TestPublisher(client.Queue);
+            var publisher = new TestPublisher(client.Queue);
 
-        // Explicitly specifying IEvent as the type parameter — simulates real-world usage
-        IEvent order = new OrderCreatedEvent { EventId = "e1", OrderNumber = "ORD-1" };
-        IEvent payment = new PaymentCompletedEvent { EventId = "e2", Amount = 50.0m };
+            // Explicitly specifying IEvent as the type parameter — simulates real-world usage
+            IEvent order = new OrderCreatedEvent { EventId = "e1", OrderNumber = "ORD-1" };
+            IEvent payment = new PaymentCompletedEvent { EventId = "e2", Amount = 50.0m };
 
-        await publisher.RaiseEvent<IEvent>(order, CancellationToken.None);
-        await publisher.RaiseEvent<IEvent>(payment, CancellationToken.None);
+            await publisher.RaiseEvent<IEvent>(order, CancellationToken.None);
+            await publisher.RaiseEvent<IEvent>(payment, CancellationToken.None);
 
-        await Task.Delay(1000);
+            await Task.Delay(1000);
 
-        Assert.Single(orderMsgs);
-        Assert.Single(paymentMsgs);
+            Assert.Single(orderMsgs);
+            Assert.Single(paymentMsgs);
 
-        var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
-        Assert.Contains("OrderCreatedEvent", allQueues);
-        Assert.Contains("PaymentCompletedEvent", allQueues);
-        Assert.DoesNotContain("IEvent", allQueues);
+            var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
+            Assert.Contains("OrderCreatedEvent", allQueues);
+            Assert.Contains("PaymentCompletedEvent", allQueues);
+            Assert.DoesNotContain("IEvent", allQueues);
 
-        client.Disconnect();
-        orderConsumer.Disconnect();
-        paymentConsumer.Disconnect();
+            client.Disconnect();
+            orderConsumer.Disconnect();
+            paymentConsumer.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -739,50 +809,57 @@ public class InterfaceTypeResolutionTest
             o.Acknowledge = QueueAckDecision.None;
             o.AutoQueueCreation = true;
         });
+        try
+        {
 
-        var client = new HorseClient();
-        await client.ConnectAsync($"horse://localhost:{ctx.Port}");
-        Assert.True(client.IsConnected);
+            var client = new HorseClient();
+            await client.ConnectAsync($"horse://localhost:{ctx.Port}");
+            Assert.True(client.IsConnected);
 
-        var orderConsumer = new HorseClient();
-        await orderConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await orderConsumer.Queue.Subscribe("OrderQueue", true, CancellationToken.None);
+            var orderConsumer = new HorseClient();
+            await orderConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await orderConsumer.Queue.Subscribe("OrderQueue", true, CancellationToken.None);
 
-        List<HorseMessage> orderMsgs = new();
-        orderConsumer.MessageReceived += (_, m) => { lock (orderMsgs) orderMsgs.Add(m); };
+            List<HorseMessage> orderMsgs = new();
+            orderConsumer.MessageReceived += (_, m) => { lock (orderMsgs) orderMsgs.Add(m); };
 
-        var paymentConsumer = new HorseClient();
-        await paymentConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await paymentConsumer.Queue.Subscribe("PaymentQueue", true, CancellationToken.None);
+            var paymentConsumer = new HorseClient();
+            await paymentConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await paymentConsumer.Queue.Subscribe("PaymentQueue", true, CancellationToken.None);
 
-        List<HorseMessage> paymentMsgs = new();
-        paymentConsumer.MessageReceived += (_, m) => { lock (paymentMsgs) paymentMsgs.Add(m); };
+            List<HorseMessage> paymentMsgs = new();
+            paymentConsumer.MessageReceived += (_, m) => { lock (paymentMsgs) paymentMsgs.Add(m); };
 
-        await Task.Delay(300);
+            await Task.Delay(300);
 
-        var publisher = new TestPublisher(client.Queue);
+            var publisher = new TestPublisher(client.Queue);
 
-        IEvent order = new OrderCreatedWithQueueNameEvent { EventId = "e1", OrderNumber = "ORD-1" };
-        IEvent payment = new PaymentCompletedWithQueueNameEvent { EventId = "e2", Amount = 75.0m };
+            IEvent order = new OrderCreatedWithQueueNameEvent { EventId = "e1", OrderNumber = "ORD-1" };
+            IEvent payment = new PaymentCompletedWithQueueNameEvent { EventId = "e2", Amount = 75.0m };
 
-        await publisher.RaiseEvent<IEvent>(order, CancellationToken.None);
-        await publisher.RaiseEvent<IEvent>(payment, CancellationToken.None);
+            await publisher.RaiseEvent<IEvent>(order, CancellationToken.None);
+            await publisher.RaiseEvent<IEvent>(payment, CancellationToken.None);
 
-        await Task.Delay(1000);
+            await Task.Delay(1000);
 
-        Assert.Single(orderMsgs);
-        Assert.Single(paymentMsgs);
+            Assert.Single(orderMsgs);
+            Assert.Single(paymentMsgs);
 
-        var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
-        Assert.Contains("OrderQueue", allQueues);
-        Assert.Contains("PaymentQueue", allQueues);
-        Assert.DoesNotContain("IEvent", allQueues);
-        Assert.DoesNotContain("OrderCreatedWithQueueNameEvent", allQueues);
-        Assert.DoesNotContain("PaymentCompletedWithQueueNameEvent", allQueues);
+            var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
+            Assert.Contains("OrderQueue", allQueues);
+            Assert.Contains("PaymentQueue", allQueues);
+            Assert.DoesNotContain("IEvent", allQueues);
+            Assert.DoesNotContain("OrderCreatedWithQueueNameEvent", allQueues);
+            Assert.DoesNotContain("PaymentCompletedWithQueueNameEvent", allQueues);
 
-        client.Disconnect();
-        orderConsumer.Disconnect();
-        paymentConsumer.Disconnect();
+            client.Disconnect();
+            orderConsumer.Disconnect();
+            paymentConsumer.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -798,36 +875,43 @@ public class InterfaceTypeResolutionTest
             o.Acknowledge = QueueAckDecision.None;
             o.AutoQueueCreation = true;
         });
+        try
+        {
 
-        var client = new HorseClient();
-        await client.ConnectAsync($"horse://localhost:{ctx.Port}");
-        Assert.True(client.IsConnected);
+            var client = new HorseClient();
+            await client.ConnectAsync($"horse://localhost:{ctx.Port}");
+            Assert.True(client.IsConnected);
 
-        IHorseQueueBus bus = new HorseQueueBus(client);
-        var busPublisher = new TestBusPublisher(bus);
+            IHorseQueueBus bus = new HorseQueueBus(client);
+            var busPublisher = new TestBusPublisher(bus);
 
-        var consumer = new HorseClient();
-        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("OrderQueue", true, CancellationToken.None);
+            var consumer = new HorseClient();
+            await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await consumer.Queue.Subscribe("OrderQueue", true, CancellationToken.None);
 
-        List<HorseMessage> received = new();
-        consumer.MessageReceived += (_, m) => { lock (received) received.Add(m); };
+            List<HorseMessage> received = new();
+            consumer.MessageReceived += (_, m) => { lock (received) received.Add(m); };
 
-        await Task.Delay(300);
+            await Task.Delay(300);
 
-        IEvent order = new OrderCreatedWithQueueNameEvent { EventId = "e1", OrderNumber = "ORD-1" };
-        await busPublisher.RaiseEvent<IEvent>(order, CancellationToken.None);
+            IEvent order = new OrderCreatedWithQueueNameEvent { EventId = "e1", OrderNumber = "ORD-1" };
+            await busPublisher.RaiseEvent<IEvent>(order, CancellationToken.None);
 
-        await Task.Delay(1000);
+            await Task.Delay(1000);
 
-        Assert.Single(received);
+            Assert.Single(received);
 
-        var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
-        Assert.Contains("OrderQueue", allQueues);
-        Assert.DoesNotContain("IEvent", allQueues);
+            var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
+            Assert.Contains("OrderQueue", allQueues);
+            Assert.DoesNotContain("IEvent", allQueues);
 
-        client.Disconnect();
-        consumer.Disconnect();
+            client.Disconnect();
+            consumer.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     #endregion
@@ -848,35 +932,42 @@ public class InterfaceTypeResolutionTest
             o.Acknowledge = QueueAckDecision.None;
             o.AutoQueueCreation = true;
         });
+        try
+        {
 
-        var producer = new HorseClient();
-        producer.MessageSerializer = new NaiveCustomSerializer();
-        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        Assert.True(producer.IsConnected);
+            var producer = new HorseClient();
+            producer.MessageSerializer = new NaiveCustomSerializer();
+            await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            Assert.True(producer.IsConnected);
 
-        var consumer = new HorseClient();
-        consumer.MessageSerializer = new NaiveCustomSerializer();
-        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
+            var consumer = new HorseClient();
+            consumer.MessageSerializer = new NaiveCustomSerializer();
+            await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await consumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
 
-        List<HorseMessage> received = new();
-        consumer.MessageReceived += (_, m) => { lock (received) received.Add(m); };
+            List<HorseMessage> received = new();
+            consumer.MessageReceived += (_, m) => { lock (received) received.Add(m); };
 
-        await Task.Delay(300);
+            await Task.Delay(300);
 
-        IEvent order = new OrderCreatedEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
-        await producer.Queue.Push<IEvent>(order, true, CancellationToken.None);
+            IEvent order = new OrderCreatedEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
+            await producer.Queue.Push<IEvent>(order, true, CancellationToken.None);
 
-        await Task.Delay(1000);
+            await Task.Delay(1000);
 
-        Assert.Single(received);
+            Assert.Single(received);
 
-        var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
-        Assert.Contains("OrderCreatedEvent", allQueues);
-        Assert.DoesNotContain("IEvent", allQueues);
+            var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
+            Assert.Contains("OrderCreatedEvent", allQueues);
+            Assert.DoesNotContain("IEvent", allQueues);
 
-        producer.Disconnect();
-        consumer.Disconnect();
+            producer.Disconnect();
+            consumer.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -892,36 +983,43 @@ public class InterfaceTypeResolutionTest
             o.Acknowledge = QueueAckDecision.None;
             o.AutoQueueCreation = true;
         });
+        try
+        {
 
-        var producer = new HorseClient();
-        producer.MessageSerializer = new NaiveCustomSerializer();
-        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        Assert.True(producer.IsConnected);
+            var producer = new HorseClient();
+            producer.MessageSerializer = new NaiveCustomSerializer();
+            await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            Assert.True(producer.IsConnected);
 
-        var consumer = new HorseClient();
-        consumer.MessageSerializer = new NaiveCustomSerializer();
-        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("OrderQueue", true, CancellationToken.None);
+            var consumer = new HorseClient();
+            consumer.MessageSerializer = new NaiveCustomSerializer();
+            await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await consumer.Queue.Subscribe("OrderQueue", true, CancellationToken.None);
 
-        List<HorseMessage> received = new();
-        consumer.MessageReceived += (_, m) => { lock (received) received.Add(m); };
+            List<HorseMessage> received = new();
+            consumer.MessageReceived += (_, m) => { lock (received) received.Add(m); };
 
-        await Task.Delay(300);
+            await Task.Delay(300);
 
-        IEvent order = new OrderCreatedWithQueueNameEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
-        await producer.Queue.Push<IEvent>(order, true, CancellationToken.None);
+            IEvent order = new OrderCreatedWithQueueNameEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
+            await producer.Queue.Push<IEvent>(order, true, CancellationToken.None);
 
-        await Task.Delay(1000);
+            await Task.Delay(1000);
 
-        Assert.Single(received);
+            Assert.Single(received);
 
-        var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
-        Assert.Contains("OrderQueue", allQueues);
-        Assert.DoesNotContain("IEvent", allQueues);
-        Assert.DoesNotContain("OrderCreatedWithQueueNameEvent", allQueues);
+            var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
+            Assert.Contains("OrderQueue", allQueues);
+            Assert.DoesNotContain("IEvent", allQueues);
+            Assert.DoesNotContain("OrderCreatedWithQueueNameEvent", allQueues);
 
-        producer.Disconnect();
-        consumer.Disconnect();
+            producer.Disconnect();
+            consumer.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -938,49 +1036,56 @@ public class InterfaceTypeResolutionTest
             o.Acknowledge = QueueAckDecision.None;
             o.AutoQueueCreation = true;
         });
+        try
+        {
 
-        var producer = new HorseClient();
-        producer.MessageSerializer = new TypeDiscriminatorSerializer();
-        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        Assert.True(producer.IsConnected);
+            var producer = new HorseClient();
+            producer.MessageSerializer = new TypeDiscriminatorSerializer();
+            await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            Assert.True(producer.IsConnected);
 
-        var orderConsumer = new HorseClient();
-        orderConsumer.MessageSerializer = new TypeDiscriminatorSerializer();
-        await orderConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await orderConsumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
+            var orderConsumer = new HorseClient();
+            orderConsumer.MessageSerializer = new TypeDiscriminatorSerializer();
+            await orderConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await orderConsumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
 
-        var paymentConsumer = new HorseClient();
-        paymentConsumer.MessageSerializer = new TypeDiscriminatorSerializer();
-        await paymentConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await paymentConsumer.Queue.Subscribe("PaymentCompletedEvent", true, CancellationToken.None);
+            var paymentConsumer = new HorseClient();
+            paymentConsumer.MessageSerializer = new TypeDiscriminatorSerializer();
+            await paymentConsumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await paymentConsumer.Queue.Subscribe("PaymentCompletedEvent", true, CancellationToken.None);
 
-        List<HorseMessage> orderMsgs = new();
-        orderConsumer.MessageReceived += (_, m) => { lock (orderMsgs) orderMsgs.Add(m); };
+            List<HorseMessage> orderMsgs = new();
+            orderConsumer.MessageReceived += (_, m) => { lock (orderMsgs) orderMsgs.Add(m); };
 
-        List<HorseMessage> paymentMsgs = new();
-        paymentConsumer.MessageReceived += (_, m) => { lock (paymentMsgs) paymentMsgs.Add(m); };
+            List<HorseMessage> paymentMsgs = new();
+            paymentConsumer.MessageReceived += (_, m) => { lock (paymentMsgs) paymentMsgs.Add(m); };
 
-        await Task.Delay(300);
+            await Task.Delay(300);
 
-        IEvent order = new OrderCreatedEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
-        IEvent payment = new PaymentCompletedEvent { EventId = "evt-2", Amount = 49.99m };
+            IEvent order = new OrderCreatedEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
+            IEvent payment = new PaymentCompletedEvent { EventId = "evt-2", Amount = 49.99m };
 
-        await producer.Queue.Push<IEvent>(order, true, CancellationToken.None);
-        await producer.Queue.Push<IEvent>(payment, true, CancellationToken.None);
+            await producer.Queue.Push<IEvent>(order, true, CancellationToken.None);
+            await producer.Queue.Push<IEvent>(payment, true, CancellationToken.None);
 
-        await Task.Delay(1000);
+            await Task.Delay(1000);
 
-        Assert.Single(orderMsgs);
-        Assert.Single(paymentMsgs);
+            Assert.Single(orderMsgs);
+            Assert.Single(paymentMsgs);
 
-        var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
-        Assert.Contains("OrderCreatedEvent", allQueues);
-        Assert.Contains("PaymentCompletedEvent", allQueues);
-        Assert.DoesNotContain("IEvent", allQueues);
+            var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
+            Assert.Contains("OrderCreatedEvent", allQueues);
+            Assert.Contains("PaymentCompletedEvent", allQueues);
+            Assert.DoesNotContain("IEvent", allQueues);
 
-        producer.Disconnect();
-        orderConsumer.Disconnect();
-        paymentConsumer.Disconnect();
+            producer.Disconnect();
+            orderConsumer.Disconnect();
+            paymentConsumer.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -996,37 +1101,44 @@ public class InterfaceTypeResolutionTest
             o.Acknowledge = QueueAckDecision.None;
             o.AutoQueueCreation = true;
         });
+        try
+        {
 
-        var client = new HorseClient();
-        client.MessageSerializer = new NaiveCustomSerializer();
-        await client.ConnectAsync($"horse://localhost:{ctx.Port}");
-        Assert.True(client.IsConnected);
+            var client = new HorseClient();
+            client.MessageSerializer = new NaiveCustomSerializer();
+            await client.ConnectAsync($"horse://localhost:{ctx.Port}");
+            Assert.True(client.IsConnected);
 
-        var consumer = new HorseClient();
-        consumer.MessageSerializer = new NaiveCustomSerializer();
-        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("OrderQueue", true, CancellationToken.None);
+            var consumer = new HorseClient();
+            consumer.MessageSerializer = new NaiveCustomSerializer();
+            await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await consumer.Queue.Subscribe("OrderQueue", true, CancellationToken.None);
 
-        List<HorseMessage> received = new();
-        consumer.MessageReceived += (_, m) => { lock (received) received.Add(m); };
+            List<HorseMessage> received = new();
+            consumer.MessageReceived += (_, m) => { lock (received) received.Add(m); };
 
-        await Task.Delay(300);
+            await Task.Delay(300);
 
-        var publisher = new TestPublisher(client.Queue);
+            var publisher = new TestPublisher(client.Queue);
 
-        IEvent order = new OrderCreatedWithQueueNameEvent { EventId = "e1", OrderNumber = "ORD-1" };
-        await publisher.RaiseEvent<IEvent>(order, CancellationToken.None);
+            IEvent order = new OrderCreatedWithQueueNameEvent { EventId = "e1", OrderNumber = "ORD-1" };
+            await publisher.RaiseEvent<IEvent>(order, CancellationToken.None);
 
-        await Task.Delay(1000);
+            await Task.Delay(1000);
 
-        Assert.Single(received);
+            Assert.Single(received);
 
-        var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
-        Assert.Contains("OrderQueue", allQueues);
-        Assert.DoesNotContain("IEvent", allQueues);
+            var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
+            Assert.Contains("OrderQueue", allQueues);
+            Assert.DoesNotContain("IEvent", allQueues);
 
-        client.Disconnect();
-        consumer.Disconnect();
+            client.Disconnect();
+            consumer.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -1042,37 +1154,44 @@ public class InterfaceTypeResolutionTest
             o.Acknowledge = QueueAckDecision.None;
             o.AutoQueueCreation = true;
         });
+        try
+        {
 
-        var client = new HorseClient();
-        client.MessageSerializer = new NaiveCustomSerializer();
-        await client.ConnectAsync($"horse://localhost:{ctx.Port}");
-        Assert.True(client.IsConnected);
+            var client = new HorseClient();
+            client.MessageSerializer = new NaiveCustomSerializer();
+            await client.ConnectAsync($"horse://localhost:{ctx.Port}");
+            Assert.True(client.IsConnected);
 
-        IHorseQueueBus bus = new HorseQueueBus(client);
+            IHorseQueueBus bus = new HorseQueueBus(client);
 
-        var consumer = new HorseClient();
-        consumer.MessageSerializer = new NaiveCustomSerializer();
-        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
+            var consumer = new HorseClient();
+            consumer.MessageSerializer = new NaiveCustomSerializer();
+            await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await consumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
 
-        List<HorseMessage> received = new();
-        consumer.MessageReceived += (_, m) => { lock (received) received.Add(m); };
+            List<HorseMessage> received = new();
+            consumer.MessageReceived += (_, m) => { lock (received) received.Add(m); };
 
-        await Task.Delay(300);
+            await Task.Delay(300);
 
-        IEvent order = new OrderCreatedEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
-        await bus.Push<IEvent>(order, true, CancellationToken.None);
+            IEvent order = new OrderCreatedEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
+            await bus.Push<IEvent>(order, true, CancellationToken.None);
 
-        await Task.Delay(1000);
+            await Task.Delay(1000);
 
-        Assert.Single(received);
+            Assert.Single(received);
 
-        var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
-        Assert.Contains("OrderCreatedEvent", allQueues);
-        Assert.DoesNotContain("IEvent", allQueues);
+            var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
+            Assert.Contains("OrderCreatedEvent", allQueues);
+            Assert.DoesNotContain("IEvent", allQueues);
 
-        client.Disconnect();
-        consumer.Disconnect();
+            client.Disconnect();
+            consumer.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -1088,41 +1207,48 @@ public class InterfaceTypeResolutionTest
             o.Acknowledge = QueueAckDecision.None;
             o.AutoQueueCreation = true;
         });
-
-        var producer = new HorseClient();
-        producer.MessageSerializer = new NaiveCustomSerializer();
-        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        Assert.True(producer.IsConnected);
-
-        var consumer = new HorseClient();
-        consumer.MessageSerializer = new NaiveCustomSerializer();
-        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
-
-        List<HorseMessage> received = new();
-        consumer.MessageReceived += (_, m) => { lock (received) received.Add(m); };
-
-        await Task.Delay(300);
-
-        var items = new List<IEvent>
+        try
         {
-            new OrderCreatedEvent { EventId = "evt-1", OrderNumber = "ORD-1" },
-            new OrderCreatedEvent { EventId = "evt-2", OrderNumber = "ORD-2" }
-        };
 
-        producer.Queue.PushBulk(items, null);
+            var producer = new HorseClient();
+            producer.MessageSerializer = new NaiveCustomSerializer();
+            await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            Assert.True(producer.IsConnected);
 
-        for (int i = 0; i < 50 && received.Count < 2; i++)
-            await Task.Delay(100);
+            var consumer = new HorseClient();
+            consumer.MessageSerializer = new NaiveCustomSerializer();
+            await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await consumer.Queue.Subscribe("OrderCreatedEvent", true, CancellationToken.None);
 
-        Assert.Equal(2, received.Count);
+            List<HorseMessage> received = new();
+            consumer.MessageReceived += (_, m) => { lock (received) received.Add(m); };
 
-        var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
-        Assert.Contains("OrderCreatedEvent", allQueues);
-        Assert.DoesNotContain("IEvent", allQueues);
+            await Task.Delay(300);
 
-        producer.Disconnect();
-        consumer.Disconnect();
+            var items = new List<IEvent>
+                    {
+                        new OrderCreatedEvent { EventId = "evt-1", OrderNumber = "ORD-1" },
+                        new OrderCreatedEvent { EventId = "evt-2", OrderNumber = "ORD-2" }
+                    };
+
+            producer.Queue.PushBulk(items, null);
+
+            for (int i = 0; i < 50 && received.Count < 2; i++)
+                await Task.Delay(100);
+
+            Assert.Equal(2, received.Count);
+
+            var allQueues = ctx.Rider.Queue.Queues.Select(q => q.Name).ToList();
+            Assert.Contains("OrderCreatedEvent", allQueues);
+            Assert.DoesNotContain("IEvent", allQueues);
+
+            producer.Disconnect();
+            consumer.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     #endregion

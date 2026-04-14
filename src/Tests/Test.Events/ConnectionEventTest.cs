@@ -1,4 +1,3 @@
-using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Events;
@@ -13,50 +12,45 @@ public class ConnectionEventTest
     [Fact]
     public async Task ClientConnect()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(300, 300);
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            HorseClient client = new HorseClient();
 
-        HorseClient client = new HorseClient();
+            EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
+            registrar.RegisterHandler<ClientConnectHandler>();
 
-        EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
-        registrar.RegisterHandler<ClientConnectHandler>();
+            await client.ConnectAsync($"horse://localhost:{port}");
 
-        await client.ConnectAsync($"horse://localhost:{port}");
+            HorseClient client2 = new HorseClient();
+            await client2.ConnectAsync($"horse://localhost:{port}");
 
-        HorseClient client2 = new HorseClient();
-        await client2.ConnectAsync($"horse://localhost:{port}");
-            
-        await Task.Delay(250);
-        Assert.Equal(1, ClientConnectHandler.Count);
-        server.Stop();
+            await Task.Delay(250);
+            Assert.Equal(1, ClientConnectHandler.Count);
+        });
     }
-        
-        
+
     [Fact]
     public async Task ClientDisconnect()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(300, 300);
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            HorseClient client = new HorseClient();
 
-        HorseClient client = new HorseClient();
+            EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
+            registrar.RegisterHandler<ClientDisconnectHandler>();
 
-        EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
-        registrar.RegisterHandler<ClientDisconnectHandler>();
+            await client.ConnectAsync($"horse://localhost:{port}");
 
-        await client.ConnectAsync($"horse://localhost:{port}");
+            HorseClient client2 = new HorseClient();
+            await client2.ConnectAsync($"horse://localhost:{port}");
 
-        HorseClient client2 = new HorseClient();
-        await client2.ConnectAsync($"horse://localhost:{port}");
-            
-        await Task.Delay(250);
-        Assert.Equal(0, ClientDisconnectHandler.Count);
+            await Task.Delay(250);
+            Assert.Equal(0, ClientDisconnectHandler.Count);
 
-        client2.Disconnect();
-            
-        await Task.Delay(250);
-        Assert.Equal(1, ClientDisconnectHandler.Count);
-        server.Stop();
+            client2.Disconnect();
+
+            await Task.Delay(250);
+            Assert.Equal(1, ClientDisconnectHandler.Count);
+        });
     }
 }

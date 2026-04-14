@@ -22,29 +22,36 @@ public class MessageLimitTest
             o.CommitWhen = CommitWhen.AfterReceived;
             o.Acknowledge = QueueAckDecision.None;
         });
-
-        await ctx.Rider.Queue.Create("ml-reject", o =>
+        try
         {
-            o.Type = QueueType.Push;
-            o.MessageLimit = 3;
-            o.LimitExceededStrategy = MessageLimitExceededStrategy.RejectNewMessage;
-        });
 
-        HorseClient producer = new HorseClient();
-        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await ctx.Rider.Queue.Create("ml-reject", o =>
+            {
+                o.Type = QueueType.Push;
+                o.MessageLimit = 3;
+                o.LimitExceededStrategy = MessageLimitExceededStrategy.RejectNewMessage;
+            });
 
-        // Push 3 messages (within limit)
-        for (int i = 0; i < 3; i++)
-        {
-            HorseResult r = await producer.Queue.Push("ml-reject", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), true, CancellationToken.None);
-            Assert.Equal(HorseResultCode.Ok, r.Code);
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+
+            // Push 3 messages (within limit)
+            for (int i = 0; i < 3; i++)
+            {
+                HorseResult r = await producer.Queue.Push("ml-reject", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), true, CancellationToken.None);
+                Assert.Equal(HorseResultCode.Ok, r.Code);
+            }
+
+            // 4th message exceeds limit → should be rejected
+            HorseResult rejected = await producer.Queue.Push("ml-reject", new MemoryStream("overflow"u8.ToArray()), true, CancellationToken.None);
+            Assert.NotEqual(HorseResultCode.Ok, rejected.Code);
+
+            producer.Disconnect();
         }
-
-        // 4th message exceeds limit → should be rejected
-        HorseResult rejected = await producer.Queue.Push("ml-reject", new MemoryStream("overflow"u8.ToArray()), true, CancellationToken.None);
-        Assert.NotEqual(HorseResultCode.Ok, rejected.Code);
-
-        producer.Disconnect();
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -57,28 +64,35 @@ public class MessageLimitTest
             o.CommitWhen = CommitWhen.AfterReceived;
             o.Acknowledge = QueueAckDecision.None;
         });
-
-        await ctx.Rider.Queue.Create("ml-oldest", o =>
+        try
         {
-            o.Type = QueueType.Push;
-            o.MessageLimit = 3;
-            o.LimitExceededStrategy = MessageLimitExceededStrategy.DeleteOldestMessage;
-        });
 
-        HorseClient producer = new HorseClient();
-        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await ctx.Rider.Queue.Create("ml-oldest", o =>
+            {
+                o.Type = QueueType.Push;
+                o.MessageLimit = 3;
+                o.LimitExceededStrategy = MessageLimitExceededStrategy.DeleteOldestMessage;
+            });
 
-        // Push 5 messages with DeleteOldest strategy
-        for (int i = 0; i < 5; i++)
-            await producer.Queue.Push("ml-oldest", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), true, CancellationToken.None);
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
-        await Task.Delay(500);
+            // Push 5 messages with DeleteOldest strategy
+            for (int i = 0; i < 5; i++)
+                await producer.Queue.Push("ml-oldest", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), true, CancellationToken.None);
 
-        HorseQueue queue = ctx.Rider.Queue.Find("ml-oldest");
-        int count = queue.Manager.MessageStore.Count() + queue.Manager.PriorityMessageStore.Count();
-        Assert.True(count <= 3, $"Expected <=3 messages but found {count}");
+            await Task.Delay(500);
 
-        producer.Disconnect();
+            HorseQueue queue = ctx.Rider.Queue.Find("ml-oldest");
+            int count = queue.Manager.MessageStore.Count() + queue.Manager.PriorityMessageStore.Count();
+            Assert.True(count <= 3, $"Expected <=3 messages but found {count}");
+
+            producer.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -91,23 +105,30 @@ public class MessageLimitTest
             o.CommitWhen = CommitWhen.AfterReceived;
             o.Acknowledge = QueueAckDecision.None;
         });
-
-        await ctx.Rider.Queue.Create("ml-unlim", o =>
+        try
         {
-            o.Type = QueueType.Push;
-            o.MessageLimit = 0; // unlimited
-        });
 
-        HorseClient producer = new HorseClient();
-        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await ctx.Rider.Queue.Create("ml-unlim", o =>
+            {
+                o.Type = QueueType.Push;
+                o.MessageLimit = 0; // unlimited
+            });
 
-        for (int i = 0; i < 50; i++)
-        {
-            HorseResult r = await producer.Queue.Push("ml-unlim", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), true, CancellationToken.None);
-            Assert.Equal(HorseResultCode.Ok, r.Code);
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+
+            for (int i = 0; i < 50; i++)
+            {
+                HorseResult r = await producer.Queue.Push("ml-unlim", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), true, CancellationToken.None);
+                Assert.Equal(HorseResultCode.Ok, r.Code);
+            }
+
+            producer.Disconnect();
         }
-
-        producer.Disconnect();
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -120,29 +141,36 @@ public class MessageLimitTest
             o.CommitWhen = CommitWhen.AfterReceived;
             o.Acknowledge = QueueAckDecision.None;
         });
-
-        await ctx.Rider.Queue.Create("ml-exact", o =>
+        try
         {
-            o.Type = QueueType.Push;
-            o.MessageLimit = 5;
-            o.LimitExceededStrategy = MessageLimitExceededStrategy.RejectNewMessage;
-        });
 
-        HorseClient producer = new HorseClient();
-        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await ctx.Rider.Queue.Create("ml-exact", o =>
+            {
+                o.Type = QueueType.Push;
+                o.MessageLimit = 5;
+                o.LimitExceededStrategy = MessageLimitExceededStrategy.RejectNewMessage;
+            });
 
-        // Exactly 5 messages → all should be accepted
-        for (int i = 0; i < 5; i++)
-        {
-            HorseResult r = await producer.Queue.Push("ml-exact", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), true, CancellationToken.None);
-            Assert.Equal(HorseResultCode.Ok, r.Code);
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+
+            // Exactly 5 messages → all should be accepted
+            for (int i = 0; i < 5; i++)
+            {
+                HorseResult r = await producer.Queue.Push("ml-exact", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), true, CancellationToken.None);
+                Assert.Equal(HorseResultCode.Ok, r.Code);
+            }
+
+            HorseQueue queue = ctx.Rider.Queue.Find("ml-exact");
+            int count = queue.Manager.MessageStore.Count() + queue.Manager.PriorityMessageStore.Count();
+            Assert.Equal(5, count);
+
+            producer.Disconnect();
         }
-
-        HorseQueue queue = ctx.Rider.Queue.Find("ml-exact");
-        int count = queue.Manager.MessageStore.Count() + queue.Manager.PriorityMessageStore.Count();
-        Assert.Equal(5, count);
-
-        producer.Disconnect();
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -155,30 +183,37 @@ public class MessageLimitTest
             o.CommitWhen = CommitWhen.None;
             o.Acknowledge = QueueAckDecision.None;
         });
-
-        await ctx.Rider.Queue.Create("ml-newest", o =>
+        try
         {
-            o.Type = QueueType.Push;
-            o.MessageLimit = 3;
-            o.LimitExceededStrategy = MessageLimitExceededStrategy.DeleteOldestMessage;
-        });
 
-        HorseClient producer = new HorseClient();
-        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await ctx.Rider.Queue.Create("ml-newest", o =>
+            {
+                o.Type = QueueType.Push;
+                o.MessageLimit = 3;
+                o.LimitExceededStrategy = MessageLimitExceededStrategy.DeleteOldestMessage;
+            });
 
-        for (int i = 0; i < 5; i++)
-            await producer.Queue.Push("ml-newest", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false, CancellationToken.None);
-        await Task.Delay(500);
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
-        HorseQueue queue = ctx.Rider.Queue.Find("ml-newest");
-        Assert.Equal(3, queue.Manager.MessageStore.Count());
+            for (int i = 0; i < 5; i++)
+                await producer.Queue.Push("ml-newest", new MemoryStream(System.Text.Encoding.UTF8.GetBytes($"msg-{i}")), false, CancellationToken.None);
+            await Task.Delay(500);
 
-        // Oldest (msg-0, msg-1) should be deleted; newest (msg-2, msg-3, msg-4) remain
-        var first = queue.Manager.MessageStore.ReadFirst();
-        Assert.NotNull(first);
-        Assert.Equal("msg-2", first.Message.ToString());
+            HorseQueue queue = ctx.Rider.Queue.Find("ml-newest");
+            Assert.Equal(3, queue.Manager.MessageStore.Count());
 
-        producer.Disconnect();
+            // Oldest (msg-0, msg-1) should be deleted; newest (msg-2, msg-3, msg-4) remain
+            var first = queue.Manager.MessageStore.ReadFirst();
+            Assert.NotNull(first);
+            Assert.Equal("msg-2", first.Message.ToString());
+
+            producer.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 }
 

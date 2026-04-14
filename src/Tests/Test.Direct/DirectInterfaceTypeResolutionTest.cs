@@ -55,126 +55,116 @@ public class DirectInterfaceTypeResolutionTest
     [Fact]
     public async Task Send_WithInterfaceType_ResolvesConcreteTypeAttributes()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start();
-
-        HorseClient sender = new HorseClient();
-        sender.ClientId = "client-sender";
-
-        HorseClient receiver = new HorseClient();
-        receiver.ClientId = "client-receiver";
-        receiver.AutoAcknowledge = true;
-
-        await sender.ConnectAsync($"horse://localhost:{port}");
-        await receiver.ConnectAsync($"horse://localhost:{port}");
-
-        Assert.True(sender.IsConnected);
-        Assert.True(receiver.IsConnected);
-
-        List<HorseMessage> receivedMessages = new();
-        receiver.MessageReceived += (_, m) =>
+        await TestHorseRider.RunWith(async (server, port) =>
         {
-            lock (receivedMessages) receivedMessages.Add(m);
-        };
+            HorseClient sender = new HorseClient();
+            sender.ClientId = "client-sender";
 
-        // Act: Send<IDirectEvent> with a concrete DirectOrderEvent
-        // T = IDirectEvent, but runtime type = DirectOrderEvent which has [DirectTarget] and [DirectContentType(1001)]
-        var order = new DirectOrderEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
-        HorseResult result = await sender.Direct.Send<IDirectEvent>(order, true, CancellationToken.None);
+            HorseClient receiver = new HorseClient();
+            receiver.ClientId = "client-receiver";
+            receiver.AutoAcknowledge = true;
 
-        await Task.Delay(1000);
+            await sender.ConnectAsync($"horse://localhost:{port}");
+            await receiver.ConnectAsync($"horse://localhost:{port}");
 
-        // Assert: Message should arrive at receiver with correct content type from concrete class
-        Assert.Equal(HorseResultCode.Ok, result.Code);
-        Assert.NotEmpty(receivedMessages);
-        Assert.Equal(1001, receivedMessages[0].ContentType);
+            Assert.True(sender.IsConnected);
+            Assert.True(receiver.IsConnected);
 
-        server.Stop();
+            List<HorseMessage> receivedMessages = new();
+            receiver.MessageReceived += (_, m) =>
+            {
+                lock (receivedMessages) receivedMessages.Add(m);
+            };
+
+            // Act: Send<IDirectEvent> with a concrete DirectOrderEvent
+            // T = IDirectEvent, but runtime type = DirectOrderEvent which has [DirectTarget] and [DirectContentType(1001)]
+            var order = new DirectOrderEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
+            HorseResult result = await sender.Direct.Send<IDirectEvent>(order, true, CancellationToken.None);
+
+            await Task.Delay(1000);
+
+            // Assert: Message should arrive at receiver with correct content type from concrete class
+            Assert.Equal(HorseResultCode.Ok, result.Code);
+            Assert.NotEmpty(receivedMessages);
+            Assert.Equal(1001, receivedMessages[0].ContentType);
+        });
     }
 
     [Fact]
     public async Task Send_WithInterfaceType_DifferentConcreteTypes_DifferentContentTypes()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start();
-
-        HorseClient sender = new HorseClient();
-        sender.ClientId = "client-sender";
-
-        HorseClient receiver = new HorseClient();
-        receiver.ClientId = "client-receiver";
-        receiver.AutoAcknowledge = true;
-
-        await sender.ConnectAsync($"horse://localhost:{port}");
-        await receiver.ConnectAsync($"horse://localhost:{port}");
-
-        Assert.True(sender.IsConnected);
-        Assert.True(receiver.IsConnected);
-
-        List<HorseMessage> receivedMessages = new();
-        receiver.MessageReceived += (_, m) =>
+        await TestHorseRider.RunWith(async (server, port) =>
         {
-            lock (receivedMessages) receivedMessages.Add(m);
-        };
+            HorseClient sender = new HorseClient();
+            sender.ClientId = "client-sender";
 
-        // Act: Send two different concrete types via the interface generic parameter
-        var order = new DirectOrderEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
-        var payment = new DirectPaymentEvent { EventId = "evt-2", Amount = 99.99m };
+            HorseClient receiver = new HorseClient();
+            receiver.ClientId = "client-receiver";
+            receiver.AutoAcknowledge = true;
 
-        HorseResult r1 = await sender.Direct.Send<IDirectEvent>(order, true, CancellationToken.None);
-        HorseResult r2 = await sender.Direct.Send<IDirectEvent>(payment, true, CancellationToken.None);
+            await sender.ConnectAsync($"horse://localhost:{port}");
+            await receiver.ConnectAsync($"horse://localhost:{port}");
 
-        await Task.Delay(1000);
+            Assert.True(sender.IsConnected);
+            Assert.True(receiver.IsConnected);
 
-        // Assert: Both messages arrive, each with its own concrete ContentType
-        Assert.Equal(HorseResultCode.Ok, r1.Code);
-        Assert.Equal(HorseResultCode.Ok, r2.Code);
-        Assert.Equal(2, receivedMessages.Count);
+            List<HorseMessage> receivedMessages = new();
+            receiver.MessageReceived += (_, m) =>
+            {
+                lock (receivedMessages) receivedMessages.Add(m);
+            };
 
-        // Messages should have different content types based on concrete class attributes
-        var contentTypes = new HashSet<ushort>(receivedMessages.ConvertAll(m => m.ContentType));
-        Assert.Contains((ushort)1001, contentTypes);
-        Assert.Contains((ushort)1002, contentTypes);
+            // Act: Send two different concrete types via the interface generic parameter
+            var order = new DirectOrderEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
+            var payment = new DirectPaymentEvent { EventId = "evt-2", Amount = 99.99m };
 
-        server.Stop();
+            HorseResult r1 = await sender.Direct.Send<IDirectEvent>(order, true, CancellationToken.None);
+            HorseResult r2 = await sender.Direct.Send<IDirectEvent>(payment, true, CancellationToken.None);
+
+            await Task.Delay(1000);
+
+            // Assert: Both messages arrive, each with its own concrete ContentType
+            Assert.Equal(HorseResultCode.Ok, r1.Code);
+            Assert.Equal(HorseResultCode.Ok, r2.Code);
+            Assert.Equal(2, receivedMessages.Count);
+
+            // Messages should have different content types based on concrete class attributes
+            var contentTypes = new HashSet<ushort>(receivedMessages.ConvertAll(m => m.ContentType));
+            Assert.Contains((ushort)1001, contentTypes);
+            Assert.Contains((ushort)1002, contentTypes);
+        });
     }
 
     [Fact]
     public async Task Send_WithConcreteType_ResolvesCorrectly()
     {
-        // Control test: concrete type should work as expected
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start();
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            HorseClient sender = new HorseClient();
+            sender.ClientId = "client-sender";
 
-        HorseClient sender = new HorseClient();
-        sender.ClientId = "client-sender";
+            HorseClient receiver = new HorseClient();
+            receiver.ClientId = "client-receiver";
+            receiver.AutoAcknowledge = true;
 
-        HorseClient receiver = new HorseClient();
-        receiver.ClientId = "client-receiver";
-        receiver.AutoAcknowledge = true;
+            await sender.ConnectAsync($"horse://localhost:{port}");
+            await receiver.ConnectAsync($"horse://localhost:{port}");
 
-        await sender.ConnectAsync($"horse://localhost:{port}");
-        await receiver.ConnectAsync($"horse://localhost:{port}");
+            Assert.True(sender.IsConnected);
+            Assert.True(receiver.IsConnected);
 
-        Assert.True(sender.IsConnected);
-        Assert.True(receiver.IsConnected);
+            HorseMessage receivedMessage = null;
+            receiver.MessageReceived += (_, m) => receivedMessage = m;
 
-        HorseMessage receivedMessage = null;
-        receiver.MessageReceived += (_, m) => receivedMessage = m;
+            var order = new DirectOrderEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
+            HorseResult result = await sender.Direct.Send(order, true, CancellationToken.None);
 
-        var order = new DirectOrderEvent { EventId = "evt-1", OrderNumber = "ORD-100" };
-        HorseResult result = await sender.Direct.Send(order, true, CancellationToken.None);
+            await Task.Delay(1000);
 
-        await Task.Delay(1000);
-
-        Assert.Equal(HorseResultCode.Ok, result.Code);
-        Assert.NotNull(receivedMessage);
-        Assert.Equal(1001, receivedMessage.ContentType);
-
-        server.Stop();
+            Assert.Equal(HorseResultCode.Ok, result.Code);
+            Assert.NotNull(receivedMessage);
+            Assert.Equal(1001, receivedMessage.ContentType);
+        });
     }
 
     [Fact]
@@ -183,82 +173,74 @@ public class DirectInterfaceTypeResolutionTest
         // IDirectEvent has no [DirectTarget] attribute.
         // When Send<IDirectEvent>(concreteModel) is called, the concrete type's attributes must be used.
         // If IDirectEvent was used (the old bug), it would fail because IDirectEvent has no target.
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start();
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            HorseClient sender = new HorseClient();
+            sender.ClientId = "client-sender";
 
-        HorseClient sender = new HorseClient();
-        sender.ClientId = "client-sender";
+            HorseClient receiver = new HorseClient();
+            receiver.ClientId = "client-receiver";
+            receiver.AutoAcknowledge = true;
 
-        HorseClient receiver = new HorseClient();
-        receiver.ClientId = "client-receiver";
-        receiver.AutoAcknowledge = true;
+            await sender.ConnectAsync($"horse://localhost:{port}");
+            await receiver.ConnectAsync($"horse://localhost:{port}");
 
-        await sender.ConnectAsync($"horse://localhost:{port}");
-        await receiver.ConnectAsync($"horse://localhost:{port}");
+            Assert.True(sender.IsConnected);
+            Assert.True(receiver.IsConnected);
 
-        Assert.True(sender.IsConnected);
-        Assert.True(receiver.IsConnected);
+            HorseMessage receivedMessage = null;
+            receiver.MessageReceived += (_, m) => receivedMessage = m;
 
-        HorseMessage receivedMessage = null;
-        receiver.MessageReceived += (_, m) => receivedMessage = m;
+            // This would have returned SendError with the old typeof(T) bug
+            // because IDirectEvent interface has no [DirectTarget] attribute
+            var order = new DirectOrderEvent { EventId = "evt-1", OrderNumber = "ORD-200" };
+            HorseResult result = await sender.Direct.Send<IDirectEvent>(order, true, CancellationToken.None);
 
-        // This would have returned SendError with the old typeof(T) bug
-        // because IDirectEvent interface has no [DirectTarget] attribute
-        var order = new DirectOrderEvent { EventId = "evt-1", OrderNumber = "ORD-200" };
-        HorseResult result = await sender.Direct.Send<IDirectEvent>(order, true, CancellationToken.None);
+            await Task.Delay(1000);
 
-        await Task.Delay(1000);
-
-        // Should succeed because runtime type DirectOrderEvent has [DirectTarget]
-        Assert.Equal(HorseResultCode.Ok, result.Code);
-        Assert.NotNull(receivedMessage);
-
-        server.Stop();
+            // Should succeed because runtime type DirectOrderEvent has [DirectTarget]
+            Assert.Equal(HorseResultCode.Ok, result.Code);
+            Assert.NotNull(receivedMessage);
+        });
     }
 
     [Fact]
     public async Task Send_UnattributedConcreteType_ReturnsSendError()
     {
         // When the concrete type itself has no [DirectTarget], Send returns SendError
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start();
 
-        HorseClient sender = new HorseClient();
-        sender.ClientId = "client-sender";
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            HorseClient sender = new HorseClient();
+            sender.ClientId = "client-sender";
 
-        await sender.ConnectAsync($"horse://localhost:{port}");
-        Assert.True(sender.IsConnected);
+            await sender.ConnectAsync($"horse://localhost:{port}");
+            Assert.True(sender.IsConnected);
 
-        var model = new UnattributedDirectEvent { EventId = "evt-1" };
-        HorseResult result = await sender.Direct.Send(model, false, CancellationToken.None);
+            var model = new UnattributedDirectEvent { EventId = "evt-1" };
+            HorseResult result = await sender.Direct.Send(model, false, CancellationToken.None);
 
-        Assert.Equal(HorseResultCode.SendError, result.Code);
-
-        server.Stop();
+            Assert.Equal(HorseResultCode.SendError, result.Code);
+        });
     }
 
     [Fact]
     public async Task Send_WithInterfaceType_UnattributedConcrete_ReturnsSendError()
     {
         // Same scenario via interface: Send<IDirectEvent>(unattributedModel) should also return SendError
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start();
 
-        HorseClient sender = new HorseClient();
-        sender.ClientId = "client-sender";
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            HorseClient sender = new HorseClient();
+            sender.ClientId = "client-sender";
 
-        await sender.ConnectAsync($"horse://localhost:{port}");
-        Assert.True(sender.IsConnected);
+            await sender.ConnectAsync($"horse://localhost:{port}");
+            Assert.True(sender.IsConnected);
 
-        var model = new UnattributedDirectEvent { EventId = "evt-1" };
-        HorseResult result = await sender.Direct.Send<IDirectEvent>(model, false, CancellationToken.None);
+            var model = new UnattributedDirectEvent { EventId = "evt-1" };
+            HorseResult result = await sender.Direct.Send<IDirectEvent>(model, false, CancellationToken.None);
 
-        Assert.Equal(HorseResultCode.SendError, result.Code);
-
-        server.Stop();
+            Assert.Equal(HorseResultCode.SendError, result.Code);
+        });
     }
 }
-

@@ -19,19 +19,17 @@ public class ServerConnectionTest
     [Fact]
     public async Task ConnectWithInfo()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start();
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            HorseClient client = new HorseClient();
+            client.SetClientName("Test-" + port);
+            await client.ConnectAsync("horse://localhost:" + port + "/path");
 
-        HorseClient client = new HorseClient();
-        client.SetClientName("Test-" + port);
-        await client.ConnectAsync("horse://localhost:" + port + "/path");
+            Thread.Sleep(50);
 
-        Thread.Sleep(50);
-
-        Assert.True(client.IsConnected);
-        Assert.Equal(1, server.ClientConnected);
-        server.Stop();
+            Assert.True(client.IsConnected);
+            Assert.Equal(1, server.ClientConnected);
+        }, 3, 4);
     }
 
     /// <summary>
@@ -40,54 +38,52 @@ public class ServerConnectionTest
     [Fact]
     public async Task ConnectWithoutInfo()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start();
-
-        List<TcpClient> clients = new List<TcpClient>();
-
-        for (int i = 0; i < 50; i++)
+        await TestHorseRider.RunWith(async (server, port) =>
         {
-            TcpClient client = new TcpClient();
-            await client.ConnectAsync("127.0.0.1", port);
-            clients.Add(client);
-            Thread.Sleep(20);
-            ThreadPool.UnsafeQueueUserWorkItem(async c =>
+            List<TcpClient> clients = new List<TcpClient>();
+
+            for (int i = 0; i < 50; i++)
             {
-                byte[] buffer = new byte[128];
-                NetworkStream ns = client.GetStream();
-                try
+                TcpClient client = new TcpClient();
+                await client.ConnectAsync("127.0.0.1", port);
+                clients.Add(client);
+                Thread.Sleep(20);
+                ThreadPool.UnsafeQueueUserWorkItem(async c =>
                 {
-                    while (c.Connected)
+                    byte[] buffer = new byte[128];
+                    NetworkStream ns = client.GetStream();
+                    try
                     {
-                        int read = await ns.ReadAsync(buffer);
-                        if (read == 0)
+                        while (c.Connected)
                         {
-                            c.Close();
-                            c.Dispose();
-                            break;
+                            int read = await ns.ReadAsync(buffer);
+                            if (read == 0)
+                            {
+                                c.Close();
+                                c.Dispose();
+                                break;
+                            }
                         }
                     }
-                }
-                catch
-                {
-                    c.Close();
-                    c.Dispose();
-                }
-            }, client, false);
+                    catch
+                    {
+                        c.Close();
+                        c.Dispose();
+                    }
+                }, client, false);
 
+                Assert.Equal(0, server.ClientConnected);
+            }
+
+            int connectedClients = clients.Count(x => x.Connected);
+            Assert.Equal(connectedClients, clients.Count);
+
+            await Task.Delay(10000);
+
+            connectedClients = clients.Count(x => x.Connected);
             Assert.Equal(0, server.ClientConnected);
-        }
-
-        int connectedClients = clients.Count(x => x.Connected);
-        Assert.Equal(connectedClients, clients.Count);
-
-        await Task.Delay(10000);
-
-        connectedClients = clients.Count(x => x.Connected);
-        Assert.Equal(0, server.ClientConnected);
-        Assert.Equal(0, connectedClients);
-        server.Stop();
+            Assert.Equal(0, connectedClients);
+        }, 3, 4);
     }
 
     /// <summary>
@@ -96,19 +92,17 @@ public class ServerConnectionTest
     [Fact]
     public async Task KeepAliveWithPingPong()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start();
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            HorseClient client = new HorseClient();
+            client.SetClientName("Test-" + port);
+            client.Connect("horse://localhost:" + port + "/path");
 
-        HorseClient client = new HorseClient();
-        client.SetClientName("Test-" + port);
-        client.Connect("horse://localhost:" + port + "/path");
+            Thread.Sleep(25000);
 
-        Thread.Sleep(25000);
-
-        Assert.True(client.IsConnected);
-        Assert.Equal(1, server.ClientConnected);
-        server.Stop();
+            Assert.True(client.IsConnected);
+            Assert.Equal(1, server.ClientConnected);
+        }, 3, 4);
     }
 
     /// <summary>
@@ -125,48 +119,41 @@ public class ServerConnectionTest
     [Fact]
     public async Task DisconnectDueToPingTimeout()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start();
-
-        TcpClient client = new TcpClient();
-        await client.ConnectAsync("127.0.0.1", port);
-
-        NetworkStream stream = client.GetStream();
-        stream.Write(PredefinedMessages.PROTOCOL_BYTES_V4);
-        HorseMessage msg = new HorseMessage();
-        msg.Type = MessageType.Server;
-        msg.ContentType = KnownContentTypes.Hello;
-        msg.SetStringContent("GET /\r\nName: Test-" + port);
-        msg.CalculateLengths();
-        HorseProtocolWriter.Write(msg, stream);
-        await Task.Delay(1000);
-        Assert.Equal(1, server.ClientConnected);
-
-        ThreadPool.UnsafeQueueUserWorkItem(async s =>
+        await TestHorseRider.RunWith(async (server, port) =>
         {
-            byte[] buffer = new byte[128];
-            while (client.Connected)
+            TcpClient client = new TcpClient();
+            await client.ConnectAsync("127.0.0.1", port);
+
+            NetworkStream stream = client.GetStream();
+            stream.Write(PredefinedMessages.PROTOCOL_BYTES_V4);
+            HorseMessage msg = new HorseMessage();
+            msg.Type = MessageType.Server;
+            msg.ContentType = KnownContentTypes.Hello;
+            msg.SetStringContent("GET /\r\nName: Test-" + port);
+            msg.CalculateLengths();
+            HorseProtocolWriter.Write(msg, stream);
+            await Task.Delay(1000);
+            Assert.Equal(1, server.ClientConnected);
+
+            ThreadPool.UnsafeQueueUserWorkItem(async s =>
             {
-                int r = await s.ReadAsync(buffer);
-                if (r == 0)
+                byte[] buffer = new byte[128];
+                while (client.Connected)
                 {
-                    client.Dispose();
-                    break;
+                    int r = await s.ReadAsync(buffer);
+                    if (r == 0)
+                    {
+                        client.Dispose();
+                        break;
+                    }
                 }
-            }
-        }, stream, false);
+            }, stream, false);
 
-        // HeartbeatManager tick interval = Clamp(PingInterval / 2, 1s, 5s).
-        // With PingInterval=3s, tickInterval = 1.5s.
-        // Tick 1 (~1.5s + 3s window): sends PING, sets PongRequired = true
-        // Tick 2 (~next tick): PongRequired still true → Disconnect()
-        // Expected disconnect within ~6s. We allow 15s margin.
-        await Task.Delay(15000);
+            await Task.Delay(15000);
 
-        Assert.False(client.Connected);
-        Assert.Equal(1, server.ClientDisconnected);
-        server.Stop();
+            Assert.False(client.Connected);
+            Assert.Equal(1, server.ClientDisconnected);
+        }, 3, 4);
     }
 
     /// <summary>
@@ -177,53 +164,51 @@ public class ServerConnectionTest
     [InlineData(50, 50, 100, 500)]
     public async Task ConnectDisconnectStress(int concurrentClients, int connectionCount, int minAliveMs, int maxAliveMs)
     {
-        Random rnd = new Random();
-        int connected = 0;
-        int disconnected = 0;
-
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start();
-
-        for (int i = 0; i < concurrentClients; i++)
+        await TestHorseRider.RunWith(async (server, port) =>
         {
-            Thread thread = new Thread(async () =>
+            Random rnd = new Random();
+            int connected = 0;
+            int disconnected = 0;
+
+            for (int i = 0; i < concurrentClients; i++)
             {
-                for (int j = 0; j < connectionCount; j++)
+                Thread thread = new Thread(async () =>
                 {
-                    try
+                    for (int j = 0; j < connectionCount; j++)
                     {
-                        HorseClient client = new HorseClient();
-                        client.Connect("horse://localhost:" + port);
-                        Assert.True(client.IsConnected);
-                        Interlocked.Increment(ref connected);
-                        await Task.Delay(rnd.Next(minAliveMs, maxAliveMs));
-                        client.Disconnect();
-                        Interlocked.Increment(ref disconnected);
-                        await Task.Delay(50);
-                        Assert.True(client.IsConnected);
+                        try
+                        {
+                            HorseClient client = new HorseClient();
+                            client.Connect("horse://localhost:" + port);
+                            Assert.True(client.IsConnected);
+                            Interlocked.Increment(ref connected);
+                            await Task.Delay(rnd.Next(minAliveMs, maxAliveMs));
+                            client.Disconnect();
+                            Interlocked.Increment(ref disconnected);
+                            await Task.Delay(50);
+                            Assert.True(client.IsConnected);
+                        }
+                        catch
+                        {
+                        }
                     }
-                    catch
-                    {
-                    }
-                }
-            });
-            thread.Start();
-        }
+                });
+                thread.Start();
+            }
 
-        TimeSpan total = TimeSpan.FromMilliseconds(maxAliveMs * connectionCount);
-        TimeSpan elapsed = TimeSpan.Zero;
-        while (elapsed < total)
-        {
-            elapsed += TimeSpan.FromMilliseconds(100);
-            await Task.Delay(100);
-        }
+            TimeSpan total = TimeSpan.FromMilliseconds(maxAliveMs * connectionCount);
+            TimeSpan elapsed = TimeSpan.Zero;
+            while (elapsed < total)
+            {
+                elapsed += TimeSpan.FromMilliseconds(100);
+                await Task.Delay(100);
+            }
 
-        await Task.Delay(maxAliveMs);
-        await Task.Delay(3000);
-        Assert.Equal(connected, concurrentClients * connectionCount);
-        Assert.Equal(disconnected, concurrentClients * connectionCount);
-        server.Stop();
+            await Task.Delay(maxAliveMs);
+            await Task.Delay(3000);
+            Assert.Equal(connected, concurrentClients * connectionCount);
+            Assert.Equal(disconnected, concurrentClients * connectionCount);
+        }, 3, 4);
     }
 
     [Theory]
@@ -231,21 +216,19 @@ public class ServerConnectionTest
     [InlineData("*client*")]
     public async Task GetOnlineClients(string filter)
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start();
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            HorseClient client = new HorseClient();
+            client.SetClientType("client-test");
+            client.SetClientName("client-test");
+            await client.ConnectAsync("horse://localhost:" + port);
 
-        HorseClient client = new HorseClient();
-        client.SetClientType("client-test");
-        client.SetClientName("client-test");
-        await client.ConnectAsync("horse://localhost:" + port);
-
-        var result = await client.Connection.GetConnectedClients(filter, CancellationToken.None);
-        Assert.Equal(HorseResultCode.Ok, result.Result.Code);
-        Assert.NotNull(result.Model);
-        var c = result.Model.FirstOrDefault();
-        Assert.NotNull(c);
-        Assert.Equal("client-test", c.Type);
-        server.Stop();
+            var result = await client.Connection.GetConnectedClients(filter, CancellationToken.None);
+            Assert.Equal(HorseResultCode.Ok, result.Result.Code);
+            Assert.NotNull(result.Model);
+            var c = result.Model.FirstOrDefault();
+            Assert.NotNull(c);
+            Assert.Equal("client-test", c.Type);
+        }, 3, 4);
     }
 }

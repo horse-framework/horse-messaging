@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,31 +17,28 @@ namespace Test.Queues.Partitions;
 /// </summary>
 public class PartitionEventTest
 {
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private static async Task<(TestHorseRider server, int port, HorseQueue queue)> CreateQueue(string name = "ev-q")
+    private static async Task RunWithQueue(
+        Func<TestHorseRider, int, HorseQueue, Task> action,
+        string name = "ev-q")
     {
-        var server = new TestHorseRider();
-        await server.Initialize();
-
-        await server.Rider.Queue.Create(name, opts =>
+        await TestHorseRider.RunWith(async (server, port) =>
         {
-            opts.Type = QueueType.Push;
-            opts.Partition = new PartitionOptions
+            await server.Rider.Queue.Create(name, opts =>
             {
-                Enabled = true,
-                MaxPartitionCount = 10,
-                SubscribersPerPartition = 1,
-                AutoDestroy = PartitionAutoDestroy.Disabled
-            };
+                opts.Type = QueueType.Push;
+                opts.Partition = new PartitionOptions
+                {
+                    Enabled = true,
+                    MaxPartitionCount = 10,
+                    SubscribersPerPartition = 1,
+                    AutoDestroy = PartitionAutoDestroy.Disabled
+                };
+            });
+
+            HorseQueue queue = server.Rider.Queue.Find(name);
+            await action(server, port, queue);
         });
-
-        int port = server.Start(300, 300);
-        HorseQueue queue = server.Rider.Queue.Find(name);
-        return (server, port, queue);
     }
-
-    // ── Server-side handler ───────────────────────────────────────────────────
 
     private class TestPartitionEventHandler : IPartitionEventHandler
     {
@@ -51,7 +49,8 @@ public class PartitionEventTest
         public Task OnPartitionCreated(HorseQueue parentQueue, PartitionEntry partition)
         {
             Interlocked.Increment(ref CreatedCount);
-            lock (CreatedIds) CreatedIds.Add(partition.PartitionId);
+            lock (CreatedIds)
+                CreatedIds.Add(partition.PartitionId);
             return Task.CompletedTask;
         }
 
@@ -65,135 +64,120 @@ public class PartitionEventTest
     [Fact]
     public async Task ServerHandler_CalledWhenPartitionCreated()
     {
-        var (server, port, queue) = await CreateQueue();
+        await RunWithQueue(async (server, port, _) =>
+        {
+            var handler = new TestPartitionEventHandler();
+            server.Rider.Queue.PartitionEventHandlers.Add(handler);
 
-        var handler = new TestPartitionEventHandler();
-        server.Rider.Queue.PartitionEventHandlers.Add(handler);
+            HorseClient client = new HorseClient();
+            await client.ConnectAsync("horse://localhost:" + port);
+            await client.Queue.Subscribe("ev-q", true,
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "h1") }, CancellationToken.None);
 
-        HorseClient client = new HorseClient();
-        await client.ConnectAsync("horse://localhost:" + port);
-        await client.Queue.Subscribe("ev-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "h1") }, CancellationToken.None);
+            await Task.Delay(300);
 
-        await Task.Delay(300);
-
-        // Label partition = 1 created event
-        Assert.True(handler.CreatedCount >= 1);
-
-        server.Stop();
+            Assert.True(handler.CreatedCount >= 1);
+        });
     }
 
     [Fact]
     public async Task ServerHandler_CalledForMultiplePartitions()
     {
-        var (server, port, queue) = await CreateQueue();
+        await RunWithQueue(async (server, port, _) =>
+        {
+            var handler = new TestPartitionEventHandler();
+            server.Rider.Queue.PartitionEventHandlers.Add(handler);
 
-        var handler = new TestPartitionEventHandler();
-        server.Rider.Queue.PartitionEventHandlers.Add(handler);
+            HorseClient c1 = new HorseClient();
+            HorseClient c2 = new HorseClient();
+            await c1.ConnectAsync("horse://localhost:" + port);
+            await c2.ConnectAsync("horse://localhost:" + port);
+            await c1.Queue.Subscribe("ev-q", true,
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "lbl1") }, CancellationToken.None);
+            await c2.Queue.Subscribe("ev-q", true,
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "lbl2") }, CancellationToken.None);
 
-        HorseClient c1 = new HorseClient();
-        HorseClient c2 = new HorseClient();
-        await c1.ConnectAsync("horse://localhost:" + port);
-        await c2.ConnectAsync("horse://localhost:" + port);
-        await c1.Queue.Subscribe("ev-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "lbl1") }, CancellationToken.None);
-        await c2.Queue.Subscribe("ev-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "lbl2") }, CancellationToken.None);
+            await Task.Delay(300);
 
-        await Task.Delay(300);
-
-        // Two label partitions created
-        Assert.True(handler.CreatedCount >= 2);
-
-        server.Stop();
+            Assert.True(handler.CreatedCount >= 2);
+        });
     }
 
     [Fact]
     public async Task ServerHandler_CalledWhenPartitionDestroyed()
     {
-        var server = new TestHorseRider();
-        await server.Initialize();
-
-        await server.Rider.Queue.Create("dh-q", opts =>
+        await TestHorseRider.RunWith(async (server, port) =>
         {
-            opts.Type = QueueType.Push;
-            opts.Partition = new PartitionOptions
+            await server.Rider.Queue.Create("dh-q", opts =>
             {
-                Enabled = true,
-                MaxPartitionCount = 10,
-                SubscribersPerPartition = 1,
-                AutoDestroy = PartitionAutoDestroy.NoConsumers,
-                AutoDestroyIdleSeconds = 1
-            };
+                opts.Type = QueueType.Push;
+                opts.Partition = new PartitionOptions
+                {
+                    Enabled = true,
+                    MaxPartitionCount = 10,
+                    SubscribersPerPartition = 1,
+                    AutoDestroy = PartitionAutoDestroy.NoConsumers,
+                    AutoDestroyIdleSeconds = 1
+                };
+            });
+
+            HorseQueue queue = server.Rider.Queue.Find("dh-q");
+            Assert.NotNull(queue);
+
+            var handler = new TestPartitionEventHandler();
+            server.Rider.Queue.PartitionEventHandlers.Add(handler);
+
+            HorseClient client = new HorseClient();
+            await client.ConnectAsync("horse://localhost:" + port);
+            await client.Queue.Subscribe("dh-q", true,
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "kill-me") }, CancellationToken.None);
+
+            await Task.Delay(200);
+            client.Disconnect();
+
+            await Task.Delay(3000);
+
+            Assert.True(handler.DestroyedCount >= 1);
         });
-
-        int port = server.Start(300, 300);
-        HorseQueue queue = server.Rider.Queue.Find("dh-q");
-
-        var handler = new TestPartitionEventHandler();
-        server.Rider.Queue.PartitionEventHandlers.Add(handler);
-
-        HorseClient client = new HorseClient();
-        await client.ConnectAsync("horse://localhost:" + port);
-        await client.Queue.Subscribe("dh-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "kill-me") }, CancellationToken.None);
-
-        await Task.Delay(200);
-        client.Disconnect();
-
-        await Task.Delay(3000); // wait for auto-destroy timer
-
-        Assert.True(handler.DestroyedCount >= 1);
-
-        server.Stop();
     }
-
-    // ── Client-side HorseEventType.QueuePartitionCreated ─────────────────────
 
     [Fact]
     public async Task ClientEvent_QueuePartitionCreated_Fired()
     {
-        var (server, port, queue) = await CreateQueue("client-ev-q");
-
-        HorseClient subscriber = new HorseClient();
-        subscriber.CatchEventMessages = true; // allow MessageReceived for Event type messages
-        await subscriber.ConnectAsync("horse://localhost:" + port);
-
-        int eventFired = 0;
-
-        // MessageReceived fires for every message type including Event
-        subscriber.MessageReceived += (_, msg) =>
+        await RunWithQueue(async (_, port, _) =>
         {
-            if (msg.Type == MessageType.Event &&
-                msg.ContentType == (ushort)HorseEventType.QueuePartitionCreated)
-                Interlocked.Increment(ref eventFired);
-        };
+            HorseClient subscriber = new HorseClient();
+            subscriber.CatchEventMessages = true;
+            await subscriber.ConnectAsync("horse://localhost:" + port);
 
-        // Subscribe to the server-side event
-        await subscriber.Event.Subscribe(HorseEventType.QueuePartitionCreated, null, false, CancellationToken.None);
+            int eventFired = 0;
+            subscriber.MessageReceived += (_, msg) =>
+            {
+                if (msg.Type == MessageType.Event &&
+                    msg.ContentType == (ushort)HorseEventType.QueuePartitionCreated)
+                    Interlocked.Increment(ref eventFired);
+            };
 
-        // Now create a partition by subscribing a worker
-        HorseClient worker = new HorseClient();
-        await worker.ConnectAsync("horse://localhost:" + port);
-        await worker.Queue.Subscribe("client-ev-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w-fire") }, CancellationToken.None);
+            await subscriber.Event.Subscribe(HorseEventType.QueuePartitionCreated, null, false, CancellationToken.None);
 
-        await Task.Delay(600);
+            HorseClient worker = new HorseClient();
+            await worker.ConnectAsync("horse://localhost:" + port);
+            await worker.Queue.Subscribe("client-ev-q", true,
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w-fire") }, CancellationToken.None);
 
-        Assert.True(eventFired > 0);
+            await Task.Delay(600);
 
-        server.Stop();
+            Assert.True(eventFired > 0);
+        }, "client-ev-q");
     }
-
-    // ── EventManager exposed ──────────────────────────────────────────────────
 
     [Fact]
     public async Task PartitionCreatedEvent_EventManagerExists()
     {
-        var (server, _, _) = await CreateQueue();
-        Assert.NotNull(server.Rider.Queue.PartitionCreatedEvent);
-        server.Stop();
+        await RunWithQueue(async (server, _, _) =>
+        {
+            Assert.NotNull(server.Rider.Queue.PartitionCreatedEvent);
+            await Task.CompletedTask;
+        });
     }
 }
-
-
