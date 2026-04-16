@@ -66,7 +66,7 @@ public class ScheduleRider
             await Task.Delay(100, cts.Token);
 
         Rider.Server?.OnStopped += s => cts.Cancel();
-        
+
         while (Rider.Server.IsRunning && !cts.IsCancellationRequested)
         {
             try
@@ -188,6 +188,12 @@ public class ScheduleRider
     {
         try
         {
+            if (task.Schedule.Length >= 3 && task.Schedule.StartsWith("s/"))
+            {
+                int everySecondsValue = Convert.ToInt32(task.Schedule[2..].Split(' ')[0].Trim());
+                return DateTime.UtcNow.AddSeconds(everySecondsValue);
+            }
+
             CronExpression expression = CronExpression.Parse(task.Schedule, CronFormat.Standard);
             DateTime? next = expression.GetNextOccurrence(task.LastExecution ?? DateTime.UtcNow);
             if (next.HasValue)
