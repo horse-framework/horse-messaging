@@ -979,9 +979,9 @@ public class InterceptorTests
         {
             HorseClient consumer = new HorseClientBuilder()
                 .AddHost("horse://localhost:" + port)
-                .AddScopedConsumers((type, cfg) =>
+                .AddScopedConsumers((cfg) =>
                 {
-                    cfg.QueueName = $"{type.Name}-plural-builder-q";
+                    cfg.QueueName = $"{cfg.ConsumerType.Name}-plural-builder-q";
                     cfg.QueueType = MessagingQueueType.RoundRobin;
                     cfg.Acknowledge = QueueAckDecision.WaitForAcknowledge;
                     cfg.PutBackDecision = PutBack.Regular;

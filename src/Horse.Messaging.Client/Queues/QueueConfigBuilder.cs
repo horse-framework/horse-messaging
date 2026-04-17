@@ -105,6 +105,16 @@ public class QueueConfigBuilder
     /// Enabling that feature has performance penalty about 0.03 ms for each message.
     /// </summary>
     public bool? UniqueIdCheck { get; set; }
+    
+    /// <summary>
+    /// Gets consumer type
+    /// </summary>
+    public Type ConsumerType { get; internal set; }
+    
+    /// <summary>
+    /// Gets model type of consumer
+    /// </summary>
+    public Type ModelType { get; internal set; }
 
     internal List<InterceptorTypeDescriptor> Interceptors { get; } = new List<InterceptorTypeDescriptor>();
     internal List<TransportExceptionDescriptor> PushExceptionDescriptors { get; } = new List<TransportExceptionDescriptor>();
@@ -194,6 +204,17 @@ public class QueueConfigBuilder
         AddTransportExceptionDescriptor(typeof(TExceptionModel), exceptionType, ref _defaultPublishException, PublishExceptionDescriptors);
     }
 
+
+    private string GetValueWithParameters(string pattern)
+    {
+        if (string.IsNullOrEmpty(pattern))
+            return pattern;
+        
+        return pattern
+            .Replace("{queueName}", QueueName)
+            .Replace("{topicName}", Topic);
+    }
+    
     internal QueueTypeDescriptor Build()
     {
         if (HighPriority)
@@ -226,8 +247,8 @@ public class QueueConfigBuilder
             AutoNack = _autoNack,
             AutoNackReason = _autoNackReason,
             Retry = CloneRetry(_retry),
-            MoveOnErrorQueueName = _moveOnErrorQueueName,
-            MoveOnErrorQueueTopic = _moveOnErrorQueueTopic,
+            MoveOnErrorQueueName = GetValueWithParameters( _moveOnErrorQueueName),
+            MoveOnErrorQueueTopic = GetValueWithParameters( _moveOnErrorQueueTopic),
             DefaultPushException = _defaultPushException,
             DefaultPublishException = _defaultPublishException
         };

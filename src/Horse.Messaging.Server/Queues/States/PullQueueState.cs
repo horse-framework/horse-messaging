@@ -119,7 +119,7 @@ internal class PullQueueState : IQueueState
         bool lifo = FindLifoOrder(request);
 
         if (_queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
-            await _queue.waitForAcknowledge();
+            await _queue.WaitForAcknowledge();
 
         if (_queue.Rider.Cluster.Options.Mode == ClusterMode.Reliable)
             try
