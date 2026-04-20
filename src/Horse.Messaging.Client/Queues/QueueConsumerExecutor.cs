@@ -37,12 +37,20 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
             _registration.PushExceptions,
             _registration.DefaultPublishException,
             _registration.PublishExceptions);
+
         ResolveQueueAttributes();
     }
 
     private void ResolveQueueAttributes()
     {
         _moveOnError = _registration?.MoveOnError ?? _consumerType.GetCustomAttribute<MoveOnErrorAttribute>();
+
+        if (_moveOnError != null && _registration != null)
+        {
+            _moveOnError.QueueName = _moveOnError.QueueName
+                .Replace("{queueName}", _registration.QueueName)
+                .Replace("{queue}", _registration.QueueName);
+        }
 
         if (_registration?.AutoAck == true)
             SendPositiveResponse = true;
