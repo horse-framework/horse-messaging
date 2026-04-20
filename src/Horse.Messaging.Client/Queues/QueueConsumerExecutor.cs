@@ -8,6 +8,8 @@ using Horse.Messaging.Client.Internal;
 using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Client.Queues.Exceptions;
 using Horse.Messaging.Protocol;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Horse.Messaging.Client.Queues;
 
@@ -101,6 +103,12 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
         }
         catch (Exception e)
         {
+            if (client.Queue.LogErrors)
+            {
+                var logger = client.Provider.GetService<ILogger<ExecutorBase>>();
+                logger?.LogError(e, "Queue:{queue}, MessageId:{messageId}", message.Target, message.MessageId);
+            }
+
             if (_moveOnError != null && !string.IsNullOrEmpty(_moveOnError.QueueName))
             {
                 HorseMessage clone = message.Clone(true, true, client.UniqueIdGenerator.Create());

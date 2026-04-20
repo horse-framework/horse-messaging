@@ -24,6 +24,12 @@ public delegate string QueueNameHandler(QueueNameHandlerContext context);
 public class QueueOperator : IDisposable
 {
     internal HorseClient Client { get; }
+
+    /// <summary>
+    /// If true, logs errors with Microsoft.Extensions.Logging
+    /// </summary>
+    public bool LogErrors { get; set; } = true;
+    
     private readonly Timer _pullContainerTimeoutHandler;
 
     internal TypeDescriptorContainer<QueueTypeDescriptor> DescriptorContainer { get; }
