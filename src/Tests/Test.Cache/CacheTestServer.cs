@@ -95,6 +95,7 @@ internal class CacheTestContext : IAsyncDisposable
     {
         try
         {
+            Rider.Server.StopAsync();
             string path = Rider.Options.DataPath;
             if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
                 Directory.Delete(path, true);
