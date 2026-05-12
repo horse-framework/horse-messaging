@@ -103,40 +103,45 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
         }
         catch (Exception e)
         {
-            if (client.Queue.LogErrors)
-            {
-                var logger = client.Provider.GetService<ILogger<ExecutorBase>>();
-                logger?.LogError(e, "Queue:{queue}, MessageId:{messageId}", message.Target, message.MessageId);
-            }
-
-            if (_moveOnError != null && !string.IsNullOrEmpty(_moveOnError.QueueName))
-            {
-                HorseMessage clone = message.Clone(true, true, client.UniqueIdGenerator.Create());
-                var exDesc = ExceptionDescription.Create(client, message, e, tryCount);
-                clone.SetStringAdditionalContent(System.Text.Json.JsonSerializer.Serialize(exDesc));
-                clone.Type = MessageType.QueueMessage;
-
-                if (!string.IsNullOrEmpty(_moveOnError.QueueTopic))
-                    clone.SetOrAddHeader(HorseHeaders.QUEUE_TOPIC, _moveOnError.QueueTopic);
-
-                clone.SetTarget(_moveOnError.QueueName);
-
-                var ack = await client.SendAsync(clone, true, cancellationToken);
-
-                if (ack.Code == HorseResultCode.Ok)
-                    await client.SendAck(message, cancellationToken);
-                else if (SendNegativeResponse)
-                    await SendNegativeAck(message, client, e, cancellationToken);
-            }
-            else if (SendNegativeResponse)
-                await SendNegativeAck(message, client, e, cancellationToken);
-
-            await SendExceptions(message, client, e);
+            await ExecuteException(client, e, message, tryCount, cancellationToken);
         }
         finally
         {
             providedHandler?.Dispose();
         }
+    }
+
+    public override async Task ExecuteException(HorseClient client, Exception e, HorseMessage message, int tryCount, CancellationToken cancellationToken)
+    {
+        if (client.Queue.LogErrors)
+        {
+            var logger = client.Provider.GetService<ILogger<ExecutorBase>>();
+            logger?.LogError(e, "Queue:{queue}, MessageId:{messageId}", message.Target, message.MessageId);
+        }
+
+        if (_moveOnError != null && !string.IsNullOrEmpty(_moveOnError.QueueName))
+        {
+            HorseMessage clone = message.Clone(true, true, client.UniqueIdGenerator.Create());
+            var exDesc = ExceptionDescription.Create(client, message, e, tryCount);
+            clone.SetStringAdditionalContent(System.Text.Json.JsonSerializer.Serialize(exDesc));
+            clone.Type = MessageType.QueueMessage;
+
+            if (!string.IsNullOrEmpty(_moveOnError.QueueTopic))
+                clone.SetOrAddHeader(HorseHeaders.QUEUE_TOPIC, _moveOnError.QueueTopic);
+
+            clone.SetTarget(_moveOnError.QueueName);
+
+            var ack = await client.SendAsync(clone, true, cancellationToken);
+
+            if (ack.Code == HorseResultCode.Ok)
+                await client.SendAck(message, cancellationToken);
+            else if (SendNegativeResponse)
+                await SendNegativeAck(message, client, e, cancellationToken);
+        }
+        else if (SendNegativeResponse)
+            await SendNegativeAck(message, client, e, cancellationToken);
+
+        await SendExceptions(message, client, e);
     }
 
     private async Task Consume(IQueueConsumer<TModel> consumer, HorseMessage message, TModel model,

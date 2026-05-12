@@ -75,15 +75,20 @@ internal class DirectHandlerExecutor<TModel> : ExecutorBase
         }
         catch (Exception e)
         {
-            if (SendNegativeResponse)
-                await SendNegativeAck(message, client, e, cancellationToken);
-
-            await SendExceptions(message, client, e);
+            await ExecuteException(client, e, message, 0, cancellationToken);
         }
         finally
         {
             providedHandler?.Dispose();
         }
+    }
+
+    public override async Task ExecuteException(HorseClient client, Exception e, HorseMessage message, int tryCount, CancellationToken cancellationToken)
+    {
+        if (SendNegativeResponse)
+            await SendNegativeAck(message, client, e, cancellationToken);
+
+        await SendExceptions(message, client, e);
     }
 
     private async Task Handle(IDirectMessageHandler<TModel> messageHandler, HorseMessage message, TModel model,

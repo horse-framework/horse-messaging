@@ -63,8 +63,7 @@ internal class ChannelSubscriberExecutor<TModel> : ExecutorBase
         }
         catch (Exception e)
         {
-            await SendExceptions(message, client, e);
-
+            await ExecuteException(client, e, message, 0, cancellationToken);
             try
             {
                 if (_subscriber != null)
@@ -81,6 +80,11 @@ internal class ChannelSubscriberExecutor<TModel> : ExecutorBase
         {
             providedHandler?.Dispose();
         }
+    }
+
+    public override async Task ExecuteException(HorseClient client, Exception e, HorseMessage message, int tryCount, CancellationToken cancellationToken)
+    {
+        await SendExceptions(message, client, e);
     }
 
     private async Task Handle(IChannelSubscriber<TModel> subscriber, ChannelMessageContext<TModel> context)

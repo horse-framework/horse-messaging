@@ -31,17 +31,18 @@ public class DirectOperator
         if (reg == null)
             return;
 
-        object model = reg.MessageType == typeof(string)
-            ? message.GetStringContent()
-            : _client.MessageSerializer.Deserialize(message, reg.MessageType);
-
         try
         {
+            object model = reg.MessageType == typeof(string)
+                ? message.GetStringContent()
+                : _client.MessageSerializer.Deserialize(message, reg.MessageType);
+
             await reg.ConsumerExecuter.Execute(_client, message, model, _client.ConsumeToken);
         }
         catch (Exception ex)
         {
             _client.OnException(ex, message);
+            await reg.ConsumerExecuter.ExecuteException(_client, ex, message, 0, _client.ConsumeToken);
         }
     }
 

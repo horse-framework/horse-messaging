@@ -67,6 +67,11 @@ public abstract class ExecutorBase
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// Executes when an exception is thrown in Execute method.
+    /// </summary>
+    public abstract Task ExecuteException(HorseClient client, Exception e, HorseMessage message, int tryCount, CancellationToken cancellationToken);
+    
+    /// <summary>
     /// Sends negative ack
     /// </summary>
     protected Task SendNegativeAck(HorseMessage message, HorseClient client, Exception exception, CancellationToken cancellationToken)
