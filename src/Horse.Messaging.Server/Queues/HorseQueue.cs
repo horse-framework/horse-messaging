@@ -361,7 +361,11 @@ public class HorseQueue
         await QueueLock.WaitAsync();
         try
         {
-            if (Status != QueueStatus.NotInitialized)
+            // Key on Manager, not Status: a replica queue can reach Status=Running with a null
+            // Manager (CreateReplica skips init when the source wasn't yet initialized, then the
+            // Main's NodeQueueStateMessage advances Status via SetStatus without touching Manager).
+            // Guarding on Status alone would skip initialization forever and leave Manager null.
+            if (Manager != null)
                 return;
 
             if (queueManager != null)
@@ -1122,7 +1126,11 @@ public class HorseQueue
 
         QueueMessage message = new QueueMessage(horseMessage);
 
-        if (Status == QueueStatus.NotInitialized)
+        // A replicated queue on the successor can be Status=Running while Manager is still null
+        // (see InitializeQueue note). Enter the init block whenever the Manager is missing, not
+        // only on NotInitialized, otherwise the Manager.DeliveryHandler deref below NREs and the
+        // replica silently drops every replicated message (Main sees the ack fail).
+        if (Status == QueueStatus.NotInitialized || Manager == null)
         {
             try
             {
