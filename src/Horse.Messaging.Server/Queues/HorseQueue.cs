@@ -361,11 +361,18 @@ public class HorseQueue
         await QueueLock.WaitAsync();
         try
         {
-            // Key on Manager, not Status: a replica queue can reach Status=Running with a null
-            // Manager (CreateReplica skips init when the source wasn't yet initialized, then the
-            // Main's NodeQueueStateMessage advances Status via SetStatus without touching Manager).
-            // Guarding on Status alone would skip initialization forever and leave Manager null.
-            if (Manager != null)
+            // Skip only when the queue is FULLY initialized (Manager set AND Status=Running). Guarding on
+            // Manager alone is not enough: the queue-manager FACTORY pre-assigns Queue.Manager before it
+            // returns (HorseQueueConfigurator / Data Extensions), so a Manager-only guard early-returns
+            // here and SKIPS queueManager.Initialize() + Status=Running (regression from the S7 commit
+            // that switched this guard from Status- to Manager-based). MemoryQueueManager tolerates that
+            // (store usable from ctor), but PersistentQueueManager's store is never opened → every push
+            // is silently DROPPED (prod: MESSAGE_PRODUCED but pending=0, never delivered — normal Create
+            // AND replica alike). The combined guard still covers the replica case the S7 fix targeted
+            // (Status=Running with a null Manager → Manager==null → fall through and initialize) while
+            // also completing lazy/persistent init (Manager set, Status!=Running → initialize).
+            // Double-init is prevented by QueueLock + this same re-check inside the lock.
+            if (Manager != null && Status == QueueStatus.Running)
                 return;
 
             if (queueManager != null)

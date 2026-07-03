@@ -120,14 +120,10 @@ public class NodeQueueTest
                 q.UseMemoryQueues();
                 q.Options.Type = QueueType.RoundRobin;
                 q.Options.AutoQueueCreation = true;
-                // Mirror prod: partition-enabled queues (TrackDeliveryEvent-Partition-*).
-                q.Options.Partition = new PartitionOptions
-                {
-                    Enabled = true,
-                    AutoAssignWorkers = true,
-                    MaxPartitionsPerWorker = 1,
-                    SubscribersPerPartition = 1
-                };
+                // Non-partitioned: this test asserts the message lands in the queue's OWN store. The
+                // partition+label routing path is covered by Push_WithDynamicPartitionLabels and the
+                // persistent-config 209 repro; a partition-enabled queue with no consumer legitimately
+                // returns NoConsumers now that init completes (PartitionManager is created).
             })
             .Build();
 
@@ -412,6 +408,156 @@ public class NodeQueueTest
             Assert.Null(thrown);
             Assert.DoesNotContain(err.Errors, e => e is NullReferenceException);
             Assert.NotNull(replica.Manager); // factory resolved + Manager assigned, no NRE
+        }
+        finally
+        {
+            await server.StopAsync();
+            await Task.Delay(300);
+            try { Directory.Delete(dataPath, true); } catch { }
+        }
+    }
+
+    /// <summary>
+    /// REPRODUCE of the live prod DELIVERY DROP (not just the NRE): with the persistent manager, a message
+    /// pushed to an uninitialized replica queue is silently DROPPED (server logs MESSAGE_PRODUCED but the
+    /// message is never stored/delivered — prod: pending=0, no Deliver, charge stays Held). The null-guard
+    /// fix stops the eventId 209 crash, but the factory pre-assigns Queue.Manager, so InitializeQueue's
+    /// `if (Manager != null) return` early-return SKIPS queueManager.Initialize() + Status=Running — the
+    /// PersistentQueueManager store is never opened, so the push cannot store the message.
+    ///
+    /// Control (A) proves the SAME setup with UseMemoryQueues() STORES the message (which is exactly why
+    /// the 5 existing tests are green — MemoryQueueManager's store is usable straight from its ctor and
+    /// needs no Initialize()). (B) with UsePersistentQueues() DROPS it — the untested prod path.
+    /// </summary>
+    [Fact]
+    public async Task Push_On_Uninitialized_Replica_Memory_Stores_ButPersistent_Drops()
+    {
+        // ── (A) CONTROL: memory manager — message IS stored (mirrors the passing existing tests) ──
+        int memoryStored = await PushToReplicaAndCountStored(useMemory: true, port: 28695, dataPath: null);
+        _output.WriteLine($"[A] memory   stored={memoryStored}");
+
+        // ── (B) PROD PATH: persistent manager — message is DROPPED (store never initialized) ──
+        string dataPath = Path.Combine(Path.GetTempPath(), "horse-drop-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dataPath);
+        int persistentStored;
+        try
+        {
+            persistentStored = await PushToReplicaAndCountStored(useMemory: false, port: 28696, dataPath: dataPath);
+        }
+        finally
+        {
+            try { Directory.Delete(dataPath, true); } catch { }
+        }
+        _output.WriteLine($"[B] persist  stored={persistentStored}");
+
+        // Control must store; prod path must ALSO store once the deeper init-completeness fix lands.
+        // Today (null-guard only) (B) is 0 → this assertion reproduces the live delivery drop.
+        Assert.Equal(1, memoryStored);
+        Assert.Equal(1, persistentStored);
+    }
+
+    // Creates a pre-init replica queue (Manager null, Status NotInitialized), pushes one message via the
+    // client-publish Push path, and returns how many messages actually landed in the queue's store.
+    private async Task<int> PushToReplicaAndCountStored(bool useMemory, int port, string dataPath)
+    {
+        HorseRiderBuilder builder = HorseRiderBuilder.Create();
+        if (!useMemory)
+            builder = builder.ConfigureOptions(o => { o.DataPath = dataPath; });
+
+        HorseRider rider = builder
+            .ConfigureQueues(q =>
+            {
+                if (useMemory)
+                    q.UseMemoryQueues();
+                else
+                    q.UsePersistentQueues(pq =>
+                    {
+                        pq.SetAutoShrink(true, TimeSpan.FromMinutes(10));
+                        pq.UseInstantFlush();
+                    });
+                q.Options.Type = QueueType.RoundRobin;
+                q.Options.AutoQueueCreation = true;
+                q.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                // NON-partitioned so the message lands directly in this queue's own store (clean count).
+            })
+            .Build();
+
+        HorseServer server = new HorseServer();
+        server.Options.Hosts = [new HorseHostOptions { Port = port }];
+        server.UseRider(rider);
+        _ = server.StartAsync();
+        await Task.Delay(500);
+
+        try
+        {
+            HorseQueue source = rider.Queue.Find("SrcTpl-" + port) ?? await rider.Queue.Create("SrcTpl-" + port);
+            NodeQueueInfo info = source.ClusterNotifier.CreateNodeQueueInfo();
+            info.Name = "DropRepro-" + port;
+            info.HandlerName = "Default";
+            info.Initialized = false;
+
+            HorseQueue replica = await rider.Queue.CreateReplica(info);
+            Assert.Equal(QueueStatus.NotInitialized, replica.Status);
+            Assert.Null(replica.Manager);
+
+            HorseMessage message = new HorseMessage(MessageType.QueueMessage, replica.Name);
+            message.SetStringContent("payload");
+            message.CalculateLengths();
+
+            PushResult result = await replica.Push(new QueueMessage(message), null);
+            int stored = replica.Manager == null ? -1 : replica.Manager.MessageStore.Count();
+            _output.WriteLine($"  useMemory={useMemory} result={result} Status={replica.Status} stored={stored}");
+            return Math.Max(stored, 0);
+        }
+        finally
+        {
+            await server.StopAsync();
+            await Task.Delay(300);
+        }
+    }
+
+    /// <summary>
+    /// Regression guard for the S7 InitializeQueue guard bug on the NORMAL create path (not just replica):
+    /// a plain persistent Create + push must initialize the queue (Status=Running) and STORE the message.
+    /// Pre-fix the factory-pre-assigned Manager tripped `if (Manager != null) return`, so Initialize()
+    /// and Status=Running were skipped → the PersistentQueueManager store was never opened → the push
+    /// returned StatusNotSupported and the message was dropped (Status stayed NotInitialized). This is the
+    /// exact prod delivery drop; MemoryQueueManager hid it (store usable from ctor) but even memory could
+    /// not DELIVER to a consumer because Status never reached Running (see Test.Queues PushDeliveryTest).
+    /// </summary>
+    [Fact]
+    public async Task NormalPersistentCreate_Push_InitializesAndStores()
+    {
+        string dataPath = Path.Combine(Path.GetTempPath(), "horse-normal-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dataPath);
+        HorseRider rider = HorseRiderBuilder.Create()
+            .ConfigureOptions(o => { o.DataPath = dataPath; })
+            .ConfigureQueues(q =>
+            {
+                q.UsePersistentQueues(pq => { pq.SetAutoShrink(true, TimeSpan.FromMinutes(10)); pq.UseInstantFlush(); });
+                q.Options.Type = QueueType.RoundRobin;
+                q.Options.AutoQueueCreation = true;
+                q.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+            })
+            .Build();
+        HorseServer server = new HorseServer();
+        server.Options.Hosts = [new HorseHostOptions { Port = 28697 }];
+        server.UseRider(rider);
+        _ = server.StartAsync();
+        await Task.Delay(500);
+        try
+        {
+            HorseQueue q = await rider.Queue.Create("NormalQ");
+            HorseMessage m = new HorseMessage(MessageType.QueueMessage, "NormalQ");
+            m.SetStringContent("payload");
+            m.CalculateLengths();
+            PushResult r = await q.Push(new QueueMessage(m), null);
+            int stored = q.Manager?.MessageStore.Count() ?? -1;
+            _output.WriteLine($"result={r} Status={q.Status} stored={stored}");
+
+            Assert.Equal(QueueStatus.Running, q.Status);
+            Assert.Equal(PushResult.Success, r);
+            Assert.Equal(1, stored);
         }
         finally
         {
