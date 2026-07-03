@@ -841,7 +841,11 @@ public class HorseQueue
         if (Rider.Queue.IsShuttingDown)
             return PushResult.StatusNotSupported;
 
-        if (Status == QueueStatus.NotInitialized)
+        // Guard on Manager==null in addition to Status: a replica can reach Status=Running while its
+        // Manager is still null (CreateReplica pre-init + a stray NodeQueueStateMessage advancing
+        // Status). A Status-only guard would skip init and dereference the null Manager (silently
+        // dropping the message / NRE). This mirrors the sibling guard in PushByNode.
+        if (Status == QueueStatus.NotInitialized || Manager == null)
         {
             try
             {
