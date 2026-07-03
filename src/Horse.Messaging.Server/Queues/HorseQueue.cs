@@ -861,7 +861,14 @@ public class HorseQueue
                 if (string.IsNullOrEmpty(handlerBuilder.ManagerName))
                     handlerBuilder.ManagerName = "Default";
 
-                Func<QueueManagerBuilder, Task<IHorseQueueManager>> factory = Rider.Queue.QueueManagerFactories[handlerBuilder.ManagerName];
+                // QueueManagerFactories (the frozen dictionary) is null until the startup-load freeze
+                // (QueueRider.cs:269); a replica queue can reach this init block before then. The raw
+                // indexer dereferences the null frozen dict → NullReferenceException surfaced as
+                // eventId 209 "Initialize In Push Queue" (prod). Use the null-safe accessor that falls
+                // back to the mutable dictionary, mirroring FindQueueManagerFactory / GetQueueManagers.
+                Func<QueueManagerBuilder, Task<IHorseQueueManager>> factory = Rider.Queue.FindQueueManagerFactory(handlerBuilder.ManagerName);
+                if (factory == null)
+                    throw new KeyNotFoundException($"Queue manager factory '{handlerBuilder.ManagerName}' is not registered for queue {Name}");
                 IHorseQueueManager queueManager = await factory(handlerBuilder);
 
                 await InitializeQueue(queueManager);
@@ -1150,7 +1157,12 @@ public class HorseQueue
                 if (string.IsNullOrEmpty(handlerBuilder.ManagerName))
                     handlerBuilder.ManagerName = "Default";
 
-                Func<QueueManagerBuilder, Task<IHorseQueueManager>> factory = Rider.Queue.QueueManagerFactories[handlerBuilder.ManagerName];
+                // Same null-safe accessor as the sibling Push init block: the frozen QueueManagerFactories
+                // can be null on a replica before the startup-load freeze (QueueRider.cs:269), so avoid the
+                // raw indexer (eventId 209 NRE) and fall back to the mutable dictionary.
+                Func<QueueManagerBuilder, Task<IHorseQueueManager>> factory = Rider.Queue.FindQueueManagerFactory(handlerBuilder.ManagerName);
+                if (factory == null)
+                    throw new KeyNotFoundException($"Queue manager factory '{handlerBuilder.ManagerName}' is not registered for queue {Name}");
                 IHorseQueueManager queueManager = await factory(handlerBuilder);
 
                 await InitializeQueue(queueManager, false);

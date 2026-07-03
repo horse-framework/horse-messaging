@@ -315,6 +315,112 @@ public class NodeQueueTest
         }
     }
 
+    /// <summary>
+    /// PROD-FAITHFUL reproduce of the LIVE eventId 209 NRE ("Initialize In Push Queue: BcCargoReadyToShipEvent-standard"
+    /// @ HorseQueue.Push:873) that all five tests above MISS. The difference is the queue manager:
+    /// every passing test uses <c>UseMemoryQueues()</c>, but production (parrot HorseService.cs) uses
+    /// <c>UsePersistentQueues(...)</c> + <c>UseCustomPersistentConfigurator(null)</c> + partition. A replica
+    /// queue (Manager null, Status NotInitialized) that receives a direct client-publish Push goes through
+    /// the Push init block (HorseQueue.cs:848-876); with the PERSISTENT manager the initialization NREs and
+    /// is re-thrown at :874 after SendError(:873). Config mirrors parrot HorseService.cs:171-205 exactly.
+    ///
+    /// Pre-fix (8.2.17): Push throws NullReferenceException -> eventId 209 "Initialize In Push Queue".
+    /// Post-fix: the init block initializes the persistent Manager and stores the message (Success).
+    /// </summary>
+    [Fact]
+    public async Task Push_On_Uninitialized_Replica_PersistentQueues_ProdConfig_InitializesWithoutNre()
+    {
+        string dataPath = Path.Combine(Path.GetTempPath(), "horse-nre-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dataPath);
+        CapturingErrorHandler err = new();
+
+        // EXACT prod config (parrot src/messaging.server/HorseService.cs:140-205).
+        HorseRider rider = HorseRiderBuilder.Create()
+            .ConfigureOptions(o => { o.DataPath = dataPath; })
+            .ConfigureQueues(q =>
+            {
+                q.UsePersistentQueues(pq =>
+                {
+                    pq.SetAutoShrink(true, TimeSpan.FromMinutes(10));
+                    pq.UseInstantFlush();
+                });
+                q.Options.Type = QueueType.RoundRobin;
+                q.Options.AutoQueueCreation = true;
+                q.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                q.Options.AcknowledgeTimeout = TimeSpan.FromMinutes(5);
+                q.Options.Partition = new PartitionOptions
+                {
+                    Enabled = true,
+                    AutoDestroy = PartitionAutoDestroy.NoMessages,
+                    AutoAssignWorkers = true,
+                    MaxPartitionCount = 0,
+                    MaxPartitionsPerWorker = 1,
+                    SubscribersPerPartition = 1,
+                    AutoDestroyIdleSeconds = 120
+                };
+                q.UseCustomPersistentConfigurator(null);
+            })
+            .Build();
+        rider.ErrorHandlers.Add(err);
+
+        HorseServer server = new HorseServer();
+        server.Options.Hosts = [new HorseHostOptions { Port = 28690 }];
+        server.UseRider(rider);
+        _ = server.StartAsync();
+        await Task.Delay(500);
+
+        try
+        {
+            HorseQueue source = rider.Queue.Find("SourceTemplateP") ?? await rider.Queue.Create("SourceTemplateP");
+            Assert.NotNull(source);
+            NodeQueueInfo info = source.ClusterNotifier.CreateNodeQueueInfo();
+            info.Name = "BcCargoReadyToShipEvent-standard"; // the exact prod queue that logs 209
+            info.HandlerName = "Default";
+            info.Initialized = false;
+
+            // Replica created pre-init → Manager null, Status NotInitialized (Push takes its init block).
+            HorseQueue replica = await rider.Queue.CreateReplica(info);
+            Assert.NotNull(replica);
+            Assert.Equal(QueueStatus.NotInitialized, replica.Status);
+            Assert.Null(replica.Manager);
+
+            HorseMessage message = new HorseMessage(MessageType.QueueMessage, "BcCargoReadyToShipEvent-standard");
+            message.SetStringContent("bc-ready-payload");
+            message.CalculateLengths();
+
+            NullReferenceException thrown = null;
+            PushResult result = PushResult.Success;
+            try
+            {
+                result = await replica.Push(new QueueMessage(message), null);
+            }
+            catch (NullReferenceException e)
+            {
+                thrown = e;
+                _output.WriteLine("PUSH THREW NullReferenceException:");
+                _output.WriteLine(e.StackTrace ?? "(no stack)");
+            }
+
+            int nre209 = err.Errors.Count(e => e is NullReferenceException);
+            _output.WriteLine($"result={result} threwNre={(thrown != null)} captured209Nre={nre209} Status={replica.Status} Manager={(replica.Manager == null ? "NULL" : "set")}");
+
+            // Post-fix expectation (regression guard for the live prod eventId 209 NRE): the Push init
+            // block no longer dereferences the null frozen QueueManagerFactories — it resolves the factory
+            // via the null-safe FindQueueManagerFactory fallback and initializes the persistent Manager.
+            // Pre-fix this path threw NullReferenceException at HorseQueue.cs:864 ("Initialize In Push
+            // Queue: BcCargoReadyToShipEvent-standard", eventId 209) and black-holed the message.
+            Assert.Null(thrown);
+            Assert.DoesNotContain(err.Errors, e => e is NullReferenceException);
+            Assert.NotNull(replica.Manager); // factory resolved + Manager assigned, no NRE
+        }
+        finally
+        {
+            await server.StopAsync();
+            await Task.Delay(300);
+            try { Directory.Delete(dataPath, true); } catch { }
+        }
+    }
+
     private sealed class CapturingErrorHandler : IErrorHandler
     {
         private readonly object _lock = new();
