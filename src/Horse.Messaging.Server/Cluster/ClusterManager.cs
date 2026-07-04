@@ -377,6 +377,35 @@ public class ClusterManager
 
             NodeClient oldestClient = Clients.Where(x => x.Info.StartDate.HasValue).MinBy(x => x.Info.StartDate);
 
+            //StartDate is populated only on the inbound handshake (NodeClient.IncomingClientConnected)
+            //and is cleared in ProcessDisconnection before OnMainDown runs. A connected-but-inbound-less
+            //peer therefore has a null StartDate, so oldestClient can be null here. A blanket AskForMain
+            //fallback would let two symmetric survivors nominate each other (AnswerMainRequest approves any
+            //asker while MainNode == null) -> dual-Main. Instead fall back to a deterministic single nominee
+            //keyed on the always-available node Name: only the lexicographic-min Name asks for main.
+            if (oldestClient == null)
+            {
+                string minName = Options.Name;
+
+                foreach (NodeClient client in Clients)
+                {
+                    if (client.IsConnected && !string.IsNullOrEmpty(client.Info.Name) && string.CompareOrdinal(client.Info.Name, minName) < 0)
+                        minName = client.Info.Name;
+                }
+
+                //this survivor owns the min Name -> it is the sole nominee
+                if (minName == Options.Name)
+                    return AskForMain();
+
+                //otherwise prod the min-Name survivor to announce its mainity
+                NodeClient minNameClient = Clients.FirstOrDefault(x => x.IsConnected && x.Info.Name == minName);
+
+                if (minNameClient != null)
+                    return minNameClient.SendMessage(new HorseMessage(MessageType.Cluster, Id, KnownContentTypes.ProdForMainAnnouncement));
+
+                return Task.CompletedTask;
+            }
+
             if (StartDate > oldestClient.Info.StartDate)
                 return AskForMain();
 

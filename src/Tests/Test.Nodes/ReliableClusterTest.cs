@@ -510,4 +510,106 @@ public class ReliableClusterTest
             await StopCluster(nodes);
         }
     }
+
+    /// <summary>
+    /// Test A — null-guard. Drives OnMainDown into the State==Replica branch where SuccessorNode is
+    /// unavailable, a connected firstReplica exists, but every connected peer has a null Info.StartDate
+    /// (the real prod window: StartDate is set only on the inbound handshake and cleared on disconnect,
+    /// while IsConnected can be true from the outbound client alone). Pre-fix: MinBy returns null and
+    /// `StartDate > oldestClient.Info.StartDate` throws NullReferenceException (ClusterManager.cs:380).
+    /// Post-fix: the oldestClient==null guard falls back to the Name tiebreak — no throw.
+    /// </summary>
+    [Fact]
+    public async Task OnMainDown_ReplicaBranch_AllPeersMissingStartDate_DoesNotThrow()
+    {
+        int[] ports = { 28771, 28772, 28773 };
+        List<ClusterNode> nodes = StartReliableCluster(ports, ReplicaAcknowledge.OnlySuccessor);
+
+        try
+        {
+            bool formed = await WaitUntil(() =>
+                nodes.Count(n => n.Rider.Cluster.State == NodeState.Main) == 1 &&
+                nodes.Count(n => n.Rider.Cluster.State == NodeState.Successor) == 1 &&
+                nodes.Count(n => n.Rider.Cluster.State == NodeState.Replica) == 1 &&
+                NodeInState(nodes, NodeState.Replica).Rider.Cluster.Clients.Count(c => c.IsConnected) >= 1);
+            Assert.True(formed, "cluster did not converge to Main + Successor + Replica");
+
+            ClusterNode replica = NodeInState(nodes, NodeState.Replica);
+            ClusterManager cluster = replica.Rider.Cluster;
+
+            cluster.SuccessorNode = null;
+            foreach (NodeClient c in cluster.Clients)
+                c.Info.StartDate = null;
+
+            NodeClient down = cluster.Clients.First(c => c.IsConnected);
+            Assert.Equal(NodeState.Replica, cluster.State);
+
+            _output.WriteLine($"replica={replica.Name} connectedPeers={cluster.Clients.Count(c => c.IsConnected)} " +
+                              $"oldestNull={cluster.Clients.All(c => c.Info.StartDate == null)}");
+
+            Exception ex = await Record.ExceptionAsync(() => cluster.OnMainDown(down));
+            Assert.Null(ex);
+        }
+        finally
+        {
+            await StopCluster(nodes);
+        }
+    }
+
+    /// <summary>
+    /// Test B — single nominee / no dual-Main. Symmetric double-fault: two survivors both hit the
+    /// oldestClient==null branch. A blanket AskForMain fallback would make BOTH ask, and each approves
+    /// the other while MainNode==null (AnswerMainRequest, ClusterManager.cs:306-307) → dual-Main. The
+    /// Name tiebreak funnels nomination to a single node: only the lexicographic-min Name asks for main,
+    /// the other prods it. Assert exactly ONE node becomes Main and it is the min-Name node.
+    /// </summary>
+    [Fact]
+    public async Task OnMainDown_SymmetricDoubleFault_OnlyLexicographicMinNameBecomesMain()
+    {
+        int[] ports = { 28781, 28782 };
+        List<ClusterNode> nodes = StartReliableCluster(ports, ReplicaAcknowledge.OnlySuccessor);
+
+        try
+        {
+            bool connected = await WaitUntil(() =>
+                nodes.All(n => n.Rider.Cluster.Clients.Any(c => c.IsConnected)));
+            Assert.True(connected, "the two nodes never connected as peers");
+
+            ClusterNode expectedMain = nodes.OrderBy(n => n.Name, StringComparer.Ordinal).First();
+            ClusterNode other = nodes.Single(n => n != expectedMain);
+            _output.WriteLine($"expectedMain(minName)={expectedMain.Name} other={other.Name}");
+
+            foreach (ClusterNode node in nodes)
+            {
+                ClusterManager cluster = node.Rider.Cluster;
+                NodeClient peer = cluster.Clients.First(c => c.IsConnected);
+                cluster.MainNode = new NodeInfo { Id = peer.Info.Id, Name = peer.Info.Name };
+                cluster.SuccessorNode = null;
+                cluster.UpdateState();
+                Assert.Equal(NodeState.Replica, cluster.State);
+                peer.Info.StartDate = null;
+            }
+
+            foreach (ClusterNode node in nodes)
+            {
+                ClusterManager cluster = node.Rider.Cluster;
+                NodeClient peer = cluster.Clients.First(c => c.IsConnected);
+                await cluster.OnMainDown(peer);
+            }
+
+            bool singleMain = await WaitUntil(() =>
+                expectedMain.Rider.Cluster.State == NodeState.Main &&
+                other.Rider.Cluster.State != NodeState.Main);
+
+            foreach (ClusterNode n in nodes)
+                _output.WriteLine($"{n.Name} finalState={n.Rider.Cluster.State} main={n.Rider.Cluster.MainNode?.Name}");
+
+            Assert.True(singleMain, "min-Name node did not become the sole Main (tiebreak violated / dual-Main)");
+            Assert.Equal(1, nodes.Count(n => n.Rider.Cluster.State == NodeState.Main));
+        }
+        finally
+        {
+            await StopCluster(nodes);
+        }
+    }
 }
