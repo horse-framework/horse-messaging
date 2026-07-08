@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Logging;
 
 namespace Horse.Messaging.Server.Queues.Store;
@@ -37,6 +38,13 @@ public class DefaultMessageTimeoutTracker : IMessageTimeoutTracker
         {
             try
             {
+                // A passive replica (Successor/Replica) holds messages only for replication;
+                // expiring/forwarding them is the Main's job. Running the tracker here also NREs
+                // because the forward target (e.g. TIMEOUT_QUEUE) usually doesn't exist on the
+                // successor. Only Main (or a non-clustered Single node) expires messages.
+                if (_queue.Rider.Cluster.State is not (NodeState.Main or NodeState.Single))
+                    continue;
+
                 MessageTimeoutStrategy strategy = _queue.Options.MessageTimeout;
 
                 if (strategy.Policy == MessageTimeoutPolicy.NoTimeout || strategy.MessageDuration == 0)
@@ -58,12 +66,14 @@ public class DefaultMessageTimeoutTracker : IMessageTimeoutTracker
                         if (strategy.Policy == MessageTimeoutPolicy.PushQueue)
                         {
                             var queue = _queue.Rider.Queue.Find(strategy.TargetName);
-                            await queue.Push(message.Message);
+                            if (queue != null)
+                                await queue.Push(message.Message);
                         }
                         else if (strategy.Policy == MessageTimeoutPolicy.PublishRouter)
                         {
                             var router = _queue.Rider.Router.Find(strategy.TargetName);
-                            await router.Publish(null, message.Message);
+                            if (router != null)
+                                await router.Publish(null, message.Message);
                         }
                     }
 

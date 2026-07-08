@@ -25,37 +25,44 @@ public class QueueInformationTest
             o.CommitWhen = CommitWhen.AfterReceived;
             o.Acknowledge = QueueAckDecision.WaitForAcknowledge;
         });
-
-        await ctx.Rider.Queue.Create("info-unack", o =>
+        try
         {
-            o.Type = QueueType.RoundRobin;
-            o.PutBack = PutBackDecision.No;
-            o.AcknowledgeTimeout = System.TimeSpan.FromSeconds(2);
-        });
 
-        var consumer = new HorseClient
+            await ctx.Rider.Queue.Create("info-unack", o =>
+            {
+                o.Type = QueueType.RoundRobin;
+                o.PutBack = PutBackDecision.No;
+                o.AcknowledgeTimeout = System.TimeSpan.FromSeconds(2);
+            });
+
+            var consumer = new HorseClient
+            {
+                AutoAcknowledge = false
+            };
+
+            await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await consumer.Queue.Subscribe("info-unack", true, CancellationToken.None);
+
+            var producer = new HorseClient();
+            await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await producer.Queue.Push("info-unack", new MemoryStream("unack"u8.ToArray()), false, CancellationToken.None);
+
+            await Task.Delay(4000);
+
+            HorseModelResult<List<QueueInformation>> result = await producer.Queue.List(CancellationToken.None);
+            Assert.Equal(HorseResultCode.Ok, result.Result.Code);
+
+            QueueInformation info = result.Model.FirstOrDefault(q => q.Name == "info-unack");
+            Assert.NotNull(info);
+            Assert.Equal(1, info.Unacknowledges);
+            Assert.Equal(0, info.NegativeAcks);
+
+            producer.Disconnect();
+            consumer.Disconnect();
+        }
+        finally
         {
-            AutoAcknowledge = false
-        };
-
-        await consumer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await consumer.Queue.Subscribe("info-unack", true, CancellationToken.None);
-
-        var producer = new HorseClient();
-        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
-        await producer.Queue.Push("info-unack", new MemoryStream("unack"u8.ToArray()), false, CancellationToken.None);
-
-        await Task.Delay(4000);
-
-        HorseModelResult<List<QueueInformation>> result = await producer.Queue.List(CancellationToken.None);
-        Assert.Equal(HorseResultCode.Ok, result.Result.Code);
-
-        QueueInformation info = result.Model.FirstOrDefault(q => q.Name == "info-unack");
-        Assert.NotNull(info);
-        Assert.Equal(1, info.Unacknowledges);
-        Assert.Equal(0, info.NegativeAcks);
-
-        producer.Disconnect();
-        consumer.Disconnect();
+            await ctx.Server.StopAsync();
+        }
     }
 }

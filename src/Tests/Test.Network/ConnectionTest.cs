@@ -1,4 +1,5 @@
 using System.Threading;
+using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Test.Common;
@@ -17,13 +18,10 @@ public class ConnectionTest
     [Fact]
     public async Task ClientConnectsToServer()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 3, requestTimeout: 15);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             HorseClient client = new HorseClient();
             await client.ConnectAsync($"horse://localhost:{port}");
             await Task.Delay(500);
@@ -31,23 +29,16 @@ public class ConnectionTest
             Assert.True(client.IsConnected);
 
             client.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 3, requestTimeout: 15);
     }
 
     [Fact]
     public async Task ClientDisconnectsCleanly()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 3, requestTimeout: 15);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             HorseClient client = new HorseClient();
             await client.ConnectAsync($"horse://localhost:{port}");
             await Task.Delay(500);
@@ -58,23 +49,16 @@ public class ConnectionTest
             await Task.Delay(200);
 
             Assert.False(client.IsConnected);
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 3, requestTimeout: 15);
     }
 
     [Fact]
     public async Task MultipleClientsConnect()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 3, requestTimeout: 15);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             HorseClient client1 = new HorseClient();
             HorseClient client2 = new HorseClient();
             HorseClient client3 = new HorseClient();
@@ -92,11 +76,7 @@ public class ConnectionTest
             client1.Disconnect();
             client2.Disconnect();
             client3.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 3, requestTimeout: 15);
     }
 
     [Fact]
@@ -104,7 +84,6 @@ public class ConnectionTest
     {
         HorseClient client = new HorseClient();
 
-        // Port that is almost certainly not in use
         await client.ConnectAsync("horse://localhost:59999");
         await Task.Delay(500);
 
@@ -118,13 +97,10 @@ public class ConnectionTest
     [Fact]
     public async Task ClientReceivesId()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 3, requestTimeout: 15);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             HorseClient client = new HorseClient();
             await client.ConnectAsync($"horse://localhost:{port}");
             await Task.Delay(500);
@@ -133,23 +109,16 @@ public class ConnectionTest
             Assert.False(string.IsNullOrEmpty(client.ClientId));
 
             client.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 3, requestTimeout: 15);
     }
 
     [Fact]
     public async Task ClientNameAndType()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 3, requestTimeout: 15);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             HorseClient client = new HorseClient();
             client.SetClientName("test-client");
             client.SetClientType("test-type");
@@ -159,23 +128,16 @@ public class ConnectionTest
             Assert.True(client.IsConnected);
 
             client.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 3, requestTimeout: 15);
     }
 
     [Fact]
     public async Task DuplicateClientId_SecondRejected()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 3, requestTimeout: 15);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             string sharedId = "dup-" + Guid.NewGuid().ToString("N")[..8];
 
             HorseClient client1 = new HorseClient();
@@ -192,22 +154,15 @@ public class ConnectionTest
             client2.Disconnected += _ => client2Disconnected = true;
             await client2.ConnectAsync($"horse://localhost:{port}");
 
-            // Wait for second client to be rejected and disconnected
             for (int i = 0; i < 50 && !client2Disconnected; i++)
                 await Task.Delay(100);
 
-            // Stop reconnection attempts
             client2.Disconnect();
 
-            // Second client must have been disconnected at least once (rejected by server)
             Assert.True(client2Disconnected);
 
             client1.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 3, requestTimeout: 15);
     }
 
     #endregion
@@ -217,20 +172,17 @@ public class ConnectionTest
     [Fact]
     public async Task SendDirectMessage()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 3, requestTimeout: 15);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             HorseClient sender = new HorseClient();
             await sender.ConnectAsync($"horse://localhost:{port}");
 
             HorseClient receiver = new HorseClient();
 
             HorseMessage receivedMessage = null;
-            receiver.MessageReceived += (c, m) => { receivedMessage = m; };
+            receiver.MessageReceived += (_, m) => { receivedMessage = m; };
 
             await receiver.ConnectAsync($"horse://localhost:{port}");
             await Task.Delay(1000);
@@ -238,11 +190,11 @@ public class ConnectionTest
             Assert.True(sender.IsConnected);
             Assert.True(receiver.IsConnected);
 
-            // Send a direct message using receiver's actual client id
             HorseMessage msg = new HorseMessage(MessageType.DirectMessage, receiver.ClientId);
             msg.SetStringContent("hello from sender");
 
             HorseResult result = await sender.SendAsync(msg, CancellationToken.None);
+            Assert.NotNull(result);
 
             await Task.Delay(2000);
 
@@ -251,23 +203,16 @@ public class ConnectionTest
 
             sender.Disconnect();
             receiver.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 3, requestTimeout: 15);
     }
 
     [Fact]
     public async Task SendMessageToNonExistentClient()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 3, requestTimeout: 15);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             HorseClient client = new HorseClient();
             await client.ConnectAsync($"horse://localhost:{port}");
             await Task.Delay(500);
@@ -277,16 +222,10 @@ public class ConnectionTest
             msg.WaitResponse = true;
 
             HorseResult result = await client.SendAsync(msg, CancellationToken.None);
-
-            // Message sent successfully to server (no delivery guarantee without ack)
             Assert.NotNull(result);
 
             client.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 3, requestTimeout: 15);
     }
 
     #endregion
@@ -296,30 +235,22 @@ public class ConnectionTest
     [Fact]
     public async Task ConnectionStaysAliveWithPing()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 2, requestTimeout: 10);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             HorseClient client = new HorseClient();
             await client.ConnectAsync($"horse://localhost:{port}");
             await Task.Delay(500);
 
             Assert.True(client.IsConnected);
 
-            // Wait for multiple ping cycles
             await Task.Delay(5000);
 
             Assert.True(client.IsConnected);
 
             client.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 2, requestTimeout: 10);
     }
 
     #endregion
@@ -329,33 +260,28 @@ public class ConnectionTest
     [Fact]
     public async Task ServerStop_DisconnectsClients()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 2, requestTimeout: 4);
-        Assert.True(port > 0);
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            Assert.True(port > 0);
 
-        bool disconnected = false;
-        HorseClient client = new HorseClient();
-        client.Disconnected += _ => disconnected = true;
-        await client.ConnectAsync($"horse://localhost:{port}");
-        await Task.Delay(500);
+            bool disconnected = false;
+            HorseClient client = new HorseClient();
+            client.Disconnected += _ => disconnected = true;
+            await client.ConnectAsync($"horse://localhost:{port}");
+            await Task.Delay(500);
 
-        Assert.True(client.IsConnected);
+            Assert.True(client.IsConnected);
 
-        server.Stop();
+            await server.StopAsync();
 
-        // Poll until client detects disconnection (up to 15s - depends on ping timeout)
-        for (int i = 0; i < 150 && !disconnected; i++)
-            await Task.Delay(100);
+            for (int i = 0; i < 150 && !disconnected; i++)
+                await Task.Delay(100);
 
-        // Stop reconnection attempts
-        client.Disconnect();
+            client.Disconnect();
 
-        Assert.True(disconnected);
+            Assert.True(disconnected);
+        }, pingInterval: 2, requestTimeout: 4);
     }
 
     #endregion
 }
-
-
-

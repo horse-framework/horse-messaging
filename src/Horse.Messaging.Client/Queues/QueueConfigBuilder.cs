@@ -106,6 +106,16 @@ public class QueueConfigBuilder
     /// </summary>
     public bool? UniqueIdCheck { get; set; }
 
+    /// <summary>
+    /// Gets consumer type
+    /// </summary>
+    public Type ConsumerType { get; internal set; }
+
+    /// <summary>
+    /// Gets model type of consumer
+    /// </summary>
+    public Type ModelType { get; internal set; }
+
     internal List<InterceptorTypeDescriptor> Interceptors { get; } = new List<InterceptorTypeDescriptor>();
     internal List<TransportExceptionDescriptor> PushExceptionDescriptors { get; } = new List<TransportExceptionDescriptor>();
     internal List<TransportExceptionDescriptor> PublishExceptionDescriptors { get; } = new List<TransportExceptionDescriptor>();

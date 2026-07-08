@@ -22,30 +22,37 @@ public class MessageIdUniqueCheckTest
             o.CommitWhen = CommitWhen.AfterReceived;
             o.Acknowledge = QueueAckDecision.None;
         });
-
-        await ctx.Rider.Queue.Create("uid-on", o =>
+        try
         {
-            o.Type = QueueType.Push;
-            o.MessageIdUniqueCheck = true;
-        });
 
-        HorseClient producer = new HorseClient();
-        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await ctx.Rider.Queue.Create("uid-on", o =>
+            {
+                o.Type = QueueType.Push;
+                o.MessageIdUniqueCheck = true;
+            });
 
-        // Push first with explicit message id
-        HorseResult r1 = await producer.Queue.Push("uid-on", new MemoryStream("first"u8.ToArray()), "dup-id-001", true, CancellationToken.None);
-        Assert.Equal(HorseResultCode.Ok, r1.Code);
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
-        // Push with same message id using waitForCommit=false (to avoid client tracker duplicate)
-        // then check server store count to verify rejection
-        await producer.Queue.Push("uid-on", new MemoryStream("second"u8.ToArray()), "dup-id-001", false, CancellationToken.None);
-        await Task.Delay(500);
+            // Push first with explicit message id
+            HorseResult r1 = await producer.Queue.Push("uid-on", new MemoryStream("first"u8.ToArray()), "dup-id-001", true, CancellationToken.None);
+            Assert.Equal(HorseResultCode.Ok, r1.Code);
 
-        HorseQueue queue = ctx.Rider.Queue.Find("uid-on");
-        int storeCount = queue.Manager.MessageStore.Count() + queue.Manager.PriorityMessageStore.Count();
-        Assert.Equal(1, storeCount); // duplicate was rejected
+            // Push with same message id using waitForCommit=false (to avoid client tracker duplicate)
+            // then check server store count to verify rejection
+            await producer.Queue.Push("uid-on", new MemoryStream("second"u8.ToArray()), "dup-id-001", false, CancellationToken.None);
+            await Task.Delay(500);
 
-        producer.Disconnect();
+            HorseQueue queue = ctx.Rider.Queue.Find("uid-on");
+            int storeCount = queue.Manager.MessageStore.Count() + queue.Manager.PriorityMessageStore.Count();
+            Assert.Equal(1, storeCount); // duplicate was rejected
+
+            producer.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -58,28 +65,35 @@ public class MessageIdUniqueCheckTest
             o.CommitWhen = CommitWhen.AfterReceived;
             o.Acknowledge = QueueAckDecision.None;
         });
-
-        await ctx.Rider.Queue.Create("uid-off", o =>
+        try
         {
-            o.Type = QueueType.Push;
-            o.MessageIdUniqueCheck = false;
-        });
 
-        HorseClient producer = new HorseClient();
-        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            await ctx.Rider.Queue.Create("uid-off", o =>
+            {
+                o.Type = QueueType.Push;
+                o.MessageIdUniqueCheck = false;
+            });
 
-        HorseResult r1 = await producer.Queue.Push("uid-off", new MemoryStream("first"u8.ToArray()), "dup-id-002", true, CancellationToken.None);
-        Assert.Equal(HorseResultCode.Ok, r1.Code);
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
-        // Same id but unique check off → use waitForCommit=false to avoid client tracker issue
-        await producer.Queue.Push("uid-off", new MemoryStream("second"u8.ToArray()), "dup-id-002", false, CancellationToken.None);
-        await Task.Delay(500);
+            HorseResult r1 = await producer.Queue.Push("uid-off", new MemoryStream("first"u8.ToArray()), "dup-id-002", true, CancellationToken.None);
+            Assert.Equal(HorseResultCode.Ok, r1.Code);
 
-        HorseQueue queue = ctx.Rider.Queue.Find("uid-off");
-        int storeCount = queue.Manager.MessageStore.Count() + queue.Manager.PriorityMessageStore.Count();
-        Assert.Equal(2, storeCount); // both accepted
+            // Same id but unique check off → use waitForCommit=false to avoid client tracker issue
+            await producer.Queue.Push("uid-off", new MemoryStream("second"u8.ToArray()), "dup-id-002", false, CancellationToken.None);
+            await Task.Delay(500);
 
-        producer.Disconnect();
+            HorseQueue queue = ctx.Rider.Queue.Find("uid-off");
+            int storeCount = queue.Manager.MessageStore.Count() + queue.Manager.PriorityMessageStore.Count();
+            Assert.Equal(2, storeCount); // both accepted
+
+            producer.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -92,36 +106,43 @@ public class MessageIdUniqueCheckTest
             o.CommitWhen = CommitWhen.AfterReceived;
             o.Acknowledge = QueueAckDecision.None;
         });
-
-        await ctx.Rider.Queue.Create("uid-timeout-reuse", o =>
+        try
         {
-            o.Type = QueueType.Push;
-            o.MessageIdUniqueCheck = true;
-            o.MessageTimeout = new MessageTimeoutStrategy
+
+            await ctx.Rider.Queue.Create("uid-timeout-reuse", o =>
             {
-                MessageDuration = 2,
-                Policy = MessageTimeoutPolicy.Delete
-            };
-        });
+                o.Type = QueueType.Push;
+                o.MessageIdUniqueCheck = true;
+                o.MessageTimeout = new MessageTimeoutStrategy
+                {
+                    MessageDuration = 2,
+                    Policy = MessageTimeoutPolicy.Delete
+                };
+            });
 
-        HorseClient producer = new HorseClient();
-        await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync($"horse://localhost:{ctx.Port}");
 
-        HorseResult r1 = await producer.Queue.Push("uid-timeout-reuse", new MemoryStream("first"u8.ToArray()), "reuse-id-001", true, CancellationToken.None);
-        Assert.Equal(HorseResultCode.Ok, r1.Code);
+            HorseResult r1 = await producer.Queue.Push("uid-timeout-reuse", new MemoryStream("first"u8.ToArray()), "reuse-id-001", true, CancellationToken.None);
+            Assert.Equal(HorseResultCode.Ok, r1.Code);
 
-        HorseQueue queue = ctx.Rider.Queue.Find("uid-timeout-reuse");
-        for (int i = 0; i < 50 && !queue.IsEmpty; i++)
-            await Task.Delay(200);
+            HorseQueue queue = ctx.Rider.Queue.Find("uid-timeout-reuse");
+            for (int i = 0; i < 50 && !queue.IsEmpty; i++)
+                await Task.Delay(200);
 
-        Assert.True(queue.IsEmpty, "First message should have timed out and been removed");
+            Assert.True(queue.IsEmpty, "First message should have timed out and been removed");
 
-        await producer.Queue.Push("uid-timeout-reuse", new MemoryStream("second"u8.ToArray()), "reuse-id-001", false, CancellationToken.None);
-        await Task.Delay(500);
+            await producer.Queue.Push("uid-timeout-reuse", new MemoryStream("second"u8.ToArray()), "reuse-id-001", false, CancellationToken.None);
+            await Task.Delay(500);
 
-        int storeCount = queue.Manager.MessageStore.Count() + queue.Manager.PriorityMessageStore.Count();
-        Assert.Equal(1, storeCount);
+            int storeCount = queue.Manager.MessageStore.Count() + queue.Manager.PriorityMessageStore.Count();
+            Assert.Equal(1, storeCount);
 
-        producer.Disconnect();
+            producer.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 }

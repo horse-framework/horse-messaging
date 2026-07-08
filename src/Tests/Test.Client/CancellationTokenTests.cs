@@ -80,9 +80,18 @@ internal class BlockingQueueConsumer : IQueueConsumer<string>
     public async Task Consume(ConsumeContext<string> context)
     {
         Started.Release();
-        try { await Task.Delay(10_000, context.CancellationToken); }
-        catch (OperationCanceledException) { CancelledObserved = true; }
-        finally { Finished.Release(); }
+        try
+        {
+            await Task.Delay(10_000, context.CancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            CancelledObserved = true;
+        }
+        finally
+        {
+            Finished.Release();
+        }
     }
 }
 
@@ -96,9 +105,17 @@ internal class DelayTimingQueueConsumer : IQueueConsumer<string>
     public async Task Consume(ConsumeContext<string> context)
     {
         StartedTcs.TrySetResult(true);
-        try { await Task.Delay(30_000, context.CancellationToken); }
-        catch (OperationCanceledException) { }
-        finally { FinishedTcs.TrySetResult(true); }
+        try
+        {
+            await Task.Delay(30_000, context.CancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            FinishedTcs.TrySetResult(true);
+        }
     }
 }
 
@@ -125,9 +142,18 @@ internal class BlockingDirectHandler : IDirectMessageHandler<string>
         CancellationToken cancellationToken = default)
     {
         Started.Release();
-        try { await Task.Delay(10_000, cancellationToken); }
-        catch (OperationCanceledException) { CancelledObserved = true; }
-        finally { Finished.Release(); }
+        try
+        {
+            await Task.Delay(10_000, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            CancelledObserved = true;
+        }
+        finally
+        {
+            Finished.Release();
+        }
     }
 }
 
@@ -171,7 +197,7 @@ public class CancellationTokenTests
     [Fact]
     public async Task ConsumeToken_IsNotCancelled_AfterConnect()
     {
-        var server = new TestHorseRider();
+        await using   var server = new TestHorseRider();
         await server.Initialize();
         int port = server.Start(300, 300);
 
@@ -181,7 +207,6 @@ public class CancellationTokenTests
         Assert.False(client.ConsumeToken.IsCancellationRequested);
 
         client.Disconnect();
-        server.Stop();
     }
 
     // -----------------------------------------------------------------------
@@ -191,7 +216,7 @@ public class CancellationTokenTests
     [Fact]
     public async Task ConsumeToken_IsCancelled_AfterDisconnect()
     {
-        var server = new TestHorseRider();
+        await using var server = new TestHorseRider();
         await server.Initialize();
         int port = server.Start(300, 300);
 
@@ -205,8 +230,6 @@ public class CancellationTokenTests
 
         Assert.True(captured.IsCancellationRequested,
             "Token captured before disconnect must be cancelled after Disconnect()");
-
-        server.Stop();
     }
 
     // -----------------------------------------------------------------------
@@ -216,7 +239,7 @@ public class CancellationTokenTests
     [Fact]
     public async Task ConsumeToken_IsRefreshed_AfterReconnect()
     {
-        var server = new TestHorseRider();
+        await using var server = new TestHorseRider();
         await server.Initialize();
         int port = server.Start(300, 300);
 
@@ -234,7 +257,6 @@ public class CancellationTokenTests
         Assert.NotEqual(first, second);
 
         client.Disconnect();
-        server.Stop();
     }
 
     // -----------------------------------------------------------------------
@@ -244,7 +266,7 @@ public class CancellationTokenTests
     [Fact]
     public async Task MultipleDisconnects_DoNotThrow()
     {
-        var server = new TestHorseRider();
+        await using var server = new TestHorseRider();
         await server.Initialize();
         int port = server.Start(300, 300);
 
@@ -259,7 +281,6 @@ public class CancellationTokenTests
         });
 
         Assert.Null(ex);
-        server.Stop();
     }
 
     // -----------------------------------------------------------------------
@@ -271,7 +292,7 @@ public class CancellationTokenTests
     public async Task QueueConsumer_ReceivesLiveConsumeToken()
     {
         TestState.Reset();
-        var server = new TestHorseRider();
+        await using var server = new TestHorseRider();
         await server.Initialize();
         int port = server.Start(300, 300);
 
@@ -290,7 +311,6 @@ public class CancellationTokenTests
         Assert.Equal(client.ConsumeToken, TestState.LastQueueToken);
 
         client.Disconnect();
-        server.Stop();
     }
 
     // -----------------------------------------------------------------------
@@ -305,7 +325,7 @@ public class CancellationTokenTests
         BlockingQueueConsumer.Finished = new SemaphoreSlim(0, 1);
         BlockingQueueConsumer.CancelledObserved = false;
 
-        var server = new TestHorseRider();
+        await using var server = new TestHorseRider();
         await server.Initialize();
         int port = server.Start(300, 300);
 
@@ -330,8 +350,7 @@ public class CancellationTokenTests
         Assert.True(BlockingQueueConsumer.CancelledObserved,
             "OperationCanceledException must be observed inside consumer");
 
-        await consumeTask; // should complete
-        server.Stop();
+        await consumeTask;
     }
 
     // -----------------------------------------------------------------------
@@ -344,7 +363,7 @@ public class CancellationTokenTests
         var startedTcs = new TaskCompletionSource<bool>();
         var finishedTcs = new TaskCompletionSource<bool>();
 
-        var server = new TestHorseRider();
+        await using var server = new TestHorseRider();
         await server.Initialize();
         int port = server.Start(300, 300);
 
@@ -357,9 +376,17 @@ public class CancellationTokenTests
         var consumeTask = Task.Run(async () =>
         {
             startedTcs.TrySetResult(true);
-            try { await Task.Delay(30_000, tokenAtConnect); }
-            catch (OperationCanceledException) { }
-            finally { finishedTcs.TrySetResult(true); }
+            try
+            {
+                await Task.Delay(30_000, tokenAtConnect);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            finally
+            {
+                finishedTcs.TrySetResult(true);
+            }
         });
 
         await startedTcs.Task.WaitAsync(TimeSpan.FromSeconds(3));
@@ -374,7 +401,6 @@ public class CancellationTokenTests
             $"Consumer should stop early via cancellation, took {sw.ElapsedMilliseconds} ms");
 
         await consumeTask;
-        server.Stop();
     }
 
     // -----------------------------------------------------------------------
@@ -384,7 +410,7 @@ public class CancellationTokenTests
     [Fact]
     public async Task TokenIsolation_DisconnectOneClient_OtherUnaffected()
     {
-        var server = new TestHorseRider();
+        await using var server = new TestHorseRider();
         await server.Initialize();
         int port = server.Start(300, 300);
 
@@ -402,7 +428,6 @@ public class CancellationTokenTests
         Assert.False(t2.IsCancellationRequested, "client2 token must NOT be affected");
 
         client2.Disconnect();
-        server.Stop();
     }
 
     // -----------------------------------------------------------------------
@@ -414,7 +439,7 @@ public class CancellationTokenTests
     public async Task MultipleMessages_AllReceiveSameLiveToken()
     {
         TestState.Reset();
-        var server = new TestHorseRider();
+        await using var server = new TestHorseRider();
         await server.Initialize();
         int port = server.Start(300, 300);
 
@@ -442,7 +467,6 @@ public class CancellationTokenTests
         }
 
         client.Disconnect();
-        server.Stop();
     }
 
     // -----------------------------------------------------------------------
@@ -452,7 +476,7 @@ public class CancellationTokenTests
     [Fact]
     public async Task MultipleReconnects_EachCycleProducesUniqueToken()
     {
-        var server = new TestHorseRider();
+        await using var server = new TestHorseRider();
         await server.Initialize();
         int port = server.Start(300, 300);
 
@@ -472,8 +496,6 @@ public class CancellationTokenTests
 
         for (int i = 0; i < history.Count - 1; i++)
             Assert.NotEqual(history[i], history[i + 1]);
-
-        server.Stop();
     }
 
     // -----------------------------------------------------------------------
@@ -483,7 +505,7 @@ public class CancellationTokenTests
     [Fact]
     public async Task GracefulShutdown_CancelsConsumeToken()
     {
-        var server = new TestHorseRider();
+        await using var server = new TestHorseRider();
         await server.Initialize();
         int port = server.Start(300, 300);
 
@@ -507,8 +529,6 @@ public class CancellationTokenTests
         await WaitUntil(() => tokenBefore.IsCancellationRequested, 2000);
         Assert.True(tokenBefore.IsCancellationRequested,
             "ConsumeToken must be cancelled during graceful shutdown");
-
-        server.Stop();
     }
 
     // -----------------------------------------------------------------------
@@ -518,7 +538,7 @@ public class CancellationTokenTests
     [Fact]
     public async Task ReconnectAfterCancel_DoesNotThrow_AndProducesFreshToken()
     {
-        var server = new TestHorseRider();
+        await using var server = new TestHorseRider();
         await server.Initialize();
         int port = server.Start(300, 300);
 
@@ -536,7 +556,6 @@ public class CancellationTokenTests
         Assert.True(old.IsCancellationRequested, "Old token must still be cancelled");
 
         client.Disconnect();
-        server.Stop();
     }
 
     // -----------------------------------------------------------------------
@@ -547,7 +566,7 @@ public class CancellationTokenTests
     public async Task DirectHandler_ReceivesLiveConsumeToken()
     {
         TestState.Reset();
-        var server = new TestHorseRider();
+        await using var server = new TestHorseRider();
         await server.Initialize();
         int port = server.Start(300, 300);
 
@@ -568,7 +587,6 @@ public class CancellationTokenTests
         Assert.Equal(client.ConsumeToken, TestState.LastDirectToken);
 
         client.Disconnect();
-        server.Stop();
     }
 
     // -----------------------------------------------------------------------
@@ -582,7 +600,7 @@ public class CancellationTokenTests
         BlockingDirectHandler.Finished = new SemaphoreSlim(0, 1);
         BlockingDirectHandler.CancelledObserved = false;
 
-        var server = new TestHorseRider();
+        await using var server = new TestHorseRider();
         await server.Initialize();
         int port = server.Start(300, 300);
 
@@ -609,7 +627,6 @@ public class CancellationTokenTests
             "OperationCanceledException must be observed in DirectHandler");
 
         await handlerTask;
-        server.Stop();
     }
 
     // -----------------------------------------------------------------------
@@ -620,7 +637,7 @@ public class CancellationTokenTests
     public async Task ChannelSubscriber_ReceivesLiveConsumeToken()
     {
         TestState.Reset();
-        var server = new TestHorseRider();
+        await using var server = new TestHorseRider();
         await server.Initialize();
         int port = server.Start(300, 300);
 
@@ -640,7 +657,6 @@ public class CancellationTokenTests
         Assert.Equal(client.ConsumeToken, TestState.LastChannelToken);
 
         client.Disconnect();
-        server.Stop();
     }
 
     // -----------------------------------------------------------------------

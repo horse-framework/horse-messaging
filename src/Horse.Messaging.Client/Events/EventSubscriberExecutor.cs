@@ -49,12 +49,17 @@ internal class EventSubscriberExecutor : ExecutorBase
         }
         catch (Exception e)
         {
-            await SendExceptions(message, client, e);
+            await ExecuteException(client, e, message, 0, cancellationToken);
         }
         finally
         {
             providedHandler?.Dispose();
         }
+    }
+
+    public override Task ExecuteException(HorseClient client, Exception e, HorseMessage message, int tryCount, CancellationToken cancellationToken)
+    {
+        return SendExceptions(message, client, e);
     }
 
     private async Task Handle(IHorseEventHandler handler, HorseMessage message, HorseEvent horseEvent,

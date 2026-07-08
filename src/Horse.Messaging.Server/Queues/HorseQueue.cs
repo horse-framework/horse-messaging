@@ -361,7 +361,18 @@ public class HorseQueue
         await QueueLock.WaitAsync();
         try
         {
-            if (Status != QueueStatus.NotInitialized)
+            // Skip only when the queue is FULLY initialized (Manager set AND Status=Running). Guarding on
+            // Manager alone is not enough: the queue-manager FACTORY pre-assigns Queue.Manager before it
+            // returns (HorseQueueConfigurator / Data Extensions), so a Manager-only guard early-returns
+            // here and SKIPS queueManager.Initialize() + Status=Running (regression from the S7 commit
+            // that switched this guard from Status- to Manager-based). MemoryQueueManager tolerates that
+            // (store usable from ctor), but PersistentQueueManager's store is never opened → every push
+            // is silently DROPPED (prod: MESSAGE_PRODUCED but pending=0, never delivered — normal Create
+            // AND replica alike). The combined guard still covers the replica case the S7 fix targeted
+            // (Status=Running with a null Manager → Manager==null → fall through and initialize) while
+            // also completing lazy/persistent init (Manager set, Status!=Running → initialize).
+            // Double-init is prevented by QueueLock + this same re-check inside the lock.
+            if (Manager != null && Status == QueueStatus.Running)
                 return;
 
             if (queueManager != null)
@@ -837,7 +848,11 @@ public class HorseQueue
         if (Rider.Queue.IsShuttingDown)
             return PushResult.StatusNotSupported;
 
-        if (Status == QueueStatus.NotInitialized)
+        // Guard on Manager==null in addition to Status: a replica can reach Status=Running while its
+        // Manager is still null (CreateReplica pre-init + a stray NodeQueueStateMessage advancing
+        // Status). A Status-only guard would skip init and dereference the null Manager (silently
+        // dropping the message / NRE). This mirrors the sibling guard in PushByNode.
+        if (Status == QueueStatus.NotInitialized || Manager == null)
         {
             try
             {
@@ -853,7 +868,14 @@ public class HorseQueue
                 if (string.IsNullOrEmpty(handlerBuilder.ManagerName))
                     handlerBuilder.ManagerName = "Default";
 
-                Func<QueueManagerBuilder, Task<IHorseQueueManager>> factory = Rider.Queue.QueueManagerFactories[handlerBuilder.ManagerName];
+                // QueueManagerFactories (the frozen dictionary) is null until the startup-load freeze
+                // (QueueRider.cs:269); a replica queue can reach this init block before then. The raw
+                // indexer dereferences the null frozen dict → NullReferenceException surfaced as
+                // eventId 209 "Initialize In Push Queue" (prod). Use the null-safe accessor that falls
+                // back to the mutable dictionary, mirroring FindQueueManagerFactory / GetQueueManagers.
+                Func<QueueManagerBuilder, Task<IHorseQueueManager>> factory = Rider.Queue.FindQueueManagerFactory(handlerBuilder.ManagerName);
+                if (factory == null)
+                    throw new KeyNotFoundException($"Queue manager factory '{handlerBuilder.ManagerName}' is not registered for queue {Name}");
                 IHorseQueueManager queueManager = await factory(handlerBuilder);
 
                 await InitializeQueue(queueManager);
@@ -1050,7 +1072,7 @@ public class HorseQueue
 
             bool waitForAck = Options.Type != QueueType.RoundRobin && Options.Acknowledge == QueueAckDecision.WaitForAcknowledge;
             if (waitForAck)
-                await waitForAcknowledge();
+                await WaitForAcknowledge();
 
             QueueMessage message = null;
 
@@ -1122,7 +1144,11 @@ public class HorseQueue
 
         QueueMessage message = new QueueMessage(horseMessage);
 
-        if (Status == QueueStatus.NotInitialized)
+        // A replicated queue on the successor can be Status=Running while Manager is still null
+        // (see InitializeQueue note). Enter the init block whenever the Manager is missing, not
+        // only on NotInitialized, otherwise the Manager.DeliveryHandler deref below NREs and the
+        // replica silently drops every replicated message (Main sees the ack fail).
+        if (Status == QueueStatus.NotInitialized || Manager == null)
         {
             try
             {
@@ -1138,7 +1164,12 @@ public class HorseQueue
                 if (string.IsNullOrEmpty(handlerBuilder.ManagerName))
                     handlerBuilder.ManagerName = "Default";
 
-                Func<QueueManagerBuilder, Task<IHorseQueueManager>> factory = Rider.Queue.QueueManagerFactories[handlerBuilder.ManagerName];
+                // Same null-safe accessor as the sibling Push init block: the frozen QueueManagerFactories
+                // can be null on a replica before the startup-load freeze (QueueRider.cs:269), so avoid the
+                // raw indexer (eventId 209 NRE) and fall back to the mutable dictionary.
+                Func<QueueManagerBuilder, Task<IHorseQueueManager>> factory = Rider.Queue.FindQueueManagerFactory(handlerBuilder.ManagerName);
+                if (factory == null)
+                    throw new KeyNotFoundException($"Queue manager factory '{handlerBuilder.ManagerName}' is not registered for queue {Name}");
                 IHorseQueueManager queueManager = await factory(handlerBuilder);
 
                 await InitializeQueue(queueManager, false);
@@ -1423,7 +1454,7 @@ public class HorseQueue
     /// <summary>
     /// When wait for acknowledge is active, this method locks the queue until acknowledge is received
     /// </summary>
-    internal async Task waitForAcknowledge()
+    internal async Task WaitForAcknowledge()
     {
         TaskCompletionSource<bool> source = _acknowledgeCallback;
         if (source != null && !source.Task.IsCompleted)

@@ -293,28 +293,35 @@ public class RetryTest
     public async Task UseRetry_ConfigBuilder_AllFail_ExactlyThreeAttempts(string mode)
     {
         await using var ctx = await CreateContext(mode);
-
-        RetryTracker tracker = new() { ShouldThrow = true };
-        HorseClient worker = await BuildRetryWorker<BuilderRetryConsumer>(ctx.Port, tracker, cfg =>
+        try
         {
-            cfg.AutoNack(NegativeReason.Error);
-            cfg.UseRetry(3, 50);
-        });
-        await Task.Delay(500);
 
-        HorseClient producer = await ConnectRaw(ctx.Port);
-        IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("retry-q", new RetryModel { Data = "builder-r3-test" }, false, CancellationToken.None);
+            RetryTracker tracker = new() { ShouldThrow = true };
+            HorseClient worker = await BuildRetryWorker<BuilderRetryConsumer>(ctx.Port, tracker, cfg =>
+            {
+                cfg.AutoNack(NegativeReason.Error);
+                cfg.UseRetry(3, 50);
+            });
+            await Task.Delay(500);
 
-        await WaitUntil(() => tracker.ThrowCount >= 3, 5_000);
-        await Task.Delay(200);
+            HorseClient producer = await ConnectRaw(ctx.Port);
+            IHorseQueueBus bus = new HorseQueueBus(producer);
+            await bus.Push("retry-q", new RetryModel { Data = "builder-r3-test" }, false, CancellationToken.None);
 
-        Assert.Equal(3, tracker.AttemptCount);
-        Assert.Equal(3, tracker.ThrowCount);
-        Assert.Empty(tracker.ConsumedMessages);
+            await WaitUntil(() => tracker.ThrowCount >= 3, 5_000);
+            await Task.Delay(200);
 
-        producer.Disconnect();
-        worker.Disconnect();
+            Assert.Equal(3, tracker.AttemptCount);
+            Assert.Equal(3, tracker.ThrowCount);
+            Assert.Empty(tracker.ConsumedMessages);
+
+            producer.Disconnect();
+            worker.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -323,24 +330,31 @@ public class RetryTest
     public async Task Retry3_AllFail_ExactlyThreeAttempts(string mode)
     {
         await using var ctx = await CreateContext(mode);
+        try
+        {
 
-        RetryTracker tracker = new() { ShouldThrow = true };
-        HorseClient worker = await BuildRetryWorker<Retry3Consumer>(ctx.Port, tracker);
-        await Task.Delay(500);
+            RetryTracker tracker = new() { ShouldThrow = true };
+            HorseClient worker = await BuildRetryWorker<Retry3Consumer>(ctx.Port, tracker);
+            await Task.Delay(500);
 
-        HorseClient producer = await ConnectRaw(ctx.Port);
-        IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("retry-q", new RetryModel { Data = "r3-test" }, false, CancellationToken.None);
+            HorseClient producer = await ConnectRaw(ctx.Port);
+            IHorseQueueBus bus = new HorseQueueBus(producer);
+            await bus.Push("retry-q", new RetryModel { Data = "r3-test" }, false, CancellationToken.None);
 
-        await WaitUntil(() => tracker.ThrowCount >= 3, 5_000);
-        await Task.Delay(200);
+            await WaitUntil(() => tracker.ThrowCount >= 3, 5_000);
+            await Task.Delay(200);
 
-        Assert.Equal(3, tracker.AttemptCount);
-        Assert.Equal(3, tracker.ThrowCount);
-        Assert.Empty(tracker.ConsumedMessages);
+            Assert.Equal(3, tracker.AttemptCount);
+            Assert.Equal(3, tracker.ThrowCount);
+            Assert.Empty(tracker.ConsumedMessages);
 
-        producer.Disconnect();
-        worker.Disconnect();
+            producer.Disconnect();
+            worker.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -349,24 +363,31 @@ public class RetryTest
     public async Task Retry5_AllFail_ExactlyFiveAttempts(string mode)
     {
         await using var ctx = await CreateContext(mode);
+        try
+        {
 
-        RetryTracker tracker = new() { ShouldThrow = true };
-        HorseClient worker = await BuildRetryWorker<Retry5Consumer>(ctx.Port, tracker);
-        await Task.Delay(500);
+            RetryTracker tracker = new() { ShouldThrow = true };
+            HorseClient worker = await BuildRetryWorker<Retry5Consumer>(ctx.Port, tracker);
+            await Task.Delay(500);
 
-        HorseClient producer = await ConnectRaw(ctx.Port);
-        IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("retry-q", new RetryModel { Data = "r5-test" }, false, CancellationToken.None);
+            HorseClient producer = await ConnectRaw(ctx.Port);
+            IHorseQueueBus bus = new HorseQueueBus(producer);
+            await bus.Push("retry-q", new RetryModel { Data = "r5-test" }, false, CancellationToken.None);
 
-        await WaitUntil(() => tracker.ThrowCount >= 5, 5_000);
-        await Task.Delay(200);
+            await WaitUntil(() => tracker.ThrowCount >= 5, 5_000);
+            await Task.Delay(200);
 
-        Assert.Equal(5, tracker.AttemptCount);
-        Assert.Equal(5, tracker.ThrowCount);
-        Assert.Empty(tracker.ConsumedMessages);
+            Assert.Equal(5, tracker.AttemptCount);
+            Assert.Equal(5, tracker.ThrowCount);
+            Assert.Empty(tracker.ConsumedMessages);
 
-        producer.Disconnect();
-        worker.Disconnect();
+            producer.Disconnect();
+            worker.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -375,24 +396,31 @@ public class RetryTest
     public async Task Retry1_SingleAttemptOnly_NoActualRetry(string mode)
     {
         await using var ctx = await CreateContext(mode);
+        try
+        {
 
-        RetryTracker tracker = new() { ShouldThrow = true };
-        HorseClient worker = await BuildRetryWorker<Retry1Consumer>(ctx.Port, tracker);
-        await Task.Delay(500);
+            RetryTracker tracker = new() { ShouldThrow = true };
+            HorseClient worker = await BuildRetryWorker<Retry1Consumer>(ctx.Port, tracker);
+            await Task.Delay(500);
 
-        HorseClient producer = await ConnectRaw(ctx.Port);
-        IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("retry-q", new RetryModel { Data = "r1-test" }, false, CancellationToken.None);
+            HorseClient producer = await ConnectRaw(ctx.Port);
+            IHorseQueueBus bus = new HorseQueueBus(producer);
+            await bus.Push("retry-q", new RetryModel { Data = "r1-test" }, false, CancellationToken.None);
 
-        await WaitUntil(() => tracker.ThrowCount >= 1, 5_000);
-        await Task.Delay(200);
+            await WaitUntil(() => tracker.ThrowCount >= 1, 5_000);
+            await Task.Delay(200);
 
-        Assert.Equal(1, tracker.AttemptCount);
-        Assert.Equal(1, tracker.ThrowCount);
-        Assert.Empty(tracker.ConsumedMessages);
+            Assert.Equal(1, tracker.AttemptCount);
+            Assert.Equal(1, tracker.ThrowCount);
+            Assert.Empty(tracker.ConsumedMessages);
 
-        producer.Disconnect();
-        worker.Disconnect();
+            producer.Disconnect();
+            worker.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     #endregion
@@ -409,25 +437,32 @@ public class RetryTest
     public async Task Retry3_SucceedsOnSecondAttempt_TwoAttemptsTotal(string mode)
     {
         await using var ctx = await CreateContext(mode);
+        try
+        {
 
-        RetryTracker tracker = new() { ShouldThrow = true, StopThrowingAfterAttempt = 1 };
-        HorseClient worker = await BuildRetryWorker<Retry3Consumer>(ctx.Port, tracker);
-        await Task.Delay(500);
+            RetryTracker tracker = new() { ShouldThrow = true, StopThrowingAfterAttempt = 1 };
+            HorseClient worker = await BuildRetryWorker<Retry3Consumer>(ctx.Port, tracker);
+            await Task.Delay(500);
 
-        HorseClient producer = await ConnectRaw(ctx.Port);
-        IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("retry-q", new RetryModel { Data = "succeed-2nd" }, false, CancellationToken.None);
+            HorseClient producer = await ConnectRaw(ctx.Port);
+            IHorseQueueBus bus = new HorseQueueBus(producer);
+            await bus.Push("retry-q", new RetryModel { Data = "succeed-2nd" }, false, CancellationToken.None);
 
-        await WaitUntil(() => tracker.ConsumedMessages.Count >= 1, 5_000);
-        await Task.Delay(200);
+            await WaitUntil(() => tracker.ConsumedMessages.Count >= 1, 5_000);
+            await Task.Delay(200);
 
-        Assert.Equal(2, tracker.AttemptCount);
-        Assert.Equal(1, tracker.ThrowCount);
-        Assert.Single(tracker.ConsumedMessages);
-        Assert.Contains("succeed-2nd", tracker.ConsumedMessages);
+            Assert.Equal(2, tracker.AttemptCount);
+            Assert.Equal(1, tracker.ThrowCount);
+            Assert.Single(tracker.ConsumedMessages);
+            Assert.Contains("succeed-2nd", tracker.ConsumedMessages);
 
-        producer.Disconnect();
-        worker.Disconnect();
+            producer.Disconnect();
+            worker.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -436,24 +471,31 @@ public class RetryTest
     public async Task Retry3_SucceedsOnThirdAttempt_ThreeAttemptsTotal(string mode)
     {
         await using var ctx = await CreateContext(mode);
+        try
+        {
 
-        RetryTracker tracker = new() { ShouldThrow = true, StopThrowingAfterAttempt = 2 };
-        HorseClient worker = await BuildRetryWorker<Retry3Consumer>(ctx.Port, tracker);
-        await Task.Delay(500);
+            RetryTracker tracker = new() { ShouldThrow = true, StopThrowingAfterAttempt = 2 };
+            HorseClient worker = await BuildRetryWorker<Retry3Consumer>(ctx.Port, tracker);
+            await Task.Delay(500);
 
-        HorseClient producer = await ConnectRaw(ctx.Port);
-        IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("retry-q", new RetryModel { Data = "succeed-3rd" }, false, CancellationToken.None);
+            HorseClient producer = await ConnectRaw(ctx.Port);
+            IHorseQueueBus bus = new HorseQueueBus(producer);
+            await bus.Push("retry-q", new RetryModel { Data = "succeed-3rd" }, false, CancellationToken.None);
 
-        await WaitUntil(() => tracker.ConsumedMessages.Count >= 1, 5_000);
-        await Task.Delay(200);
+            await WaitUntil(() => tracker.ConsumedMessages.Count >= 1, 5_000);
+            await Task.Delay(200);
 
-        Assert.Equal(3, tracker.AttemptCount);
-        Assert.Equal(2, tracker.ThrowCount);
-        Assert.Single(tracker.ConsumedMessages);
+            Assert.Equal(3, tracker.AttemptCount);
+            Assert.Equal(2, tracker.ThrowCount);
+            Assert.Single(tracker.ConsumedMessages);
 
-        producer.Disconnect();
-        worker.Disconnect();
+            producer.Disconnect();
+            worker.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -462,24 +504,31 @@ public class RetryTest
     public async Task Retry3_SucceedsOnFirstAttempt_NoRetryNeeded(string mode)
     {
         await using var ctx = await CreateContext(mode);
+        try
+        {
 
-        RetryTracker tracker = new() { ShouldThrow = false };
-        HorseClient worker = await BuildRetryWorker<Retry3Consumer>(ctx.Port, tracker);
-        await Task.Delay(500);
+            RetryTracker tracker = new() { ShouldThrow = false };
+            HorseClient worker = await BuildRetryWorker<Retry3Consumer>(ctx.Port, tracker);
+            await Task.Delay(500);
 
-        HorseClient producer = await ConnectRaw(ctx.Port);
-        IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("retry-q", new RetryModel { Data = "no-retry" }, false, CancellationToken.None);
+            HorseClient producer = await ConnectRaw(ctx.Port);
+            IHorseQueueBus bus = new HorseQueueBus(producer);
+            await bus.Push("retry-q", new RetryModel { Data = "no-retry" }, false, CancellationToken.None);
 
-        await WaitUntil(() => tracker.ConsumedMessages.Count >= 1, 5_000);
-        await Task.Delay(200);
+            await WaitUntil(() => tracker.ConsumedMessages.Count >= 1, 5_000);
+            await Task.Delay(200);
 
-        Assert.Equal(1, tracker.AttemptCount);
-        Assert.Equal(0, tracker.ThrowCount);
-        Assert.Single(tracker.ConsumedMessages);
+            Assert.Equal(1, tracker.AttemptCount);
+            Assert.Equal(0, tracker.ThrowCount);
+            Assert.Single(tracker.ConsumedMessages);
 
-        producer.Disconnect();
-        worker.Disconnect();
+            producer.Disconnect();
+            worker.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     #endregion
@@ -496,30 +545,37 @@ public class RetryTest
     public async Task Retry3_IgnoredExceptionType_ImmediatelyPropagates_NoRetry(string mode)
     {
         await using var ctx = await CreateContext(mode);
-
-        // CustomBusinessException is in the IgnoreExceptions list
-        RetryTracker tracker = new()
+        try
         {
-            ShouldThrow = true,
-            ExceptionTypeToThrow = typeof(CustomBusinessException),
-            ExceptionMessage = "Business error"
-        };
-        HorseClient worker = await BuildRetryWorker<Retry3IgnoreBusinessExceptionConsumer>(ctx.Port, tracker);
-        await Task.Delay(500);
 
-        HorseClient producer = await ConnectRaw(ctx.Port);
-        IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("retry-q", new RetryModel { Data = "ignored-exc" }, false, CancellationToken.None);
+            // CustomBusinessException is in the IgnoreExceptions list
+            RetryTracker tracker = new()
+            {
+                ShouldThrow = true,
+                ExceptionTypeToThrow = typeof(CustomBusinessException),
+                ExceptionMessage = "Business error"
+            };
+            HorseClient worker = await BuildRetryWorker<Retry3IgnoreBusinessExceptionConsumer>(ctx.Port, tracker);
+            await Task.Delay(500);
 
-        await WaitUntil(() => tracker.ThrowCount >= 1, 5_000);
-        await Task.Delay(300);
+            HorseClient producer = await ConnectRaw(ctx.Port);
+            IHorseQueueBus bus = new HorseQueueBus(producer);
+            await bus.Push("retry-q", new RetryModel { Data = "ignored-exc" }, false, CancellationToken.None);
 
-        // Ignored exception should NOT be retried — only 1 attempt
-        Assert.Equal(1, tracker.AttemptCount);
-        Assert.Equal(1, tracker.ThrowCount);
+            await WaitUntil(() => tracker.ThrowCount >= 1, 5_000);
+            await Task.Delay(300);
 
-        producer.Disconnect();
-        worker.Disconnect();
+            // Ignored exception should NOT be retried — only 1 attempt
+            Assert.Equal(1, tracker.AttemptCount);
+            Assert.Equal(1, tracker.ThrowCount);
+
+            producer.Disconnect();
+            worker.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -528,30 +584,37 @@ public class RetryTest
     public async Task Retry3_NonIgnoredExceptionType_RetriesNormally(string mode)
     {
         await using var ctx = await CreateContext(mode);
-
-        // InvalidOperationException is NOT in the IgnoreExceptions list
-        RetryTracker tracker = new()
+        try
         {
-            ShouldThrow = true,
-            ExceptionTypeToThrow = typeof(InvalidOperationException),
-            ExceptionMessage = "Normal error"
-        };
-        HorseClient worker = await BuildRetryWorker<Retry3IgnoreBusinessExceptionConsumer>(ctx.Port, tracker);
-        await Task.Delay(500);
 
-        HorseClient producer = await ConnectRaw(ctx.Port);
-        IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("retry-q", new RetryModel { Data = "normal-retry" }, false, CancellationToken.None);
+            // InvalidOperationException is NOT in the IgnoreExceptions list
+            RetryTracker tracker = new()
+            {
+                ShouldThrow = true,
+                ExceptionTypeToThrow = typeof(InvalidOperationException),
+                ExceptionMessage = "Normal error"
+            };
+            HorseClient worker = await BuildRetryWorker<Retry3IgnoreBusinessExceptionConsumer>(ctx.Port, tracker);
+            await Task.Delay(500);
 
-        await WaitUntil(() => tracker.ThrowCount >= 3, 5_000);
-        await Task.Delay(200);
+            HorseClient producer = await ConnectRaw(ctx.Port);
+            IHorseQueueBus bus = new HorseQueueBus(producer);
+            await bus.Push("retry-q", new RetryModel { Data = "normal-retry" }, false, CancellationToken.None);
 
-        // Non-ignored exception: retried 3 times
-        Assert.Equal(3, tracker.AttemptCount);
-        Assert.Equal(3, tracker.ThrowCount);
+            await WaitUntil(() => tracker.ThrowCount >= 3, 5_000);
+            await Task.Delay(200);
 
-        producer.Disconnect();
-        worker.Disconnect();
+            // Non-ignored exception: retried 3 times
+            Assert.Equal(3, tracker.AttemptCount);
+            Assert.Equal(3, tracker.ThrowCount);
+
+            producer.Disconnect();
+            worker.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     #endregion
@@ -568,43 +631,50 @@ public class RetryTest
     public async Task Retry3_Exhausted_PushExceptionFires(string mode)
     {
         await using var ctx = await CreateContext(mode);
-
-        await ctx.Rider.Queue.Create("exception-log-q", o =>
+        try
         {
-            o.Type = QueueType.Push;
-            o.CommitWhen = CommitWhen.AfterReceived;
-            o.Acknowledge = QueueAckDecision.None;
-        });
 
-        RetryTracker tracker = new() { ShouldThrow = true };
-        HorseClient worker = await BuildRetryWorker<Retry3WithPushExceptionConsumer>(ctx.Port, tracker);
-        await Task.Delay(500);
+            await ctx.Rider.Queue.Create("exception-log-q", o =>
+            {
+                o.Type = QueueType.Push;
+                o.CommitWhen = CommitWhen.AfterReceived;
+                o.Acknowledge = QueueAckDecision.None;
+            });
 
-        ConcurrentBag<HorseMessage> logMsgs = new();
-        HorseClient logConsumer = await ConnectRaw(ctx.Port);
-        logConsumer.MessageReceived += (_, msg) => logMsgs.Add(msg);
-        await logConsumer.Queue.Subscribe("exception-log-q", true, CancellationToken.None);
-        await Task.Delay(200);
+            RetryTracker tracker = new() { ShouldThrow = true };
+            HorseClient worker = await BuildRetryWorker<Retry3WithPushExceptionConsumer>(ctx.Port, tracker);
+            await Task.Delay(500);
 
-        HorseClient producer = await ConnectRaw(ctx.Port);
-        IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("retry-q", new RetryModel { Data = "retry-push-exc" }, false, CancellationToken.None);
+            ConcurrentBag<HorseMessage> logMsgs = new();
+            HorseClient logConsumer = await ConnectRaw(ctx.Port);
+            logConsumer.MessageReceived += (_, msg) => logMsgs.Add(msg);
+            await logConsumer.Queue.Subscribe("exception-log-q", true, CancellationToken.None);
+            await Task.Delay(200);
 
-        await WaitUntil(() => tracker.ThrowCount >= 3, 5_000);
-        await WaitUntil(() => logMsgs.Count >= 1, 5_000);
+            HorseClient producer = await ConnectRaw(ctx.Port);
+            IHorseQueueBus bus = new HorseQueueBus(producer);
+            await bus.Push("retry-q", new RetryModel { Data = "retry-push-exc" }, false, CancellationToken.None);
 
-        Assert.Equal(3, tracker.ThrowCount);
-        Assert.True(logMsgs.Count >= 1, $"Expected ≥1, got {logMsgs.Count}");
+            await WaitUntil(() => tracker.ThrowCount >= 3, 5_000);
+            await WaitUntil(() => logMsgs.Count >= 1, 5_000);
 
-        // Verify the exception log content
-        string content = logMsgs.First().GetStringContent();
-        ExceptionLogModel logModel = JsonSerializer.Deserialize<ExceptionLogModel>(content);
-        Assert.NotNull(logModel);
-        Assert.Equal(typeof(InvalidOperationException).FullName, logModel.ExceptionType);
+            Assert.Equal(3, tracker.ThrowCount);
+            Assert.True(logMsgs.Count >= 1, $"Expected ≥1, got {logMsgs.Count}");
 
-        producer.Disconnect();
-        worker.Disconnect();
-        logConsumer.Disconnect();
+            // Verify the exception log content
+            string content = logMsgs.First().GetStringContent();
+            ExceptionLogModel logModel = JsonSerializer.Deserialize<ExceptionLogModel>(content);
+            Assert.NotNull(logModel);
+            Assert.Equal(typeof(InvalidOperationException).FullName, logModel.ExceptionType);
+
+            producer.Disconnect();
+            worker.Disconnect();
+            logConsumer.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Theory]
@@ -613,39 +683,46 @@ public class RetryTest
     public async Task Retry3_Succeeds_NoPushExceptionFires(string mode)
     {
         await using var ctx = await CreateContext(mode);
-
-        await ctx.Rider.Queue.Create("exception-log-q", o =>
+        try
         {
-            o.Type = QueueType.Push;
-            o.CommitWhen = CommitWhen.AfterReceived;
-            o.Acknowledge = QueueAckDecision.None;
-        });
 
-        // Fail first, succeed on 2nd attempt
-        RetryTracker tracker = new() { ShouldThrow = true, StopThrowingAfterAttempt = 1 };
-        HorseClient worker = await BuildRetryWorker<Retry3WithPushExceptionConsumer>(ctx.Port, tracker);
-        await Task.Delay(500);
+            await ctx.Rider.Queue.Create("exception-log-q", o =>
+            {
+                o.Type = QueueType.Push;
+                o.CommitWhen = CommitWhen.AfterReceived;
+                o.Acknowledge = QueueAckDecision.None;
+            });
 
-        ConcurrentBag<HorseMessage> logMsgs = new();
-        HorseClient logConsumer = await ConnectRaw(ctx.Port);
-        logConsumer.MessageReceived += (_, msg) => logMsgs.Add(msg);
-        await logConsumer.Queue.Subscribe("exception-log-q", true, CancellationToken.None);
-        await Task.Delay(200);
+            // Fail first, succeed on 2nd attempt
+            RetryTracker tracker = new() { ShouldThrow = true, StopThrowingAfterAttempt = 1 };
+            HorseClient worker = await BuildRetryWorker<Retry3WithPushExceptionConsumer>(ctx.Port, tracker);
+            await Task.Delay(500);
 
-        HorseClient producer = await ConnectRaw(ctx.Port);
-        IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("retry-q", new RetryModel { Data = "retry-ok" }, false, CancellationToken.None);
+            ConcurrentBag<HorseMessage> logMsgs = new();
+            HorseClient logConsumer = await ConnectRaw(ctx.Port);
+            logConsumer.MessageReceived += (_, msg) => logMsgs.Add(msg);
+            await logConsumer.Queue.Subscribe("exception-log-q", true, CancellationToken.None);
+            await Task.Delay(200);
 
-        await WaitUntil(() => tracker.ConsumedMessages.Count >= 1, 5_000);
-        await Task.Delay(500);
+            HorseClient producer = await ConnectRaw(ctx.Port);
+            IHorseQueueBus bus = new HorseQueueBus(producer);
+            await bus.Push("retry-q", new RetryModel { Data = "retry-ok" }, false, CancellationToken.None);
 
-        Assert.Single(tracker.ConsumedMessages);
-        Assert.Equal(1, tracker.ThrowCount);
-        Assert.Empty(logMsgs); // No PushException since retry succeeded
+            await WaitUntil(() => tracker.ConsumedMessages.Count >= 1, 5_000);
+            await Task.Delay(500);
 
-        producer.Disconnect();
-        worker.Disconnect();
-        logConsumer.Disconnect();
+            Assert.Single(tracker.ConsumedMessages);
+            Assert.Equal(1, tracker.ThrowCount);
+            Assert.Empty(logMsgs); // No PushException since retry succeeded
+
+            producer.Disconnect();
+            worker.Disconnect();
+            logConsumer.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     #endregion
@@ -662,40 +739,47 @@ public class RetryTest
     public async Task Retry3_Exhausted_MoveOnErrorFires(string mode)
     {
         await using var ctx = await CreateContext(mode);
-
-        await ctx.Rider.Queue.Create("retry-error-q", o =>
+        try
         {
-            o.Type = QueueType.Push;
-            o.CommitWhen = CommitWhen.AfterReceived;
-            o.Acknowledge = QueueAckDecision.None;
-        });
 
-        RetryTracker tracker = new() { ShouldThrow = true };
-        HorseClient worker = await BuildRetryWorker<Retry3WithMoveOnErrorConsumer>(ctx.Port, tracker);
-        await Task.Delay(500);
+            await ctx.Rider.Queue.Create("retry-error-q", o =>
+            {
+                o.Type = QueueType.Push;
+                o.CommitWhen = CommitWhen.AfterReceived;
+                o.Acknowledge = QueueAckDecision.None;
+            });
 
-        ConcurrentBag<HorseMessage> errorMsgs = new();
-        HorseClient errorConsumer = await ConnectRaw(ctx.Port);
-        errorConsumer.MessageReceived += (_, msg) => errorMsgs.Add(msg);
-        await errorConsumer.Queue.Subscribe("retry-error-q", true, CancellationToken.None);
-        await Task.Delay(200);
+            RetryTracker tracker = new() { ShouldThrow = true };
+            HorseClient worker = await BuildRetryWorker<Retry3WithMoveOnErrorConsumer>(ctx.Port, tracker);
+            await Task.Delay(500);
 
-        HorseClient producer = await ConnectRaw(ctx.Port);
-        IHorseQueueBus bus = new HorseQueueBus(producer);
-        await bus.Push("retry-q", new RetryModel { Data = "retry-move" }, false, CancellationToken.None);
+            ConcurrentBag<HorseMessage> errorMsgs = new();
+            HorseClient errorConsumer = await ConnectRaw(ctx.Port);
+            errorConsumer.MessageReceived += (_, msg) => errorMsgs.Add(msg);
+            await errorConsumer.Queue.Subscribe("retry-error-q", true, CancellationToken.None);
+            await Task.Delay(200);
 
-        await WaitUntil(() => tracker.ThrowCount >= 3, 5_000);
-        await WaitUntil(() => errorMsgs.Count >= 1, 5_000);
+            HorseClient producer = await ConnectRaw(ctx.Port);
+            IHorseQueueBus bus = new HorseQueueBus(producer);
+            await bus.Push("retry-q", new RetryModel { Data = "retry-move" }, false, CancellationToken.None);
 
-        Assert.Equal(3, tracker.ThrowCount);
-        Assert.True(errorMsgs.Count >= 1, $"Expected ≥1 error msg, got {errorMsgs.Count}");
+            await WaitUntil(() => tracker.ThrowCount >= 3, 5_000);
+            await WaitUntil(() => errorMsgs.Count >= 1, 5_000);
 
-        // Verify the moved message target is the error queue
-        Assert.Equal("retry-error-q", errorMsgs.First().Target);
+            Assert.Equal(3, tracker.ThrowCount);
+            Assert.True(errorMsgs.Count >= 1, $"Expected ≥1 error msg, got {errorMsgs.Count}");
 
-        producer.Disconnect();
-        worker.Disconnect();
-        errorConsumer.Disconnect();
+            // Verify the moved message target is the error queue
+            Assert.Equal("retry-error-q", errorMsgs.First().Target);
+
+            producer.Disconnect();
+            worker.Disconnect();
+            errorConsumer.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     #endregion
@@ -712,27 +796,34 @@ public class RetryTest
     public async Task Retry3_MultipleMessages_EachRetriedIndependently(string mode)
     {
         await using var ctx = await CreateContext(mode);
+        try
+        {
 
-        RetryTracker tracker = new() { ShouldThrow = true };
-        HorseClient worker = await BuildRetryWorker<Retry3Consumer>(ctx.Port, tracker);
-        await Task.Delay(500);
+            RetryTracker tracker = new() { ShouldThrow = true };
+            HorseClient worker = await BuildRetryWorker<Retry3Consumer>(ctx.Port, tracker);
+            await Task.Delay(500);
 
-        HorseClient producer = await ConnectRaw(ctx.Port);
-        IHorseQueueBus bus = new HorseQueueBus(producer);
+            HorseClient producer = await ConnectRaw(ctx.Port);
+            IHorseQueueBus bus = new HorseQueueBus(producer);
 
-        int msgCount = 3;
-        for (int i = 0; i < msgCount; i++)
-            await bus.Push("retry-q", new RetryModel { Data = $"multi-{i}" }, false, CancellationToken.None);
+            int msgCount = 3;
+            for (int i = 0; i < msgCount; i++)
+                await bus.Push("retry-q", new RetryModel { Data = $"multi-{i}" }, false, CancellationToken.None);
 
-        // Each message retried 3 times → 9 total attempts
-        await WaitUntil(() => tracker.ThrowCount >= msgCount * 3, 10_000);
-        await Task.Delay(300);
+            // Each message retried 3 times → 9 total attempts
+            await WaitUntil(() => tracker.ThrowCount >= msgCount * 3, 10_000);
+            await Task.Delay(300);
 
-        Assert.Equal(msgCount * 3, tracker.AttemptCount);
-        Assert.Equal(msgCount * 3, tracker.ThrowCount);
+            Assert.Equal(msgCount * 3, tracker.AttemptCount);
+            Assert.Equal(msgCount * 3, tracker.ThrowCount);
 
-        producer.Disconnect();
-        worker.Disconnect();
+            producer.Disconnect();
+            worker.Disconnect();
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     #endregion

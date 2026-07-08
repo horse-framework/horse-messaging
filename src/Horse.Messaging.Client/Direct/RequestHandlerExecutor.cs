@@ -8,14 +8,14 @@ using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client.Direct;
 
-internal class RequestHandlerExecutor<TRequest, TResponse>: ExecutorBase
+internal class RequestHandlerExecutor<TRequest, TResponse> : ExecutorBase
 {
     private readonly Type _handlerType;
     private readonly IHorseRequestHandler<TRequest, TResponse> _handler;
     private readonly Func<IHandlerFactory> _handlerFactoryCreator;
     private DirectHandlerRegistration _registration;
     private InterceptorRunner _interceptorRunner;
-    
+
     public RequestHandlerExecutor(Type handlerType, IHorseRequestHandler<TRequest, TResponse> handler, Func<IHandlerFactory> handlerFactoryCreator)
     {
         _handlerType = handlerType;
@@ -113,6 +113,11 @@ internal class RequestHandlerExecutor<TRequest, TResponse>: ExecutorBase
         {
             providedHandler?.Dispose();
         }
+    }
+
+    public override Task ExecuteException(HorseClient client, Exception e, HorseMessage message, int tryCount, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
     }
 
     private async Task<TResponse> Handle(IHorseRequestHandler<TRequest, TResponse> handler, TRequest request,

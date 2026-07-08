@@ -200,30 +200,20 @@ internal class RoundRobinQueueState : IQueueState
 
         while (true)
         {
+            QueueClient[] clients = _queue.ClientsArray;
+            int length = clients.Length;
             int index = currentIndex < 0 ? 0 : currentIndex;
-            if (index >= _queue.ClientsArray.Length)
-            {
-                if (!_queue.HasAnyClient())
-                    break;
 
-                currentIndex = 0;
-                continue;
-            }
+            if (index >= length)
+                index = 0;
 
-            for (int i = index; i < _queue.ClientsArray.Length; i++)
+            for (int scan = 0; scan < length; scan++)
             {
-                QueueClient client = _queue.ClientsArray[i];
+                int i = (index + scan) % length;
+                QueueClient client = clients[i];
 
                 if (client == null)
-                {
-                    if (i == 0)
-                        break;
-
-                    i = 0;
-                    client = _queue.ClientsArray[i];
-                    if (client == null)
-                        break;
-                }
+                    continue;
 
                 if (!client.Client.IsConnected)
                     continue;
@@ -244,7 +234,7 @@ internal class RoundRobinQueueState : IQueueState
                 if (!canReceive)
                     continue;
 
-                return new Tuple<QueueClient, int>(client, i + 1);
+                return new Tuple<QueueClient, int>(client, (i + 1) % length);
             }
 
             // No available client found after scanning all consumers.

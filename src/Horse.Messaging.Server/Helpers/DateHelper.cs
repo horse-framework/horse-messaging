@@ -4,13 +4,15 @@ namespace Horse.Messaging.Server.Helpers;
 
 internal static class DateHelper
 {
+    private static readonly long MaxSupportedUnixMilliseconds = DateTimeOffset.MaxValue.ToUnixTimeMilliseconds();
+
     /// <summary>
     /// Converts DateTime to unix milliseconds
     /// </summary>
     public static long ToUnixMilliseconds(this DateTime date)
     {
-        TimeSpan span = date - new DateTime(1970, 1, 1);
-        return Convert.ToInt64(span.TotalMilliseconds);
+        long milliseconds = (date.Ticks - DateTime.UnixEpoch.Ticks) / TimeSpan.TicksPerMillisecond;
+        return milliseconds > MaxSupportedUnixMilliseconds ? MaxSupportedUnixMilliseconds : milliseconds;
     }
     /// <summary>
     /// Converts DateTime to unix seconds
@@ -26,7 +28,10 @@ internal static class DateHelper
     /// </summary>
     public static DateTime ToUnixDate(this long unixMilliseconds)
     {
-        return new DateTime(1970, 1, 1).AddMilliseconds(unixMilliseconds);
+        if (unixMilliseconds > MaxSupportedUnixMilliseconds)
+            unixMilliseconds = MaxSupportedUnixMilliseconds;
+
+        return DateTimeOffset.FromUnixTimeMilliseconds(unixMilliseconds).UtcDateTime;
     }
 
     /// <summary>

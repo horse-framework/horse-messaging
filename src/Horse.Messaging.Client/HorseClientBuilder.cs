@@ -4,7 +4,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Horse.Messaging.Client.Annotations;
 using Horse.Messaging.Client.Channels;
 using Horse.Messaging.Client.Direct;
 using Horse.Messaging.Client.Events;
@@ -65,6 +64,14 @@ public class HorseClientBuilder
     /// Service key for keyed services. Null if not using keyed services.
     /// </summary>
     internal string ServiceKey { get; set; }
+
+    /// <summary>
+    /// If true, logs errors with Microsoft.Extensions.Logging
+    /// </summary>
+    public bool UseQueueErrorLogging
+    {
+        set => _client.Queue.LogErrors = value;
+    }
 
     /// <summary>
     /// Creates Horse Connector Builder without IOC implementation
@@ -822,13 +829,21 @@ public class HorseClientBuilder
         return config.Build();
     }
 
-    private QueueTypeDescriptor BuildConsumerDescriptor(Type consumerType, Action<Type, QueueConfigBuilder> builder, ServiceLifetime lifetime)
+    private QueueTypeDescriptor BuildConsumerDescriptor(Type consumerType, Action<QueueConfigBuilder> builder, ServiceLifetime lifetime)
     {
         if (builder == null)
             return null;
 
         QueueConfigBuilder config = new QueueConfigBuilder();
-        builder(consumerType, config);
+        config.ConsumerType = consumerType;
+
+        Type queueConsumerInterface = consumerType.GetInterfaces()
+            .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IQueueConsumer<>));
+
+        if (queueConsumerInterface != null)
+            config.ModelType = queueConsumerInterface.GetGenericArguments()[0];
+
+        builder(config);
         RegisterBuilderInterceptors(config, lifetime);
         return config.Build();
     }
@@ -972,7 +987,7 @@ public class HorseClientBuilder
     /// <summary>
     /// Adds all queue consumer types in specified assemblies with transient life time and per-consumer builder configuration.
     /// </summary>
-    public HorseClientBuilder AddTransientConsumers(Action<Type, QueueConfigBuilder> builder, params Type[] assemblyTypes)
+    public HorseClientBuilder AddTransientConsumers(Action<QueueConfigBuilder> builder, params Type[] assemblyTypes)
     {
         if (_services == null)
             throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
@@ -1010,7 +1025,7 @@ public class HorseClientBuilder
     /// <summary>
     /// Adds all queue consumer types in specified assemblies with scoped life time and per-consumer builder configuration.
     /// </summary>
-    public HorseClientBuilder AddScopedConsumers(Action<Type, QueueConfigBuilder> builder, params Type[] assemblyTypes)
+    public HorseClientBuilder AddScopedConsumers(Action<QueueConfigBuilder> builder, params Type[] assemblyTypes)
     {
         if (_services == null)
             throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
@@ -1049,7 +1064,7 @@ public class HorseClientBuilder
     /// <summary>
     /// Adds all queue consumer types in specified assemblies with singleton life time and per-consumer builder configuration.
     /// </summary>
-    public HorseClientBuilder AddSingletonConsumers(Action<Type, QueueConfigBuilder> builder, params Type[] assemblyTypes)
+    public HorseClientBuilder AddSingletonConsumers(Action<QueueConfigBuilder> builder, params Type[] assemblyTypes)
     {
         QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
 

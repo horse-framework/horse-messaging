@@ -11,6 +11,7 @@ using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Plugins;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Routing;
+using Horse.Messaging.Server.Scheduling;
 using Horse.Messaging.Server.Transactions;
 using Horse.Server;
 
@@ -52,6 +53,11 @@ public class HorseRider
     /// Manages key value memory caches
     /// </summary>
     public HorseCache Cache { get; }
+
+    /// <summary>
+    /// Manages scheduled tasks
+    /// </summary>
+    public ScheduleRider Schedule { get; }
 
     /// <summary>
     /// Transaction rider object manages all transactions and their operations
@@ -125,6 +131,7 @@ public class HorseRider
         Transaction = new TransactionRider(this);
         Cache = new HorseCache(this);
         Plugin = new PluginRider(this);
+        Schedule = new ScheduleRider(this);
 
         Cluster.Initialize();
     }
@@ -146,6 +153,8 @@ public class HorseRider
         Channel.Initialize();
         Queue.Initialize();
         Plugin.Initialize();
+        
+        Schedule.Initialize();
     }
 
     /// <summary>

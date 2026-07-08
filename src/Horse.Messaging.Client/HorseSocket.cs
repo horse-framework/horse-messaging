@@ -278,6 +278,11 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
         if (message == null)
             throw new IOException("Cannot read message from stream.");
 
+        _ = ProcessMessage(message);
+    }
+    
+    private async Task ProcessMessage(HorseMessage message)
+    {
         try
         {
             await _client.OnMessageReceived(message);

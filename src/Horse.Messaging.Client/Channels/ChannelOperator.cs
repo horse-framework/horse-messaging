@@ -50,12 +50,12 @@ public class ChannelOperator
         if (reg == null)
             return;
 
-        object model = reg.MessageType == typeof(string)
-            ? message.GetStringContent()
-            : Client.MessageSerializer.Deserialize(message, reg.MessageType);
-
         try
         {
+            object model = reg.MessageType == typeof(string)
+                ? message.GetStringContent()
+                : Client.MessageSerializer.Deserialize(message, reg.MessageType);
+
             if (reg.Filter != null && !reg.Filter(message, model))
                 return;
 
@@ -65,6 +65,7 @@ public class ChannelOperator
         catch (Exception ex)
         {
             Client.OnException(ex, message);
+            await reg.Executer.ExecuteException(Client, ex, message, 0, Client.ConsumeToken);
         }
         finally
         {

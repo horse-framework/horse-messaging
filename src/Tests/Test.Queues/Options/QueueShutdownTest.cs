@@ -24,21 +24,28 @@ public class QueueShutdownTest
             o.CommitWhen = CommitWhen.AfterReceived;
             o.Acknowledge = QueueAckDecision.None;
         });
-
-        HorseQueue queue = await ctx.Rider.Queue.Create("shutdown-blocked", o =>
+        try
         {
-            o.Type = QueueType.Push;
-            o.CommitWhen = CommitWhen.AfterReceived;
-            o.Acknowledge = QueueAckDecision.None;
-        });
 
-        await ctx.Rider.Queue.BeginShutdownAsync(TimeSpan.Zero);
+            HorseQueue queue = await ctx.Rider.Queue.Create("shutdown-blocked", o =>
+            {
+                o.Type = QueueType.Push;
+                o.CommitWhen = CommitWhen.AfterReceived;
+                o.Acknowledge = QueueAckDecision.None;
+            });
 
-        HorseMessage message = new HorseMessage(MessageType.QueueMessage, queue.Name);
-        message.SetStringContent("payload");
+            await ctx.Rider.Queue.BeginShutdownAsync(TimeSpan.Zero);
 
-        PushResult result = await queue.Push(message);
-        Assert.Equal(PushResult.StatusNotSupported, result);
+            HorseMessage message = new HorseMessage(MessageType.QueueMessage, queue.Name);
+            message.SetStringContent("payload");
+
+            PushResult result = await queue.Push(message);
+            Assert.Equal(PushResult.StatusNotSupported, result);
+        }
+        finally
+        {
+            await ctx.Server.StopAsync();
+        }
     }
 
     [Fact]

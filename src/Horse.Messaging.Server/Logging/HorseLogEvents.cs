@@ -38,6 +38,12 @@ internal static class HorseLogEvents
     internal const int SaveTransactionContainer = 601;
 
     internal const int LoadPersistentCache = 701;
-
+    
     internal const int EventTrigger = 801;
+
+    internal const int ScheduleLoad = 901;
+    internal const int ScheduleSave = 902;
+    internal const int ScheduleSystemRun = 903;
+    internal const int ScheduleTaskRun = 904;
+    internal const int ScheduleTimeCalculation = 905;
 }

@@ -1,5 +1,9 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Test.Common;
@@ -16,9 +20,6 @@ public class PingPongTest
 {
     #region Helpers
 
-    /// <summary>
-    /// Waits until predicate returns true or timeout expires.
-    /// </summary>
     private static async Task<bool> WaitUntil(Func<bool> predicate, int timeoutMs = 10000, int pollMs = 100)
     {
         int elapsed = 0;
@@ -38,130 +39,79 @@ public class PingPongTest
 
     #region Server → Client: Ping/Pong
 
-    /// <summary>
-    /// Server sends PING to an idle client, client responds with PONG,
-    /// and the connection stays alive across multiple heartbeat cycles.
-    /// PingInterval=3s → tickInterval = Clamp(3000/2, 1000, 5000) = 1500ms.
-    /// The connection must remain alive for the entire duration.
-    /// </summary>
     [Fact]
     public async Task Server_PingsIdleClient_ClientRespondsWithPong_ConnectionStaysAlive()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 3, requestTimeout: 15);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             HorseClient client = new HorseClient();
-            client.PingInterval = TimeSpan.FromSeconds(60); // disable client-initiated pings
+            client.PingInterval = TimeSpan.FromSeconds(60);
             await client.ConnectAsync($"horse://localhost:{port}");
             await Task.Delay(300);
 
             Assert.True(client.IsConnected);
 
-            // With tickInterval=1.5s, multiple heartbeat cycles occur within 15s
-            // Server should send PINGs, client should auto-respond with PONGs
             await Task.Delay(15_000);
 
             Assert.True(client.IsConnected, "Client should remain connected — server PINGs, client auto-responds with PONGs");
 
             client.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 3, requestTimeout: 15);
     }
 
-    /// <summary>
-    /// Client sends PING to server, server responds with PONG,
-    /// and the connection stays alive across multiple ping cycles.
-    /// </summary>
     [Fact]
     public async Task Client_PingsServer_ServerRespondsWithPong_ConnectionStaysAlive()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 300, requestTimeout: 300); // very long server ping — server won't initiate
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             HorseClient client = new HorseClient();
-            client.PingInterval = TimeSpan.FromSeconds(2); // client pings every 2s
+            client.PingInterval = TimeSpan.FromSeconds(2);
             await client.ConnectAsync($"horse://localhost:{port}");
             await Task.Delay(300);
 
             Assert.True(client.IsConnected);
 
-            // Wait for several client-initiated ping cycles
             await Task.Delay(8000);
 
             Assert.True(client.IsConnected, "Client-initiated PINGs should keep the connection alive (server responds with PONGs)");
 
             client.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 300, requestTimeout: 300);
     }
 
     #endregion
 
     #region Idle Timeout — Server Disconnects Unresponsive Client
 
-    /// <summary>
-    /// When a client does not respond to server PING with PONG,
-    /// the server must disconnect the client.
-    /// 
-    /// To simulate this: we create a raw TCP connection that completes the Horse protocol
-    /// handshake but does not process PING messages (no PONG sent back).
-    /// The server's HeartbeatManager should detect the missing PONG and disconnect.
-    /// 
-    /// Server PingInterval=3s → tickInterval = Clamp(1500, 1000, 5000) = 1.5s.
-    /// Expected: within ~6-10s the non-responsive client is disconnected.
-    /// </summary>
     [Fact]
     public async Task Server_DisconnectsClient_WhenNoPongReceived()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 3, requestTimeout: 10);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
-            // Connect a normal client first to verify the server is working
+            Assert.True(port > 0);
+
             HorseClient normalClient = new HorseClient();
             await normalClient.ConnectAsync($"horse://localhost:{port}");
             await Task.Delay(300);
             Assert.True(normalClient.IsConnected);
 
-            // Count connected clients on the server
             int initialClientCount = server.Rider.Client.Clients.Count();
             Assert.True(initialClientCount >= 1);
 
-            // Now connect a second client that will just sit idle
             HorseClient idleClient = new HorseClient();
-            idleClient.PingInterval = TimeSpan.FromSeconds(60); // don't ping from client side
+            idleClient.PingInterval = TimeSpan.FromSeconds(60);
             bool idleClientDisconnected = false;
             idleClient.Disconnected += _ => idleClientDisconnected = true;
             await idleClient.ConnectAsync($"horse://localhost:{port}");
             await Task.Delay(300);
             Assert.True(idleClient.IsConnected);
 
-            // Both clients should be connected
             Assert.True(server.Rider.Client.Clients.Count() >= 2);
 
-            // With tickInterval=1.5s, PingInterval=3s:
-            // Tick sees idle > 3s → PongRequired=true, sends PING
-            // Client should auto-respond with PONG (HorseClient handles this)
-            // Next tick: PongRequired reset, connection stays alive
-            // The idle client IS a HorseClient that will auto-respond to PINGs,
-            // so it should NOT be disconnected. This test verifies the normal case.
             await Task.Delay(15_000);
 
             Assert.True(idleClient.IsConnected, "Idle HorseClient should stay connected — it auto-responds to server PINGs");
@@ -169,32 +119,20 @@ public class PingPongTest
 
             normalClient.Disconnect();
             idleClient.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 3, requestTimeout: 10);
     }
 
     #endregion
 
     #region SmartHealthCheck
 
-    /// <summary>
-    /// With SmartHealthCheck enabled on the client, if the client is actively sending/receiving
-    /// messages, it should NOT send redundant PING messages. The server should still consider
-    /// the client alive due to message traffic updating LastAliveTimeTicks.
-    /// </summary>
     [Fact]
     public async Task SmartHealthCheck_ActiveTraffic_NoPingNeeded_ConnectionStaysAlive()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 3, requestTimeout: 15);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             HorseClient sender = new HorseClient();
             sender.SmartHealthCheck = true;
             sender.PingInterval = TimeSpan.FromSeconds(5);
@@ -209,14 +147,12 @@ public class PingPongTest
             Assert.True(sender.IsConnected);
             Assert.True(receiver.IsConnected);
 
-            // Continuously send messages to keep the connection active
-            // This simulates real traffic — SmartHealthCheck should skip PING
             for (int i = 0; i < 20; i++)
             {
                 HorseMessage msg = new HorseMessage(MessageType.DirectMessage, receiver.ClientId);
                 msg.SetStringContent($"heartbeat-msg-{i}");
                 await sender.SendAsync(msg, CancellationToken.None);
-                await Task.Delay(1000); // every second for 20 seconds
+                await Task.Delay(1000);
             }
 
             Assert.True(sender.IsConnected, "Sender should remain connected — active traffic keeps it alive");
@@ -224,37 +160,21 @@ public class PingPongTest
 
             sender.Disconnect();
             receiver.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 3, requestTimeout: 15);
     }
 
-    /// <summary>
-    /// SmartHealthCheck on server side: when a client is sending messages within the
-    /// PingInterval window, the server should NOT send PINGs to that client.
-    /// Server's HeartbeatManager checks `socket.SmartHealthCheck && LastAliveTimeTicks + _interval > now`
-    /// and skips the ping if true.
-    /// With PingInterval=5s, tickInterval = Clamp(2500, 1000, 5000) = 2.5s.
-    /// </summary>
     [Fact]
     public async Task SmartHealthCheck_ServerSkipsPing_WhenClientIsActive()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 5, requestTimeout: 15);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             HorseClient client = new HorseClient();
             client.SmartHealthCheck = true;
             client.PingInterval = TimeSpan.FromSeconds(2);
 
             int pongCount = 0;
-            // Each time client gets a PONG from server (response to client PING),
-            // it means communication is alive
             client.MessageReceived += (_, m) =>
             {
                 if (m.Type == MessageType.Pong)
@@ -266,46 +186,34 @@ public class PingPongTest
 
             Assert.True(client.IsConnected);
 
-            // Keep sending messages frequently — within PingInterval window
             for (int i = 0; i < 15; i++)
             {
                 HorseMessage msg = new HorseMessage(MessageType.Server, null, 0);
                 msg.SetStringContent("keepalive-traffic");
                 try { await client.SendAsync(msg, CancellationToken.None); }
-                catch { /* server may reject unknown messages, that's fine — traffic still counts */ }
+                catch { }
 
                 await Task.Delay(1000);
             }
 
             Assert.True(client.IsConnected, "Client should remain connected with SmartHealthCheck and active traffic");
+            _ = pongCount;
 
             client.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 5, requestTimeout: 15);
     }
 
     #endregion
 
     #region Bidirectional Ping/Pong
 
-    /// <summary>
-    /// Both client and server have short PingIntervals.
-    /// Both sides should send PINGs and respond with PONGs.
-    /// Connection stays alive for extended period.
-    /// </summary>
     [Fact]
     public async Task BothSides_PingPong_ConnectionStaysAlive()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 3, requestTimeout: 15);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             HorseClient client = new HorseClient();
             client.PingInterval = TimeSpan.FromSeconds(3);
             await client.ConnectAsync($"horse://localhost:{port}");
@@ -313,34 +221,21 @@ public class PingPongTest
 
             Assert.True(client.IsConnected);
 
-            // Wait for many heartbeat cycles from both sides
-            // With PingInterval=3s, tickInterval=1.5s, multiple cycles within 15s
             await Task.Delay(15_000);
 
             Assert.True(client.IsConnected, "Connection should survive extended idle time with bidirectional ping/pong");
 
             client.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 3, requestTimeout: 15);
     }
 
-    /// <summary>
-    /// Multiple idle clients connected simultaneously.
-    /// All should be kept alive by the server's heartbeat mechanism.
-    /// </summary>
     [Fact]
     public async Task MultipleIdleClients_AllStayAlive()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 3, requestTimeout: 15);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             var clients = new List<HorseClient>();
             for (int i = 0; i < 5; i++)
             {
@@ -351,115 +246,84 @@ public class PingPongTest
             }
 
             await Task.Delay(500);
-            foreach (var c in clients)
+            foreach (HorseClient c in clients)
                 Assert.True(c.IsConnected);
 
-            // Wait for multiple heartbeat cycles — tick interval now 1.5s with PingInterval=3s
             await Task.Delay(15_000);
 
-            foreach (var c in clients)
+            foreach (HorseClient c in clients)
                 Assert.True(c.IsConnected, $"Client {c.ClientId} should remain connected after extended idle time");
 
-            foreach (var c in clients)
+            foreach (HorseClient c in clients)
                 c.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 3, requestTimeout: 15);
     }
 
     #endregion
 
     #region Reconnect After Ping Timeout
 
-    /// <summary>
-    /// If the server stops, the client should detect the connection loss and fire Disconnected event.
-    /// </summary>
     [Fact]
     public async Task ServerStops_ClientDetectsViaHeartbeat_DisconnectsFires()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 3, requestTimeout: 10);
-        Assert.True(port > 0);
+        await TestHorseRider.RunWith(async (server, port) =>
+        {
+            Assert.True(port > 0);
 
-        HorseClient client = new HorseClient();
-        client.PingInterval = TimeSpan.FromSeconds(2);
-        bool disconnected = false;
-        client.Disconnected += _ => disconnected = true;
-        await client.ConnectAsync($"horse://localhost:{port}");
-        await Task.Delay(500);
+            HorseClient client = new HorseClient();
+            client.PingInterval = TimeSpan.FromSeconds(2);
+            bool disconnected = false;
+            client.Disconnected += _ => disconnected = true;
+            await client.ConnectAsync($"horse://localhost:{port}");
+            await Task.Delay(500);
 
-        Assert.True(client.IsConnected);
+            Assert.True(client.IsConnected);
 
-        // Stop the server — client should detect via heartbeat failure
-        server.Stop();
+            await server.StopAsync();
 
-        // Client should detect disconnection — either immediately from broken pipe
-        // or within a few ping cycles
-        bool detected = await WaitUntil(() => disconnected, 20_000);
+            bool detected = await WaitUntil(() => disconnected, 20_000);
 
-        // Stop reconnection attempts
-        client.Disconnect();
+            client.Disconnect();
 
-        Assert.True(detected, "Client should detect server disconnection via heartbeat mechanism");
+            Assert.True(detected, "Client should detect server disconnection via heartbeat mechanism");
+        }, pingInterval: 3, requestTimeout: 10);
     }
 
     #endregion
 
     #region Edge Cases
 
-    /// <summary>
-    /// Client with PingInterval=0 (disabled) connected to a server with PingInterval=3.
-    /// The client should still respond to server-initiated PINGs and stay alive.
-    /// </summary>
     [Fact]
     public async Task ClientPingDisabled_ServerPingEnabled_ConnectionStaysAlive()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 3, requestTimeout: 15);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             HorseClient client = new HorseClient();
-            client.PingInterval = TimeSpan.Zero; // client does not send pings
+            client.PingInterval = TimeSpan.Zero;
             await client.ConnectAsync($"horse://localhost:{port}");
             await Task.Delay(300);
 
             Assert.True(client.IsConnected);
 
-            // Server will still send PINGs, client should auto-respond with PONGs
-            // With PingInterval=3s, tickInterval=1.5s, multiple cycles within 15s
             await Task.Delay(15_000);
 
             Assert.True(client.IsConnected, "Client with disabled ping should stay alive — server PINGs keep it alive");
 
             client.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 3, requestTimeout: 15);
     }
 
-    /// <summary>
-    /// Server with PingInterval=0 (disabled heartbeat) should NOT disconnect idle clients.
-    /// </summary>
     [Fact]
     public async Task ServerPingDisabled_IdleClient_NotDisconnected()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 0, requestTimeout: 300);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             HorseClient client = new HorseClient();
-            client.PingInterval = TimeSpan.FromSeconds(60); // very long, effectively disabled for test duration
+            client.PingInterval = TimeSpan.FromSeconds(60);
             bool disconnected = false;
             client.Disconnected += _ => disconnected = true;
             await client.ConnectAsync($"horse://localhost:{port}");
@@ -467,35 +331,22 @@ public class PingPongTest
 
             Assert.True(client.IsConnected);
 
-            // With server heartbeat disabled, idle client should stay connected
             await Task.Delay(10_000);
 
             Assert.True(client.IsConnected, "Server with PingInterval=0 should not disconnect idle clients");
             Assert.False(disconnected);
 
             client.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 0, requestTimeout: 300);
     }
 
-    /// <summary>
-    /// Rapid connect/disconnect cycles should not leave stale entries
-    /// in the HeartbeatManager that cause errors on the next tick.
-    /// With PingInterval=2s, tickInterval = Clamp(1000, 1000, 5000) = 1s.
-    /// </summary>
     [Fact]
     public async Task RapidConnectDisconnect_NoHeartbeatErrors()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 2, requestTimeout: 10);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             for (int i = 0; i < 10; i++)
             {
                 HorseClient client = new HorseClient();
@@ -508,44 +359,28 @@ public class PingPongTest
                 await Task.Delay(50);
             }
 
-            // Wait for a heartbeat tick to process — server should not crash
-            // tickInterval=1s with PingInterval=2s
             await Task.Delay(10_000);
 
-            // Connect one more client to verify server is healthy
             HorseClient finalClient = new HorseClient();
             await finalClient.ConnectAsync($"horse://localhost:{port}");
             bool finalConnected = await WaitUntil(() => finalClient.IsConnected, 3000);
             Assert.True(finalConnected, "Server should remain healthy after rapid connect/disconnect cycles");
 
             finalClient.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 2, requestTimeout: 10);
     }
 
     #endregion
 
     #region Configurable Tick Interval
 
-    /// <summary>
-    /// With a short PingInterval (2s), tick interval = Clamp(1000, 1000, 5000) = 1s.
-    /// A raw TCP client that never sends PONG should be disconnected within a few seconds,
-    /// proving the tick interval is derived from PingInterval, not hardcoded.
-    /// </summary>
     [Fact]
     public async Task ShortPingInterval_FastDisconnect_RawClient()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 2, requestTimeout: 10);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
-            // Raw TCP client: completes handshake but never sends PONG
+            Assert.True(port > 0);
+
             TcpClient rawClient = new TcpClient();
             await rawClient.ConnectAsync("127.0.0.1", port);
 
@@ -558,7 +393,6 @@ public class PingPongTest
             msg.CalculateLengths();
             HorseProtocolWriter.Write(msg, stream);
 
-            // Read loop to detect server-initiated disconnect
             bool disconnected = false;
             ThreadPool.UnsafeQueueUserWorkItem(async s =>
             {
@@ -585,105 +419,63 @@ public class PingPongTest
             await Task.Delay(1000);
             Assert.Equal(1, server.ClientConnected);
 
-            // With PingInterval=2s, tickInterval=1s:
-            // Tick 1 (~2s): sees idle > 2s → PongRequired=true, sends PING
-            // Tick 2 (~3s): PongRequired still true → Disconnect()
-            // Should disconnect within 5-8s. Allow generous margin.
             bool detected = await WaitUntil(() => disconnected, 15_000);
 
             Assert.True(detected, "Raw client should be disconnected within a few seconds when PingInterval=2s");
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 2, requestTimeout: 10);
     }
 
-    /// <summary>
-    /// With a medium PingInterval (5s), tick interval = Clamp(2500, 1000, 5000) = 2.5s.
-    /// Client auto-responds to PINGs and stays alive through multiple cycles.
-    /// </summary>
     [Fact]
     public async Task MediumPingInterval_ClientStaysAlive()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 5, requestTimeout: 15);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             HorseClient client = new HorseClient();
-            client.PingInterval = TimeSpan.FromSeconds(60); // only server pings
+            client.PingInterval = TimeSpan.FromSeconds(60);
             await client.ConnectAsync($"horse://localhost:{port}");
             await Task.Delay(300);
 
             Assert.True(client.IsConnected);
 
-            // PingInterval=5s, tickInterval=2.5s → ~4-6 heartbeat cycles in 15s
             await Task.Delay(15_000);
 
             Assert.True(client.IsConnected, "Client should remain alive with PingInterval=5s over multiple cycles");
 
             client.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 5, requestTimeout: 15);
     }
 
-    /// <summary>
-    /// With a large PingInterval (20s), tick interval = Clamp(10000, 1000, 5000) = 5s (capped at max).
-    /// The tick is capped at 5s even though PingInterval/2 = 10s.
-    /// A HorseClient should still stay alive.
-    /// </summary>
     [Fact]
     public async Task LargePingInterval_TickCappedAt5s_ClientStaysAlive()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 20, requestTimeout: 30);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             HorseClient client = new HorseClient();
-            client.PingInterval = TimeSpan.FromSeconds(60); // only server pings
+            client.PingInterval = TimeSpan.FromSeconds(60);
             await client.ConnectAsync($"horse://localhost:{port}");
             await Task.Delay(300);
 
             Assert.True(client.IsConnected);
 
-            // PingInterval=20s, tickInterval=5s (capped). 
-            // After 25s, server should have sent at least 1 PING.
-            // Client auto-responds with PONG → connection stays alive.
             await Task.Delay(25_000);
 
             Assert.True(client.IsConnected, "Client should remain alive with PingInterval=20s (tick capped at 5s)");
 
             client.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 20, requestTimeout: 30);
     }
 
-    /// <summary>
-    /// With PingInterval=1s (minimum meaningful), tick interval = Clamp(500, 1000, 5000) = 1s (clamped to min).
-    /// A raw client that doesn't respond to PONG should be disconnected very quickly.
-    /// </summary>
     [Fact]
     public async Task MinimalPingInterval_FastestDisconnect_RawClient()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 1, requestTimeout: 10);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             TcpClient rawClient = new TcpClient();
             await rawClient.ConnectAsync("127.0.0.1", port);
 
@@ -721,35 +513,19 @@ public class PingPongTest
 
             await Task.Delay(500);
 
-            // PingInterval=1s, tickInterval=1s (clamped min):
-            // Tick 1 (~1s): sees idle > 1s → PongRequired=true, sends PING
-            // Tick 2 (~2s): PongRequired still true → Disconnect()
-            // Should disconnect within ~3-5s.
             bool detected = await WaitUntil(() => disconnected, 10_000);
 
             Assert.True(detected, "Raw client should be disconnected within seconds when PingInterval=1s");
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 1, requestTimeout: 10);
     }
 
-    /// <summary>
-    /// Verifies that a HorseClient with a fast PingInterval (1s) on both sides stays alive.
-    /// Both server (tickInterval=1s) and client (PingInterval=1s) are ticking fast.
-    /// The connection should survive many rapid heartbeat cycles.
-    /// </summary>
     [Fact]
     public async Task FastPingInterval_BothSides_ConnectionSurvives()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 1, requestTimeout: 10);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             HorseClient client = new HorseClient();
             client.PingInterval = TimeSpan.FromSeconds(1);
             await client.ConnectAsync($"horse://localhost:{port}");
@@ -757,36 +533,21 @@ public class PingPongTest
 
             Assert.True(client.IsConnected);
 
-            // Both sides ping every ~1s, tick every 1s. 
-            // Should survive 15 seconds of rapid ping/pong easily.
             await Task.Delay(15_000);
 
             Assert.True(client.IsConnected, "Connection should survive rapid bidirectional ping/pong (PingInterval=1s both sides)");
 
             client.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 1, requestTimeout: 10);
     }
 
-    /// <summary>
-    /// Two clients with different PingIntervals connected to the same server.
-    /// Server has PingInterval=3s (tickInterval=1.5s).
-    /// One client pings every 1s, the other every 10s.
-    /// Both should stay alive because the server pings both, and both auto-respond.
-    /// </summary>
     [Fact]
     public async Task MixedClientPingIntervals_AllStayAlive()
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: 3, requestTimeout: 15);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             HorseClient fastClient = new HorseClient();
             fastClient.PingInterval = TimeSpan.FromSeconds(1);
             await fastClient.ConnectAsync($"horse://localhost:{port}");
@@ -800,7 +561,6 @@ public class PingPongTest
             Assert.True(fastClient.IsConnected);
             Assert.True(slowClient.IsConnected);
 
-            // Both should remain alive. Server pings both on its cycle.
             await Task.Delay(15_000);
 
             Assert.True(fastClient.IsConnected, "Fast-pinging client should remain connected");
@@ -808,30 +568,18 @@ public class PingPongTest
 
             fastClient.Disconnect();
             slowClient.Disconnect();
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: 3, requestTimeout: 15);
     }
 
-    /// <summary>
-    /// Verifies disconnect timing scales with PingInterval.
-    /// PingInterval=2s should disconnect much faster than PingInterval=10s.
-    /// Uses raw TCP clients that don't respond to PINGs.
-    /// </summary>
     [Theory]
-    [InlineData(2, 12_000)]   // PingInterval=2s, tickInterval=1s → disconnect within 12s
-    [InlineData(5, 20_000)]   // PingInterval=5s, tickInterval=2.5s → disconnect within 20s
+    [InlineData(2, 12_000)]
+    [InlineData(5, 20_000)]
     public async Task DisconnectSpeed_ScalesWithPingInterval(int pingIntervalSec, int maxDisconnectMs)
     {
-        TestHorseRider server = new TestHorseRider();
-        await server.Initialize();
-        int port = server.Start(pingInterval: pingIntervalSec, requestTimeout: 30);
-        Assert.True(port > 0);
-
-        try
+        await TestHorseRider.RunWith(async (server, port) =>
         {
+            Assert.True(port > 0);
+
             TcpClient rawClient = new TcpClient();
             await rawClient.ConnectAsync("127.0.0.1", port);
 
@@ -872,13 +620,8 @@ public class PingPongTest
             bool detected = await WaitUntil(() => disconnected, maxDisconnectMs);
 
             Assert.True(detected, $"Raw client should disconnect within {maxDisconnectMs}ms for PingInterval={pingIntervalSec}s");
-        }
-        finally
-        {
-            server.Stop();
-        }
+        }, pingInterval: pingIntervalSec, requestTimeout: 30);
     }
 
     #endregion
 }
-

@@ -24,6 +24,12 @@ public delegate string QueueNameHandler(QueueNameHandlerContext context);
 public class QueueOperator : IDisposable
 {
     internal HorseClient Client { get; }
+
+    /// <summary>
+    /// If true, logs errors with Microsoft.Extensions.Logging
+    /// </summary>
+    public bool LogErrors { get; set; } = true;
+
     private readonly Timer _pullContainerTimeoutHandler;
 
     internal TypeDescriptorContainer<QueueTypeDescriptor> DescriptorContainer { get; }
@@ -89,18 +95,19 @@ public class QueueOperator : IDisposable
         if (reg == null)
             return;
 
-        object model = reg.MessageType == typeof(string)
-            ? message.GetStringContent()
-            : Client.MessageSerializer.Deserialize(message, reg.MessageType);
-
         try
         {
+            object model = reg.MessageType == typeof(string)
+                ? message.GetStringContent()
+                : Client.MessageSerializer.Deserialize(message, reg.MessageType);
+
             Interlocked.Increment(ref _activeConsumeOperations);
             await reg.ConsumerExecuter.Execute(Client, message, model, Client.ConsumeToken);
         }
         catch (Exception ex)
         {
             Client.OnException(ex, message);
+            await reg.ConsumerExecuter.ExecuteException(Client, ex, message, 0, Client.ConsumeToken);
         }
         finally
         {
@@ -1203,7 +1210,7 @@ public class QueueOperator : IDisposable
                 {
                     IgnoreExceptions = current.Retry.IgnoreExceptions == null
                         ? null
-                        : (Type[]) current.Retry.IgnoreExceptions.Clone()
+                        : (Type[])current.Retry.IgnoreExceptions.Clone()
                 },
             DefaultPushException = current.DefaultPushException,
             DefaultPublishException = current.DefaultPublishException

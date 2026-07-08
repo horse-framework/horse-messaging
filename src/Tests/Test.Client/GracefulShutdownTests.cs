@@ -53,12 +53,12 @@ public class GracefulShutdownTests
     // Helpers
     // -----------------------------------------------------------------------
 
-    private static async Task<(TestHorseRider server, int port)> StartServer()
+    private static async Task RunWithServer(Func<TestHorseRider, int, Task> action)
     {
-        var server = new TestHorseRider();
+        await using var server = new TestHorseRider();
         await server.Initialize();
         int port = server.Start(300, 300);
-        return (server, port);
+        await action(server, port);
     }
 
     private static async Task WaitUntil(Func<bool> condition, int timeoutMs = 3000)
@@ -75,16 +75,16 @@ public class GracefulShutdownTests
     [Fact]
     public async Task Disconnect_WithoutGraceful_DisconnectsImmediately()
     {
-        var (server, port) = await StartServer();
+        await RunWithServer(async (server, port) =>
+        {
+            var client = new HorseClient();
+            await client.ConnectAsync($"horse://localhost:{port}");
+            Assert.True(client.IsConnected);
 
-        var client = new HorseClient();
-        await client.ConnectAsync($"horse://localhost:{port}");
-        Assert.True(client.IsConnected);
+            client.Disconnect();
 
-        client.Disconnect();
-
-        Assert.False(client.IsConnected);
-        server.Stop();
+            Assert.False(client.IsConnected);
+        });
     }
 
     // -----------------------------------------------------------------------
@@ -95,30 +95,30 @@ public class GracefulShutdownTests
     public async Task Disconnect_WithGraceful_InvokesCallback()
     {
         ShutdownState.Reset();
-        var (server, port) = await StartServer();
 
-        var builder = new HorseClientBuilder();
-        builder.AddHost($"horse://localhost:{port}");
-        builder.UseGracefulShutdown(
-            TimeSpan.FromMilliseconds(50),
-            TimeSpan.FromSeconds(2),
-            () =>
-            {
-                ShutdownState.CallbackInvoked = true;
-                return Task.CompletedTask;
-            });
+        await RunWithServer(async (server, port) =>
+        {
+            var builder = new HorseClientBuilder();
+            builder.AddHost($"horse://localhost:{port}");
+            builder.UseGracefulShutdown(
+                TimeSpan.FromMilliseconds(50),
+                TimeSpan.FromSeconds(2),
+                () =>
+                {
+                    ShutdownState.CallbackInvoked = true;
+                    return Task.CompletedTask;
+                });
 
-        var client = builder.Build();
-        await client.ConnectAsync();
-        Assert.True(client.IsConnected);
+            var client = builder.Build();
+            await client.ConnectAsync();
+            Assert.True(client.IsConnected);
 
-        client.Disconnect();
+            client.Disconnect();
 
-        await WaitUntil(() => !client.IsConnected, 3000);
-        Assert.False(client.IsConnected);
-        Assert.True(ShutdownState.CallbackInvoked, "ShuttingDownAction callback must be invoked during graceful shutdown");
-
-        server.Stop();
+            await WaitUntil(() => !client.IsConnected, 3000);
+            Assert.False(client.IsConnected);
+            Assert.True(ShutdownState.CallbackInvoked, "ShuttingDownAction callback must be invoked during graceful shutdown");
+        });
     }
 
     // -----------------------------------------------------------------------
@@ -129,35 +129,35 @@ public class GracefulShutdownTests
     public async Task Disconnect_WithGraceful_InvokesProviderCallback()
     {
         ShutdownState.Reset();
-        var (server, port) = await StartServer();
 
-        var builder = new HorseClientBuilder();
-        builder.AddHost($"horse://localhost:{port}");
-        builder.UseGracefulShutdown(
-            TimeSpan.FromMilliseconds(50),
-            TimeSpan.FromSeconds(2),
-            (IServiceProvider _) =>
-            {
-                ShutdownState.ProviderCallbackInvoked = true;
-                return Task.CompletedTask;
-            });
+        await RunWithServer(async (server, port) =>
+        {
+            var builder = new HorseClientBuilder();
+            builder.AddHost($"horse://localhost:{port}");
+            builder.UseGracefulShutdown(
+                TimeSpan.FromMilliseconds(50),
+                TimeSpan.FromSeconds(2),
+                (IServiceProvider _) =>
+                {
+                    ShutdownState.ProviderCallbackInvoked = true;
+                    return Task.CompletedTask;
+                });
 
-        var client = builder.Build();
-        // Provider is internal — use ServiceCollection registration path instead
-        var services = new ServiceCollection();
-        services.AddSingleton(client);
-        var provider = services.BuildServiceProvider();
-        // Provider is set internally by UseHorse, so we test via service-based path instead
-        await client.ConnectAsync();
-        Assert.True(client.IsConnected);
+            var client = builder.Build();
+            // Provider is internal — use ServiceCollection registration path instead
+            var services = new ServiceCollection();
+            services.AddSingleton(client);
+            var provider = services.BuildServiceProvider();
+            // Provider is set internally by UseHorse, so we test via service-based path instead
+            await client.ConnectAsync();
+            Assert.True(client.IsConnected);
 
-        client.Disconnect();
+            client.Disconnect();
 
-        await WaitUntil(() => !client.IsConnected, 3000);
-        Assert.False(client.IsConnected);
-        Assert.True(ShutdownState.ProviderCallbackInvoked, "ShuttingDownActionWithProvider callback must be invoked");
-
-        server.Stop();
+            await WaitUntil(() => !client.IsConnected, 3000);
+            Assert.False(client.IsConnected);
+            Assert.True(ShutdownState.ProviderCallbackInvoked, "ShuttingDownActionWithProvider callback must be invoked");
+        });
     }
 
     // -----------------------------------------------------------------------
@@ -170,29 +170,29 @@ public class GracefulShutdownTests
         ShutdownState.Reset();
         int callbackCount = 0;
 
-        var (server, port) = await StartServer();
+        await RunWithServer(async (server, port) =>
+        {
+            var builder = new HorseClientBuilder();
+            builder.AddHost($"horse://localhost:{port}");
+            builder.UseGracefulShutdown(
+                TimeSpan.FromMilliseconds(50),
+                TimeSpan.FromSeconds(2),
+                () =>
+                {
+                    Interlocked.Increment(ref callbackCount);
+                    return Task.CompletedTask;
+                });
 
-        var builder = new HorseClientBuilder();
-        builder.AddHost($"horse://localhost:{port}");
-        builder.UseGracefulShutdown(
-            TimeSpan.FromMilliseconds(50),
-            TimeSpan.FromSeconds(2),
-            () =>
-            {
-                Interlocked.Increment(ref callbackCount);
-                return Task.CompletedTask;
-            });
+            var client = builder.Build();
+            await client.ConnectAsync();
 
-        var client = builder.Build();
-        await client.ConnectAsync();
+            client.Disconnect();
+            client.Disconnect();
 
-        client.Disconnect();
-        client.Disconnect();
+            await Task.Delay(200);
 
-        await Task.Delay(200);
-
-        Assert.Equal(1, callbackCount);
-        server.Stop();
+            Assert.Equal(1, callbackCount);
+        });
     }
 
     // -----------------------------------------------------------------------
@@ -202,27 +202,26 @@ public class GracefulShutdownTests
     [Fact]
     public async Task GracefulShutdown_CancelsConsumeToken()
     {
-        var (server, port) = await StartServer();
+        await RunWithServer(async (server, port) =>
+        {
+            var builder = new HorseClientBuilder();
+            builder.AddHost($"horse://localhost:{port}");
+            builder.UseGracefulShutdown(
+                TimeSpan.FromMilliseconds(50),
+                TimeSpan.FromSeconds(2),
+                () => Task.CompletedTask);
 
-        var builder = new HorseClientBuilder();
-        builder.AddHost($"horse://localhost:{port}");
-        builder.UseGracefulShutdown(
-            TimeSpan.FromMilliseconds(50),
-            TimeSpan.FromSeconds(2),
-            () => Task.CompletedTask);
+            var client = builder.Build();
+            await client.ConnectAsync();
 
-        var client = builder.Build();
-        await client.ConnectAsync();
+            var tokenBefore = client.ConsumeToken;
+            Assert.False(tokenBefore.IsCancellationRequested);
 
-        var tokenBefore = client.ConsumeToken;
-        Assert.False(tokenBefore.IsCancellationRequested);
+            client.Disconnect();
 
-        client.Disconnect();
-
-        await WaitUntil(() => tokenBefore.IsCancellationRequested, 2000);
-        Assert.True(tokenBefore.IsCancellationRequested);
-
-        server.Stop();
+            await WaitUntil(() => tokenBefore.IsCancellationRequested, 2000);
+            Assert.True(tokenBefore.IsCancellationRequested);
+        });
     }
 
     // -----------------------------------------------------------------------
@@ -232,27 +231,26 @@ public class GracefulShutdownTests
     [Fact]
     public async Task GracefulShutdown_RespectsMinWait()
     {
-        var (server, port) = await StartServer();
+        await RunWithServer(async (server, port) =>
+        {
+            var builder = new HorseClientBuilder();
+            builder.AddHost($"horse://localhost:{port}");
+            builder.UseGracefulShutdown(
+                TimeSpan.FromMilliseconds(500),
+                TimeSpan.FromSeconds(5),
+                () => Task.CompletedTask);
 
-        var builder = new HorseClientBuilder();
-        builder.AddHost($"horse://localhost:{port}");
-        builder.UseGracefulShutdown(
-            TimeSpan.FromMilliseconds(500),
-            TimeSpan.FromSeconds(5),
-            () => Task.CompletedTask);
+            var client = builder.Build();
+            await client.ConnectAsync();
 
-        var client = builder.Build();
-        await client.ConnectAsync();
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            client.Disconnect();
+            sw.Stop();
 
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        client.Disconnect();
-        sw.Stop();
-
-        // Should take at least ~500ms (MinWait). Give generous margin.
-        Assert.True(sw.ElapsedMilliseconds >= 400,
-            $"Graceful shutdown should wait at least MinWait. Elapsed: {sw.ElapsedMilliseconds}ms");
-
-        server.Stop();
+            // Should take at least ~500ms (MinWait). Give generous margin.
+            Assert.True(sw.ElapsedMilliseconds >= 400,
+                $"Graceful shutdown should wait at least MinWait. Elapsed: {sw.ElapsedMilliseconds}ms");
+        });
     }
 
     // -----------------------------------------------------------------------
@@ -262,32 +260,31 @@ public class GracefulShutdownTests
     [Fact]
     public async Task GracefulShutdown_CappedByMaxWait()
     {
-        var (server, port) = await StartServer();
+        await RunWithServer(async (server, port) =>
+        {
+            var builder = new HorseClientBuilder();
+            builder.AddHost($"horse://localhost:{port}");
+            builder.UseGracefulShutdown(
+                TimeSpan.FromMilliseconds(100),
+                TimeSpan.FromSeconds(2),
+                async () =>
+                {
+                    // Simulate long callback — should be capped by MaxWait
+                    await Task.Delay(30_000);
+                });
 
-        var builder = new HorseClientBuilder();
-        builder.AddHost($"horse://localhost:{port}");
-        builder.UseGracefulShutdown(
-            TimeSpan.FromMilliseconds(100),
-            TimeSpan.FromSeconds(2),
-            async () =>
-            {
-                // Simulate long callback — should be capped by MaxWait
-                await Task.Delay(30_000);
-            });
+            var client = builder.Build();
+            await client.ConnectAsync();
 
-        var client = builder.Build();
-        await client.ConnectAsync();
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            client.Disconnect();
+            sw.Stop();
 
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        client.Disconnect();
-        sw.Stop();
-
-        // Should complete within MaxWait + generous margin
-        Assert.True(sw.ElapsedMilliseconds < 5000,
-            $"Graceful shutdown should be capped by MaxWait. Elapsed: {sw.ElapsedMilliseconds}ms");
-        Assert.False(client.IsConnected);
-
-        server.Stop();
+            // Should complete within MaxWait + generous margin
+            Assert.True(sw.ElapsedMilliseconds < 5000,
+                $"Graceful shutdown should be capped by MaxWait. Elapsed: {sw.ElapsedMilliseconds}ms");
+            Assert.False(client.IsConnected);
+        });
     }
 
     // -----------------------------------------------------------------------
@@ -297,26 +294,25 @@ public class GracefulShutdownTests
     [Fact]
     public async Task GracefulShutdown_SuppressesAutoReconnect()
     {
-        var (server, port) = await StartServer();
+        await RunWithServer(async (server, port) =>
+        {
+            var builder = new HorseClientBuilder();
+            builder.AddHost($"horse://localhost:{port}");
+            builder.SetReconnectWait(TimeSpan.FromMilliseconds(200));
+            builder.UseGracefulShutdown(
+                TimeSpan.FromMilliseconds(50),
+                TimeSpan.FromSeconds(2),
+                () => Task.CompletedTask);
 
-        var builder = new HorseClientBuilder();
-        builder.AddHost($"horse://localhost:{port}");
-        builder.SetReconnectWait(TimeSpan.FromMilliseconds(200));
-        builder.UseGracefulShutdown(
-            TimeSpan.FromMilliseconds(50),
-            TimeSpan.FromSeconds(2),
-            () => Task.CompletedTask);
+            var client = builder.Build();
+            await client.ConnectAsync();
+            Assert.True(client.IsConnected);
 
-        var client = builder.Build();
-        await client.ConnectAsync();
-        Assert.True(client.IsConnected);
+            client.Disconnect();
+            await Task.Delay(1000);
 
-        client.Disconnect();
-        await Task.Delay(1000);
-
-        Assert.False(client.IsConnected, "Client must not reconnect after graceful shutdown");
-
-        server.Stop();
+            Assert.False(client.IsConnected, "Client must not reconnect after graceful shutdown");
+        });
     }
 
     // -----------------------------------------------------------------------
@@ -327,36 +323,36 @@ public class GracefulShutdownTests
     public async Task ServiceCollection_WithGraceful_DisconnectTriggersGraceful()
     {
         ShutdownState.Reset();
-        var (server, port) = await StartServer();
 
-        var services = new ServiceCollection();
-        services.AddHorse(b =>
+        await RunWithServer(async (server, port) =>
         {
-            b.AddHost($"horse://localhost:{port}");
-            b.UseGracefulShutdown(
-                TimeSpan.FromMilliseconds(50),
-                TimeSpan.FromSeconds(2),
-                () =>
-                {
-                    ShutdownState.CallbackInvoked = true;
-                    return Task.CompletedTask;
-                });
+            var services = new ServiceCollection();
+            services.AddHorse(b =>
+            {
+                b.AddHost($"horse://localhost:{port}");
+                b.UseGracefulShutdown(
+                    TimeSpan.FromMilliseconds(50),
+                    TimeSpan.FromSeconds(2),
+                    () =>
+                    {
+                        ShutdownState.CallbackInvoked = true;
+                        return Task.CompletedTask;
+                    });
+            });
+
+            var provider = services.BuildServiceProvider();
+            provider.UseHorse();
+
+            var client = provider.GetRequiredService<HorseClient>();
+            await WaitUntil(() => client.IsConnected, 3000);
+            Assert.True(client.IsConnected);
+
+            client.Disconnect();
+
+            await WaitUntil(() => ShutdownState.CallbackInvoked, 3000);
+            Assert.True(ShutdownState.CallbackInvoked);
+            Assert.False(client.IsConnected);
         });
-
-        var provider = services.BuildServiceProvider();
-        provider.UseHorse();
-
-        var client = provider.GetRequiredService<HorseClient>();
-        await WaitUntil(() => client.IsConnected, 3000);
-        Assert.True(client.IsConnected);
-
-        client.Disconnect();
-
-        await WaitUntil(() => ShutdownState.CallbackInvoked, 3000);
-        Assert.True(ShutdownState.CallbackInvoked);
-        Assert.False(client.IsConnected);
-
-        server.Stop();
     }
 
     // -----------------------------------------------------------------------
@@ -366,25 +362,22 @@ public class GracefulShutdownTests
     [Fact]
     public async Task ServiceCollection_WithoutGraceful_DisconnectsRaw()
     {
-        var (server, port) = await StartServer();
-
-        var services = new ServiceCollection();
-        services.AddHorse(b =>
+        await RunWithServer(async (server, port) =>
         {
-            b.AddHost($"horse://localhost:{port}");
+            var services = new ServiceCollection();
+            services.AddHorse(b => { b.AddHost($"horse://localhost:{port}"); });
+
+            var provider = services.BuildServiceProvider();
+            provider.UseHorse();
+
+            var client = provider.GetRequiredService<HorseClient>();
+            await WaitUntil(() => client.IsConnected, 3000);
+            Assert.True(client.IsConnected);
+
+            client.Disconnect();
+
+            Assert.False(client.IsConnected);
         });
-
-        var provider = services.BuildServiceProvider();
-        provider.UseHorse();
-
-        var client = provider.GetRequiredService<HorseClient>();
-        await WaitUntil(() => client.IsConnected, 3000);
-        Assert.True(client.IsConnected);
-
-        client.Disconnect();
-
-        Assert.False(client.IsConnected);
-        server.Stop();
     }
 
     // -----------------------------------------------------------------------
@@ -395,35 +388,35 @@ public class GracefulShutdownTests
     public async Task HostedScenario_StopAsync_TriggersGracefulShutdown()
     {
         ShutdownState.Reset();
-        var (server, port) = await StartServer();
 
-        var hostBuilder = Host.CreateDefaultBuilder();
-        hostBuilder.AddHorse(b =>
+        await RunWithServer(async (server, port) =>
         {
-            b.AddHost($"horse://localhost:{port}");
-            b.UseGracefulShutdown(
-                TimeSpan.FromMilliseconds(50),
-                TimeSpan.FromSeconds(2),
-                () =>
-                {
-                    ShutdownState.CallbackInvoked = true;
-                    return Task.CompletedTask;
-                });
+            var hostBuilder = Host.CreateDefaultBuilder();
+            hostBuilder.AddHorse(b =>
+            {
+                b.AddHost($"horse://localhost:{port}");
+                b.UseGracefulShutdown(
+                    TimeSpan.FromMilliseconds(50),
+                    TimeSpan.FromSeconds(2),
+                    () =>
+                    {
+                        ShutdownState.CallbackInvoked = true;
+                        return Task.CompletedTask;
+                    });
+            });
+
+            using var host = hostBuilder.Build();
+            await host.StartAsync();
+
+            var client = host.Services.GetRequiredService<HorseClient>();
+            await WaitUntil(() => client.IsConnected, 3000);
+            Assert.True(client.IsConnected);
+
+            await host.StopAsync();
+
+            Assert.True(ShutdownState.CallbackInvoked, "Graceful shutdown callback must be invoked on Host.StopAsync");
+            Assert.False(client.IsConnected);
         });
-
-        using var host = hostBuilder.Build();
-        await host.StartAsync();
-
-        var client = host.Services.GetRequiredService<HorseClient>();
-        await WaitUntil(() => client.IsConnected, 3000);
-        Assert.True(client.IsConnected);
-
-        await host.StopAsync();
-
-        Assert.True(ShutdownState.CallbackInvoked, "Graceful shutdown callback must be invoked on Host.StopAsync");
-        Assert.False(client.IsConnected);
-
-        server.Stop();
     }
 
     // -----------------------------------------------------------------------
@@ -433,28 +426,24 @@ public class GracefulShutdownTests
     [Fact]
     public async Task HostedScenario_WithoutGraceful_StopAsyncDisconnects()
     {
-        var (server, port) = await StartServer();
-
-        var hostBuilder = Host.CreateDefaultBuilder();
-        hostBuilder.AddHorse(b =>
+        await RunWithServer(async (server, port) =>
         {
-            b.AddHost($"horse://localhost:{port}");
+            var hostBuilder = Host.CreateDefaultBuilder();
+            hostBuilder.AddHorse(b => { b.AddHost($"horse://localhost:{port}"); });
+
+            using var host = hostBuilder.Build();
+            await host.StartAsync();
+
+            var client = host.Services.GetRequiredService<HorseClient>();
+            await WaitUntil(() => client.IsConnected, 3000);
+
+            await host.StopAsync();
+
+            // Without graceful shutdown configured, the host stops but the client's
+            // Disconnect() was not explicitly called by GracefulShutdownService.
+            // The connection may or may not be alive depending on the socket cleanup.
+            // What we verify is that no exception is thrown.
         });
-
-        using var host = hostBuilder.Build();
-        await host.StartAsync();
-
-        var client = host.Services.GetRequiredService<HorseClient>();
-        await WaitUntil(() => client.IsConnected, 3000);
-
-        await host.StopAsync();
-
-        // Without graceful shutdown configured, the host stops but the client's
-        // Disconnect() was not explicitly called by GracefulShutdownService.
-        // The connection may or may not be alive depending on the socket cleanup.
-        // What we verify is that no exception is thrown.
-
-        server.Stop();
     }
 
     // -----------------------------------------------------------------------
@@ -464,28 +453,25 @@ public class GracefulShutdownTests
     [Fact]
     public async Task HostedScenario_AutoConnectFalse_NotConnectedUntilUseHorse()
     {
-        var (server, port) = await StartServer();
-
-        var hostBuilder = Host.CreateDefaultBuilder();
-        hostBuilder.AddHorse(b =>
+        await RunWithServer(async (server, port) =>
         {
-            b.AddHost($"horse://localhost:{port}");
-        }, autoConnect: false);
+            var hostBuilder = Host.CreateDefaultBuilder();
+            hostBuilder.AddHorse(b => { b.AddHost($"horse://localhost:{port}"); }, autoConnect: false);
 
-        using var host = hostBuilder.Build();
-        await host.StartAsync();
+            using var host = hostBuilder.Build();
+            await host.StartAsync();
 
-        var client = host.Services.GetRequiredService<HorseClient>();
-        await Task.Delay(500);
-        Assert.False(client.IsConnected, "Client must NOT auto-connect when autoConnect = false");
+            var client = host.Services.GetRequiredService<HorseClient>();
+            await Task.Delay(500);
+            Assert.False(client.IsConnected, "Client must NOT auto-connect when autoConnect = false");
 
-        // Now manually connect
-        host.Services.UseHorse();
-        await WaitUntil(() => client.IsConnected, 3000);
-        Assert.True(client.IsConnected);
+            // Now manually connect
+            host.Services.UseHorse();
+            await WaitUntil(() => client.IsConnected, 3000);
+            Assert.True(client.IsConnected);
 
-        await host.StopAsync();
-        server.Stop();
+            await host.StopAsync();
+        });
     }
 
     // -----------------------------------------------------------------------
@@ -495,24 +481,23 @@ public class GracefulShutdownTests
     [Fact]
     public async Task GracefulShutdown_CallbackException_DoesNotBreakShutdown()
     {
-        var (server, port) = await StartServer();
+        await RunWithServer(async (server, port) =>
+        {
+            var builder = new HorseClientBuilder();
+            builder.AddHost($"horse://localhost:{port}");
+            builder.UseGracefulShutdown(
+                TimeSpan.FromMilliseconds(50),
+                TimeSpan.FromSeconds(2),
+                () => throw new InvalidOperationException("boom"));
 
-        var builder = new HorseClientBuilder();
-        builder.AddHost($"horse://localhost:{port}");
-        builder.UseGracefulShutdown(
-            TimeSpan.FromMilliseconds(50),
-            TimeSpan.FromSeconds(2),
-            () => throw new InvalidOperationException("boom"));
+            var client = builder.Build();
+            await client.ConnectAsync();
+            Assert.True(client.IsConnected);
 
-        var client = builder.Build();
-        await client.ConnectAsync();
-        Assert.True(client.IsConnected);
-
-        var ex = Record.Exception(() => client.Disconnect());
-        Assert.Null(ex);
-        Assert.False(client.IsConnected);
-
-        server.Stop();
+            var ex = Record.Exception(() => client.Disconnect());
+            Assert.Null(ex);
+            Assert.False(client.IsConnected);
+        });
     }
 
     // -----------------------------------------------------------------------
@@ -523,10 +508,7 @@ public class GracefulShutdownTests
     public void ServiceCollection_AddHorse_DoesNotRegisterHostedConnectService()
     {
         var services = new ServiceCollection();
-        services.AddHorse(b =>
-        {
-            b.AddHost("horse://localhost:9999");
-        });
+        services.AddHorse(b => { b.AddHost("horse://localhost:9999"); });
 
         // HorseConnectService should NOT be registered (autoConnect is always false for IServiceCollection)
         var provider = services.BuildServiceProvider();
