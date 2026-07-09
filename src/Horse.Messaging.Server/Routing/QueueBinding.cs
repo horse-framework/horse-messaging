@@ -35,9 +35,13 @@ public class QueueBinding : Binding
                 doNotClone = false;
             }
             
+            string cloneId = Interaction == BindingInteraction.Response
+                ? message.MessageId
+                : Router.Rider.MessageIdGenerator.Create();
+
             HorseMessage msg = doNotClone
                 ? message
-                : message.Clone(true, true, Router.Rider.MessageIdGenerator.Create());
+                : message.Clone(true, true, cloneId);
 
             msg.Type = MessageType.QueueMessage;
             msg.SetTarget(Target);
