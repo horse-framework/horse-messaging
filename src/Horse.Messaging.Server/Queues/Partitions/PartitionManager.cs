@@ -55,6 +55,14 @@ public class PartitionManager
     /// </summary>
     private readonly ConcurrentDictionary<string, HashSet<string>> _partitionSubscribers = new();
 
+    /// <summary>
+    /// Remembers the last subscribers-per-partition value consumers explicitly declared per label.
+    /// Consulted when a label partition is (re)created without an override — e.g. publisher-first
+    /// creation after idle auto-destroy — so the partition keeps the capacity its consumers declared
+    /// instead of falling back to the server default. Value 0 means unlimited.
+    /// </summary>
+    private readonly ConcurrentDictionary<string, int> _labelDesiredSubscribers = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>All active partition entries (snapshot).</summary>
     public IEnumerable<PartitionEntry> Partitions => _partitions.Values;
 
@@ -97,9 +105,20 @@ public class PartitionManager
 
         if (!string.IsNullOrEmpty(partitionLabel))
         {
+            // Remember the declared capacity so publisher-first re-creations of this
+            // label partition (after auto-destroy) keep the same capacity.
+            if (subscribersOverride.HasValue && subscribersOverride.Value >= 0)
+                _labelDesiredSubscribers[partitionLabel] = subscribersOverride.Value;
+
             entry = await GetOrCreateLabelPartition(partitionLabel, subscribersOverride);
             if (entry == null)
                 return null;
+
+            // The partition may exist from a publisher-first creation with default capacity.
+            // A consumer declaring a higher capacity upgrades the live partition; live
+            // partitions are never shrunk (connected subscribers must not be orphaned).
+            if (subscribersOverride.HasValue)
+                UpgradePartitionCapacity(entry, subscribersOverride.Value);
 
             SubscriptionResult result = await entry.Queue.AddClient(client);
             if (result == SubscriptionResult.Full)
@@ -197,7 +216,7 @@ public class PartitionManager
             entry.LastMessageAt = DateTime.UtcNow;
 
             // Auto-assign: if partition has fewer consumers than allowed, pull one from the worker pool
-            if (_options.AutoAssignWorkers && target.Clients.Count() < _options.SubscribersPerPartition)
+            if (_options.AutoAssignWorkers && HasSubscriberRoom(entry))
                 await TryAssignPooledWorker(entry);
         }
         else
@@ -302,9 +321,15 @@ public class PartitionManager
             }
 
             QueueOptions partitionOptions = QueueOptions.CloneFrom(_parentQueue.Options);
-            int effectiveSubscribers = subscribersOverride.HasValue && subscribersOverride.Value >= 0
-                ? subscribersOverride.Value
-                : _options.SubscribersPerPartition;
+            int effectiveSubscribers;
+            if (subscribersOverride.HasValue && subscribersOverride.Value >= 0)
+                effectiveSubscribers = subscribersOverride.Value;
+            // Publisher-first creation carries no override; prefer the capacity consumers
+            // last declared for this label over the server default.
+            else if (!string.IsNullOrEmpty(label) && _labelDesiredSubscribers.TryGetValue(label, out int remembered))
+                effectiveSubscribers = remembered;
+            else
+                effectiveSubscribers = _options.SubscribersPerPartition;
             partitionOptions.ClientLimit = effectiveSubscribers;
             partitionOptions.AutoQueueCreation = false;
             partitionOptions.Partition = null; // Prevent recursive partitioning
@@ -425,7 +450,7 @@ public class PartitionManager
             if (_availableWorkers.IsEmpty)
                 break;
 
-            while (entry.Queue.Clients.Count() < _options.SubscribersPerPartition)
+            while (HasSubscriberRoom(entry))
             {
                 if (_availableWorkers.IsEmpty)
                     break;
@@ -443,6 +468,42 @@ public class PartitionManager
     #endregion
 
     #region Helpers
+
+    /// <summary>
+    /// True when the partition queue can accept another consumer.
+    /// Uses the partition's own client limit (creation-time capacity, possibly upgraded by a
+    /// consumer declaration) instead of the parent-level default; 0 means unlimited.
+    /// </summary>
+    private static bool HasSubscriberRoom(PartitionEntry entry)
+    {
+        if (entry.Queue == null)
+            return false;
+
+        int limit = entry.Queue.Options.ClientLimit;
+        return limit == 0 || entry.Queue.Clients.Count() < limit;
+    }
+
+    /// <summary>
+    /// Raises the live partition queue's client limit when a consumer declares a higher
+    /// subscribers-per-partition than the partition was created with. Never shrinks a live
+    /// partition (connected subscribers must not be orphaned); a lower declaration only takes
+    /// effect on the next re-creation via the remembered label capacity. 0 means unlimited.
+    /// </summary>
+    private static void UpgradePartitionCapacity(PartitionEntry entry, int declaredSubscribers)
+    {
+        if (declaredSubscribers < 0 || entry.Queue == null)
+            return;
+
+        int current = entry.Queue.Options.ClientLimit;
+        if (current == 0)
+            return;
+
+        if (declaredSubscribers == 0 || declaredSubscribers > current)
+        {
+            entry.Queue.Options.ClientLimit = declaredSubscribers;
+            entry.Queue.EnsureClientCapacity();
+        }
+    }
 
     /// <summary>
     /// Records a worker as a subscriber of the given partition.
@@ -595,7 +656,7 @@ public class PartitionManager
 
         // Collect partitions that need consumers, sorted by consumer count ascending (least-loaded first)
         List<PartitionEntry> starved = _partitions.Values
-            .Where(e => e.Queue.Clients.Count() < _options.SubscribersPerPartition)
+            .Where(HasSubscriberRoom)
             .OrderBy(e => e.Queue.Clients.Count())
             .ToList();
 
