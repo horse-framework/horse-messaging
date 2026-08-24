@@ -158,7 +158,13 @@ public class PartitionEventTest
                     Interlocked.Increment(ref eventFired);
             };
 
-            await subscriber.Event.Subscribe(HorseEventType.QueuePartitionCreated, null, false, CancellationToken.None);
+            // verifyResponse: true is load-bearing, not cosmetic. The subscribe is otherwise
+            // fire-and-forget, so the test races the server: EventMessageHandler registers the
+            // subscriber only when it processes the message, and EventManager.Trigger returns
+            // early while Subscribers is still empty. The partition below is then created before
+            // the subscription lands and the event is never sent. Waiting for the response is a
+            // real barrier — SendResponse runs after Subscribers.Add.
+            await subscriber.Event.Subscribe(HorseEventType.QueuePartitionCreated, null, true, CancellationToken.None);
 
             HorseClient worker = new HorseClient();
             await worker.ConnectAsync("horse://localhost:" + port);

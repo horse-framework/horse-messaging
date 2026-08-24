@@ -54,6 +54,11 @@ internal class RoundRobinQueueState : IQueueState
 
     public async Task<PushResult> Push(QueueMessage message)
     {
+        // The message lives only in this stack frame until it is either handed to a consumer or put
+        // back into the store. GetNextAvailableRRClient can hold it here for up to 30 seconds while
+        // the single consumer is busy, and during that time the queue looks empty to auto-destroy.
+        // Count it so HorseQueue.IsIdleForDestroy can see it.
+        _queue.BeginPush();
         try
         {
             if (_queue.Rider.Queue.IsShuttingDown)
@@ -90,6 +95,7 @@ internal class RoundRobinQueueState : IQueueState
         finally
         {
             ProcessingMessage = null;
+            _queue.EndPush();
         }
     }
 

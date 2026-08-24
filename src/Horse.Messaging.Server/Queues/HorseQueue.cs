@@ -167,6 +167,48 @@ public class HorseQueue
     public bool IsEmpty => Manager.MessageStore.IsEmpty && Manager.PriorityMessageStore.IsEmpty;
 
     /// <summary>
+    /// Number of Push operations currently executing against this queue.
+    /// A message being pushed belongs to neither the message store nor the delivery tracker,
+    /// so <see cref="IsEmpty"/> alone cannot see it.
+    /// </summary>
+    internal int PushingCount => Volatile.Read(ref _pushingCount);
+
+    private int _pushingCount;
+
+    /// <summary>
+    /// True only when the queue is provably holding nothing: no stored messages, no drain loop in
+    /// progress, no in-flight Push and no tracked delivery waiting for acknowledge.
+    /// <para>
+    /// Auto-destroy MUST be gated on this and never on <see cref="IsEmpty"/> alone. A message is
+    /// invisible to <see cref="IsEmpty"/> during three separate windows: while the drain loop holds
+    /// it between ConsumeFirst and Push, while <see cref="IQueueState.Push"/> waits for a free
+    /// consumer, and while it is sent but not yet acknowledged. Destroying the queue during any of
+    /// them drops the message silently.
+    /// </para>
+    /// </summary>
+    internal bool IsIdleForDestroy
+    {
+        get
+        {
+            if (!IsEmpty || _triggering || PushingCount > 0)
+                return false;
+
+            IQueueDeliveryHandler deliveryHandler = Manager?.DeliveryHandler;
+            return deliveryHandler?.Tracker == null || deliveryHandler.Tracker.GetDeliveryCount() == 0;
+        }
+    }
+
+    /// <summary>
+    /// Marks the beginning of a Push operation. Must be paired with <see cref="EndPush"/> in a finally block.
+    /// </summary>
+    internal void BeginPush() => Interlocked.Increment(ref _pushingCount);
+
+    /// <summary>
+    /// Marks the end of a Push operation.
+    /// </summary>
+    internal void EndPush() => Interlocked.Decrement(ref _pushingCount);
+
+    /// <summary>
     /// Sync object for inserting messages into queue as FIFO
     /// </summary>
     internal SemaphoreSlim QueueLock { get; } = new(1, 1);
@@ -477,13 +519,13 @@ public class HorseQueue
                 break;
 
             case QueueDestroy.NoMessages:
-                if (IsEmpty && Manager.DeliveryHandler.Tracker.GetDeliveryCount() == 0)
+                if (IsIdleForDestroy)
                     await Rider.Queue.Remove(this);
 
                 break;
 
             case QueueDestroy.Empty:
-                if (!HasAnyClient() && IsEmpty && Manager.DeliveryHandler.Tracker.GetDeliveryCount() == 0)
+                if (!HasAnyClient() && IsIdleForDestroy)
                     await Rider.Queue.Remove(this);
 
                 break;
@@ -528,6 +570,13 @@ public class HorseQueue
     /// </summary>
     internal PushResult AddMessage(QueueMessage message, bool trigger = true)
     {
+        // A destroyed queue has already torn down its manager, deleted its persistent database and
+        // disposed its timers. Accepting a message here would report Success for a message nothing
+        // can ever read again — a silent loss. Fail instead, so the caller (and the producer, via
+        // HorseResultCode.Failed) can retry and recreate the queue.
+        if (IsDestroyed)
+            return PushResult.Error;
+
         bool added = false;
 
         for (int i = 0; i < 3; i++)

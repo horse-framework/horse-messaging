@@ -26,6 +26,9 @@ internal class PushQueueState : IQueueState
 
     public async Task<PushResult> Push(QueueMessage message)
     {
+        // See RoundRobinQueueState.Push: while a message is being pushed it is in neither the
+        // message store nor the delivery tracker, so auto-destroy must be able to see it.
+        _queue.BeginPush();
         try
         {
             if (!message.Deadline.HasValue && _queue.Options.MessageTimeout.Policy != MessageTimeoutPolicy.NoTimeout && _queue.Options.MessageTimeout.MessageDuration > 0)
@@ -43,6 +46,7 @@ internal class PushQueueState : IQueueState
         finally
         {
             ProcessingMessage = null;
+            _queue.EndPush();
         }
     }
 

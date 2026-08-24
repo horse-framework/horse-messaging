@@ -723,11 +723,18 @@ public class PartitionManager
 
         foreach (PartitionEntry entry in _partitions.Values.ToList())
         {
+            if (entry.Queue.IsDestroyed)
+                continue;
+
+            // HorseQueue.IsIdleForDestroy is the single shared definition of "safe to destroy".
+            // This path used to test IsEmpty on its own, which sees neither an in-flight delivery
+            // nor a message held inside Push — destroying the partition underneath them dropped the
+            // message with no error, no DLQ and no log.
             bool shouldDestroy = _options.AutoDestroy switch
             {
                 PartitionAutoDestroy.NoConsumers => !entry.Queue.HasAnyClient(),
-                PartitionAutoDestroy.NoMessages  => entry.Queue.IsEmpty,
-                PartitionAutoDestroy.Empty       => !entry.Queue.HasAnyClient() && entry.Queue.IsEmpty,
+                PartitionAutoDestroy.NoMessages  => entry.Queue.IsIdleForDestroy,
+                PartitionAutoDestroy.Empty       => !entry.Queue.HasAnyClient() && entry.Queue.IsIdleForDestroy,
                 _                                => false
             };
 
