@@ -46,4 +46,9 @@ internal static class HorseLogEvents
     internal const int ScheduleSystemRun = 903;
     internal const int ScheduleTaskRun = 904;
     internal const int ScheduleTimeCalculation = 905;
+
+    /// <summary>
+    /// A client message reached a node that cannot process it (Replica or Successor in a Reliable cluster)
+    /// </summary>
+    internal const int ClusterMisdirectedMessage = 1001;
 }

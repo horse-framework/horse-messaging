@@ -514,6 +514,38 @@ public class HorseClient : IDisposable
         }
     }
 
+    /// <summary>
+    /// Moves the main node to the front of the host list so the next connection attempt targets it.
+    /// Used when a node reports that it is not the main node, either with a Found handshake
+    /// response or with a MisdirectedRequest response to a message we sent.
+    /// Without this the client keeps walking the host list and can land on a non main node again.
+    /// </summary>
+    private void PrioritizeMainHost(HorseMessage message)
+    {
+        string mainHost = message.FindHeader(HorseHeaders.NODE_PUBLIC_HOST);
+        string successorHost = message.FindHeader(HorseHeaders.SUCCESSOR_NODE);
+
+        if (string.IsNullOrEmpty(mainHost) && string.IsNullOrEmpty(successorHost))
+            return;
+
+        lock (RemoteHosts)
+        {
+            if (!string.IsNullOrEmpty(successorHost))
+            {
+                RemoteHosts.Remove(successorHost);
+                RemoteHosts.Insert(0, successorHost);
+            }
+
+            if (!string.IsNullOrEmpty(mainHost))
+            {
+                RemoteHosts.Remove(mainHost);
+                RemoteHosts.Insert(0, mainHost);
+            }
+
+            _hostIndex = -1;
+        }
+    }
+
     private void RefreshRemoteHosts(HorseMessage message)
     {
         string successorHost = message.FindHeader(HorseHeaders.SUCCESSOR_NODE);
@@ -521,7 +553,14 @@ public class HorseClient : IDisposable
 
         lock (RemoteHosts)
         {
-            string mainHost = RemoteHosts[_hostIndex];
+            if (RemoteHosts.Count == 0)
+                return;
+
+            //_hostIndex stays -1 until the next FindNextTargetHost call, and an explicit
+            //Connect(host) can reach here before that happens. Fall back to the first host
+            //instead of indexing the list out of range inside the read loop.
+            int hostIndex = _hostIndex >= 0 && _hostIndex < RemoteHosts.Count ? _hostIndex : 0;
+            string mainHost = RemoteHosts[hostIndex];
 
             if (!string.IsNullOrEmpty(replaceNodes))
             {
@@ -1484,19 +1523,7 @@ public class HorseClient : IDisposable
                     SetClientId(message.Target);
 
                 if (message.ContentType == KnownContentTypes.Found)
-                {
-                    string mainHost = message.FindHeader(HorseHeaders.NODE_PUBLIC_HOST);
-                    string successorHost = message.FindHeader(HorseHeaders.SUCCESSOR_NODE);
-
-                    lock (RemoteHosts)
-                    {
-                        if (!string.IsNullOrEmpty(successorHost) && !RemoteHosts.Contains(successorHost))
-                            RemoteHosts.Add(successorHost);
-
-                        if (!string.IsNullOrEmpty(mainHost) && !RemoteHosts.Contains(mainHost))
-                            RemoteHosts.Add(mainHost);
-                    }
-                }
+                    PrioritizeMainHost(message);
 
                 else if (message.ContentType == KnownContentTypes.Accepted || message.ContentType == KnownContentTypes.ResetContent)
                     RefreshRemoteHosts(message);
@@ -1517,6 +1544,9 @@ public class HorseClient : IDisposable
                 break;
 
             case MessageType.Response:
+                if (message.ContentType == KnownContentTypes.MisdirectedRequest)
+                    PrioritizeMainHost(message);
+
                 Tracker.Process(message);
 
                 if (CatchResponseMessages)
