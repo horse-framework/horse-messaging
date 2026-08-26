@@ -249,6 +249,72 @@ public class ReliableClusterTest
     /// producer commit, an Ok result implies the successor stored the replica.
     /// Non-partitioned RoundRobin queue → no NoConsumers trap (message is kept in queue).
     /// </summary>
+    /// <summary>
+    /// Redirect — a client whose first connection attempt lands on a node that cannot serve it
+    /// must end up targeting the main node.
+    ///
+    /// A Replica or Successor answers the handshake with Found (302) carrying Node-Public-Host and
+    /// then closes the connection (HorseNetworkHandler.Ready). The advertised main host used to be
+    /// appended to the end of RemoteHosts while _hostIndex was left untouched, so the reconnect kept
+    /// walking the list and could land on another non-main node. Every publish written inside such a
+    /// window reaches a node that drops it, which is the loss this fix closes.
+    /// </summary>
+    [Fact]
+    public async Task Redirect_ClientReachingNonMainNode_MovesMainHostToFront()
+    {
+        int[] ports = { 28751, 28752, 28753 };
+        List<ClusterNode> nodes = StartReliableCluster(ports, ReplicaAcknowledge.None);
+        HorseClient client = null;
+
+        try
+        {
+            (ClusterNode main, _) = await WaitForConnectedSuccessor(nodes);
+            ClusterNode nonMain = nodes.First(n => n.Rider.Cluster.State != NodeState.Main);
+
+            string mainHost = $"horse://localhost:{main.Port}";
+            string nonMainHost = $"horse://localhost:{nonMain.Port}";
+
+            client = new HorseClient();
+            client.SetClientName("redirect-probe");
+
+            //no auto reconnect: the only thing that may reorder the host list in this test is the
+            //redirect handler itself, so a reconnect to the main node cannot mask the assertion
+            client.ReconnectWait = TimeSpan.Zero;
+
+            //the non-main node goes in first, so the list starts in the wrong order
+            client.AddHost(nonMainHost);
+            foreach (ClusterNode node in nodes.Where(n => n.Port != nonMain.Port))
+                client.AddHost($"horse://localhost:{node.Port}");
+
+            //ClusterManager.CanClientConnect refuses client connections on a non-main node for the
+            //first 15 seconds after start; the handshake is closed before Ready ever sends a redirect.
+            //Wait that gate out, otherwise this test measures the cold-start rejection instead.
+            bool acceptsClients = await WaitUntil(() => nonMain.Rider.Cluster.CanClientConnect(), 30000, 500);
+            Assert.True(acceptsClients, "non-main node still refuses client connections");
+
+            //the first attempt deliberately targets a node that cannot serve client messages
+            await client.ConnectAsync(nonMainHost);
+
+            bool prioritized = await WaitUntil(() =>
+            {
+                lock (client.RemoteHosts)
+                    return client.RemoteHosts.Count > 0 && client.RemoteHosts[0] == mainHost;
+            }, 15000);
+
+            string hosts;
+            lock (client.RemoteHosts)
+                hosts = string.Join(", ", client.RemoteHosts);
+
+            _output.WriteLine($"main={mainHost} nonMain={nonMainHost} state={nonMain.Rider.Cluster.State} hosts=[{hosts}]");
+            Assert.True(prioritized, $"main node was not moved to the front of the host list after the redirect, hosts=[{hosts}]");
+        }
+        finally
+        {
+            client?.Disconnect();
+            await StopCluster(nodes);
+        }
+    }
+
     [Fact]
     public async Task Replication_OnlySuccessor_CommitsAndStoresOnSuccessor()
     {

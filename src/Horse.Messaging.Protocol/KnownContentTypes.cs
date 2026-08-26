@@ -56,6 +56,11 @@ public class KnownContentTypes
     public const ushort Unacceptable = 406;
 
     /// <summary>
+    /// "421" Message reached a node that cannot process it, sender should redirect to the main node
+    /// </summary>
+    public const ushort MisdirectedRequest = 421;
+
+    /// <summary>
     /// "481" Duplicate record, such as, you might send create queue operation when client is already created
     /// </summary>
     public const ushort Duplicate = 481;
