@@ -11,6 +11,7 @@ using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Direct;
 using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
+using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Plugins;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Routing;
@@ -268,6 +269,42 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
     }
 
     /// <summary>
+    /// Answers a client message that reached a node which cannot process it.
+    /// In a Reliable cluster only the main node handles client messages; Replica and Successor
+    /// nodes drop them. Dropping silently makes the loss invisible to the producer, so the sender
+    /// is told where the main node is and the drop is reported to the error handlers.
+    /// </summary>
+    private Task RejectMisdirected(MessagingClient mc, HorseMessage message)
+    {
+        //node to node traffic keeps the previous behaviour, cluster internals are untouched
+        if (mc.IsNodeClient)
+            return Task.CompletedTask;
+
+        NodeInfo mainNode = _rider.Cluster.MainNode;
+
+        _rider.SendError(HorseLogLevel.Error, HorseLogEvents.ClusterMisdirectedMessage,
+            $"{message.Type} message is dropped, node state is {_rider.Cluster.State} and cannot process client messages. Main node: {mainNode?.PublicHost ?? "unknown"}",
+            null);
+
+        if (!message.WaitResponse || string.IsNullOrEmpty(message.MessageId))
+            return Task.CompletedTask;
+
+        HorseMessage response = message.CreateResponse(HorseResultCode.MisdirectedRequest);
+
+        if (mainNode != null)
+        {
+            response.AddHeader(HorseHeaders.NODE_ID, mainNode.Id);
+            response.AddHeader(HorseHeaders.NODE_NAME, mainNode.Name);
+            response.AddHeader(HorseHeaders.NODE_PUBLIC_HOST, mainNode.PublicHost);
+        }
+
+        if (_rider.Cluster.SuccessorNode != null)
+            response.AddHeader(HorseHeaders.SUCCESSOR_NODE, _rider.Cluster.SuccessorNode.PublicHost);
+
+        return mc.SendAsync(response);
+    }
+
+    /// <summary>
     /// Routes message to it's type handler
     /// </summary>
     private Task RouteToHandler(MessagingClient mc, HorseMessage message)
@@ -285,17 +322,17 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
                     _rider.Cluster.ProcessMessageFromClient(mc, message);
 
                 return isReplica
-                    ? Task.CompletedTask
+                    ? RejectMisdirected(mc, message)
                     : _channelHandler.Handle(mc, message, mc.IsNodeClient);
 
             case MessageType.QueueMessage:
                 return isReplica
-                    ? Task.CompletedTask
+                    ? RejectMisdirected(mc, message)
                     : _queueMessageHandler.Handle(mc, message, mc.IsNodeClient);
 
             case MessageType.Router:
                 return isReplica
-                    ? Task.CompletedTask
+                    ? RejectMisdirected(mc, message)
                     : _routerMessageHandler.Handle(mc, message, mc.IsNodeClient);
 
             case MessageType.Cache:
@@ -306,12 +343,12 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
 
             case MessageType.Transaction:
                 return isReplica
-                    ? Task.CompletedTask
+                    ? RejectMisdirected(mc, message)
                     : _transactionHandler.Handle(mc, message, false);
 
             case MessageType.QueuePullRequest:
                 return isReplica
-                    ? Task.CompletedTask
+                    ? RejectMisdirected(mc, message)
                     : _pullRequestHandler.Handle(mc, message, mc.IsNodeClient);
 
             case MessageType.DirectMessage:
@@ -319,7 +356,7 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
                     _rider.Cluster.ProcessMessageFromClient(mc, message);
 
                 return isReplica
-                    ? Task.CompletedTask
+                    ? RejectMisdirected(mc, message)
                     : _clientHandler.Handle(mc, message, mc.IsNodeClient);
 
             case MessageType.Response:

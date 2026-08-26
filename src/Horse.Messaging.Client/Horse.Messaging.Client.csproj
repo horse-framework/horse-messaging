@@ -28,6 +28,7 @@
 
 	<ItemGroup>
 		<InternalsVisibleTo Include="Horse.Messaging.Extensions.Client" />
+		<InternalsVisibleTo Include="Test.Nodes" />
 	</ItemGroup>
 
 	<ItemGroup>
