@@ -9,9 +9,7 @@ using Horse.Core;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Horse.WebSocket.Protocol;
-using Horse.WebSocket.Protocol.Compressions;
 using Horse.WebSocket.Protocol.Http;
-using PredefinedMessages = Horse.WebSocket.Protocol.PredefinedMessages;
 
 namespace Horse.Messaging.Server.OverWebSockets;
 
@@ -32,32 +30,17 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
 
     public void Ping()
     {
-        _client.SendRaw(PredefinedMessages.PING);
+        WebSocketMessage ping = new WebSocketMessage { OpCode = SocketOpCode.Ping };
+        _client.SendRaw(_writer.CreateSpan(ping));
     }
 
     public void Pong(object pingMessage = null)
     {
-        if (pingMessage == null)
-        {
-            _client.SendRaw(PredefinedMessages.PONG);
-            return;
-        }
-
-        WebSocketMessage ping = pingMessage as WebSocketMessage;
-        if (ping == null)
-        {
-            _client.SendRaw(PredefinedMessages.PONG);
-            return;
-        }
-
-        WebSocketMessage pong = new WebSocketMessage();
-        pong.OpCode = SocketOpCode.Pong;
-        pong.Masking = ping.Masking;
-        if (ping.Length > 0)
+        WebSocketMessage pong = new WebSocketMessage { OpCode = SocketOpCode.Pong };
+        if (pingMessage is WebSocketMessage ping && ping.Length > 0)
             pong.Content = new MemoryStream(ping.Content.ToArray());
 
-        ReadOnlySpan<byte> data = new WebSocketWriter(true, null).CreateSpan(pong);
-        _client.SendRaw(data);
+        _client.SendRaw(_writer.CreateSpan(pong));
     }
 
     public bool Send(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)

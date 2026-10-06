@@ -110,6 +110,12 @@ internal class OverWsHandler : IProtocolConnectionHandler<WsServerSocket, WebSoc
     public Task Disconnected(IHorseServer server, WsServerSocket client)
     {
         OverWsServerSocket socket = (OverWsServerSocket) client;
-        return _horseHandler.Disconnected(server, socket.ServerSocket);
+        HorseServerSocket horseSocket = socket.ServerSocket;
+        if (horseSocket == null)
+            return Task.CompletedTask;
+
+        // The transport is shared, but the two socket objects have separate connection states.
+        horseSocket.Disconnect();
+        return _horseHandler.Disconnected(server, horseSocket);
     }
 }

@@ -174,27 +174,42 @@ public class HorseQueue
     internal int PushingCount => Volatile.Read(ref _pushingCount);
 
     private int _pushingCount;
+    private int _acknowledgingCount;
+    private long _acknowledgeVersion;
 
     /// <summary>
     /// True only when the queue is provably holding nothing: no stored messages, no drain loop in
-    /// progress, no in-flight Push and no tracked delivery waiting for acknowledge.
+    /// progress, no in-flight Push, no acknowledge decision in progress, no delayed putback and
+    /// no tracked delivery waiting for acknowledge.
     /// <para>
     /// Auto-destroy MUST be gated on this and never on <see cref="IsEmpty"/> alone. A message is
-    /// invisible to <see cref="IsEmpty"/> during three separate windows: while the drain loop holds
+    /// invisible to <see cref="IsEmpty"/> while the drain loop holds
     /// it between ConsumeFirst and Push, while <see cref="IQueueState.Push"/> waits for a free
-    /// consumer, and while it is sent but not yet acknowledged. Destroying the queue during any of
-    /// them drops the message silently.
+    /// consumer, while it is sent but not yet acknowledged, while its acknowledge decision is
+    /// applied, and while it awaits delayed putback.
+    /// Destroying the queue during any of them drops the message silently.
     /// </para>
     /// </summary>
     internal bool IsIdleForDestroy
     {
         get
         {
-            if (!IsEmpty || _triggering || PushingCount > 0)
+            if (!IsEmpty || _triggering || PushingCount > 0 || Volatile.Read(ref _acknowledgingCount) > 0)
+                return false;
+
+            long acknowledgeVersion = Volatile.Read(ref _acknowledgeVersion);
+
+            // Read only the count after the fast checks. Recheck the store in case ExecutePutBack
+            // moved the last pending message into it while we were waiting for the list lock.
+            if (GetMessageCountPendingForPutBack() > 0 || !IsEmpty)
                 return false;
 
             IQueueDeliveryHandler deliveryHandler = Manager?.DeliveryHandler;
-            return deliveryHandler?.Tracker == null || deliveryHandler.Tracker.GetDeliveryCount() == 0;
+            bool noDeliveries = deliveryHandler?.Tracker == null || deliveryHandler.Tracker.GetDeliveryCount() == 0;
+            // ACK/NACK removes a delivery before applying its decision. If it finished during
+            // these checks, the message may now be in the store or delayed putback list.
+            return noDeliveries && Volatile.Read(ref _acknowledgingCount) == 0 &&
+                   Volatile.Read(ref _acknowledgeVersion) == acknowledgeVersion;
         }
     }
 
@@ -207,6 +222,20 @@ public class HorseQueue
     /// Marks the end of a Push operation.
     /// </summary>
     internal void EndPush() => Interlocked.Decrement(ref _pushingCount);
+
+    /// <summary>
+    /// Keeps ACK/NACK and acknowledge-timeout decisions visible to auto-destroy during store handoff.
+    /// </summary>
+    internal void BeginAcknowledgeProcessing() => Interlocked.Increment(ref _acknowledgingCount);
+
+    /// <summary>
+    /// Completes acknowledge processing and invalidates concurrent idle checks.
+    /// </summary>
+    internal void EndAcknowledgeProcessing()
+    {
+        Interlocked.Increment(ref _acknowledgeVersion);
+        Interlocked.Decrement(ref _acknowledgingCount);
+    }
 
     /// <summary>
     /// Sync object for inserting messages into queue as FIFO
@@ -1517,6 +1546,7 @@ public class HorseQueue
     /// </summary>
     internal async Task AcknowledgeDelivered(MessagingClient from, HorseMessage deliveryMessage)
     {
+        BeginAcknowledgeProcessing();
         try
         {
             if (Status == QueueStatus.NotInitialized)
@@ -1605,6 +1635,10 @@ public class HorseQueue
         catch (Exception e)
         {
             Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueAckReceived, $"Ack Received Queue: {Name}, MessageId: {deliveryMessage.MessageId}", e);
+        }
+        finally
+        {
+            EndAcknowledgeProcessing();
         }
     }
 

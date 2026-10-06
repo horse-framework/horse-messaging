@@ -6,9 +6,9 @@
 		<Product>Horse.Messaging.Client</Product>
 		<Description>Horse Messaging Client to connect all Horse Servers</Description>
 		<PackageTags>horse,client,messaging,queue,channel,cache</PackageTags>
-        <AssemblyVersion>8.2.24</AssemblyVersion>
-        <FileVersion>8.2.24</FileVersion>
-        <PackageVersion>8.2.24</PackageVersion>
+        <AssemblyVersion>8.2.25</AssemblyVersion>
+        <FileVersion>8.2.25</FileVersion>
+        <PackageVersion>8.2.25</PackageVersion>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü; Emre Hızlı</Authors>
 		<PackageProjectUrl>https://github.com/horse-framework/horse-messaging</PackageProjectUrl>
@@ -33,8 +33,8 @@
 
 	<ItemGroup>
 		<PackageReference Include="Enums.NET" Version="5.0.0" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.7" />
-		<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.7" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
+		<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.12" />
 	</ItemGroup>
 
 	<ItemGroup>

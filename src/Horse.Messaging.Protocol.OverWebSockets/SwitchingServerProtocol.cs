@@ -59,7 +59,7 @@ internal class SwitchingServerProtocol : ISwitchingProtocol
 
     public Task<bool> SendAsync(ReadOnlyMemory<byte> data)
     {
-        return _socket.SendAsync(data);
+        return SendAsync(data.ToArray());
     }
 
     public Task<bool> SendAsync(byte[] data)

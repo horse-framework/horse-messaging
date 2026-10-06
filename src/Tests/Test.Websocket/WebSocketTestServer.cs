@@ -22,6 +22,8 @@ public class WebSocketTestServer
             {
                 q.Options.Type = QueueType.Push;
                 q.Options.AutoQueueCreation = true;
+                q.UseMemoryQueues();
+                q.UseCustomPersistentConfigurator(null);
             })
             .ConfigureChannels(c => { c.UseCustomPersistentConfigurator(null); })
             .Build();
