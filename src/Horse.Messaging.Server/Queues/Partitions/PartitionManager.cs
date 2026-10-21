@@ -120,9 +120,14 @@ public class PartitionManager
             if (subscribersOverride.HasValue)
                 UpgradePartitionCapacity(entry, subscribersOverride.Value);
 
-            SubscriptionResult result = await entry.Queue.AddClient(client);
-            if (result == SubscriptionResult.Full)
-                return null;
+            // A re-subscribe (or a worker already auto-assigned back after a re-create) must not
+            // take a second seat: HorseQueue.AddClient does not de-duplicate.
+            if (entry.Queue.FindClient(client) == null)
+            {
+                SubscriptionResult result = await entry.Queue.AddClient(client);
+                if (result == SubscriptionResult.Full)
+                    return null;
+            }
 
             // Record the label this worker originally subscribed with.
             // TryAssignPooledWorker uses this for label isolation after destroy/re-create cycles.
@@ -610,6 +615,15 @@ public class PartitionManager
                 }
             }
 
+            // Already consuming this partition: with unlimited MaxPartitionsPerWorker the worker
+            // stays in the pool, so every push with free capacity would otherwise re-add it
+            // until it holds every seat and other consumers of the label are rejected as Full.
+            if (entry.Queue.FindClient(worker) != null)
+            {
+                _availableWorkers.Enqueue(worker);
+                continue;
+            }
+
             SubscriptionResult result = await entry.Queue.AddClient(worker);
             if (result == SubscriptionResult.Success)
             {
@@ -683,6 +697,9 @@ public class PartitionManager
         {
             if (assignedCount >= effectiveMax)
                 break;
+
+            if (entry.Queue.FindClient(client) != null)
+                continue;
 
             SubscriptionResult result = await entry.Queue.AddClient(client);
             if (result == SubscriptionResult.Success)
