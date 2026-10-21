@@ -38,13 +38,6 @@ public class DefaultMessageTimeoutTracker : IMessageTimeoutTracker
         {
             try
             {
-                // A passive replica (Successor/Replica) holds messages only for replication;
-                // expiring/forwarding them is the Main's job. Running the tracker here also NREs
-                // because the forward target (e.g. TIMEOUT_QUEUE) usually doesn't exist on the
-                // successor. Only Main (or a non-clustered Single node) expires messages.
-                if (_queue.Rider.Cluster.State is not (NodeState.Main or NodeState.Single))
-                    continue;
-
                 MessageTimeoutStrategy strategy = _queue.Options.MessageTimeout;
 
                 if (strategy.Policy == MessageTimeoutPolicy.NoTimeout || strategy.MessageDuration == 0)
@@ -61,13 +54,25 @@ public class DefaultMessageTimeoutTracker : IMessageTimeoutTracker
                     if (message.Deadline.Value > DateTime.UtcNow)
                         break;
 
-                    if (!string.IsNullOrEmpty(strategy.TargetName))
+                    // Every node expires its own copy. Only the active node forwards timed-out
+                    // messages, otherwise replicas would publish the same message again.
+                    bool activeNode = _queue.Rider.Cluster.State is NodeState.Main or NodeState.Single;
+                    if (activeNode && !string.IsNullOrEmpty(strategy.TargetName))
                     {
                         if (strategy.Policy == MessageTimeoutPolicy.PushQueue)
                         {
                             var queue = _queue.Rider.Queue.Find(strategy.TargetName);
-                            if (queue != null)
-                                await queue.Push(message.Message);
+                            if (queue == null)
+                            {
+                                // A create request also records the manager name for replica creation.
+                                HorseMessage request = new(MessageType.Server, strategy.TargetName, KnownContentTypes.CreateQueue);
+                                queue = await _queue.Rider.Queue.Create(strategy.TargetName,
+                                    QueueOptions.CloneFrom(_queue.Rider.Queue.Options), request, false, true);
+                            }
+
+                            PushResult result = await queue.Push(message.Message);
+                            if (result != PushResult.Success)
+                                throw new InvalidOperationException($"Cannot forward timed-out message from {_queue.Name} to {strategy.TargetName}: {result}");
                         }
                         else if (strategy.Policy == MessageTimeoutPolicy.PublishRouter)
                         {
@@ -85,10 +90,13 @@ public class DefaultMessageTimeoutTracker : IMessageTimeoutTracker
 
                     await Store.Manager.OnMessageTimeout(message);
 
-                    foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
-                        _ = handler.MessageTimedOut(_queue, message);
+                    if (activeNode)
+                    {
+                        foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
+                            _ = handler.MessageTimedOut(_queue, message);
 
-                    _queue.MessageTimeoutEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
+                        _queue.MessageTimeoutEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
+                    }
 
                     message = Store.ReadFirst();
                 } while (message != null && message.Deadline.HasValue);

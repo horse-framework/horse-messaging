@@ -19,7 +19,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Horse.WebSocket.Protocol" Version="8.2.0" />
+        <PackageReference Include="Horse.WebSocket.Protocol" Version="8.2.1" />
     </ItemGroup>
 
     <ItemGroup>

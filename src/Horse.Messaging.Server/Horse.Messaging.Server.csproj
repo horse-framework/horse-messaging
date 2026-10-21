@@ -28,7 +28,7 @@
 	<ItemGroup>
 		<PackageReference Include="Cronos" Version="0.13.0" />
 		<PackageReference Include="Enums.NET" Version="5.0.0" />
-		<PackageReference Include="Horse.Server" Version="8.0.29" />
+		<PackageReference Include="Horse.Server" Version="8.0.30" />
 	</ItemGroup>
 
 	<ItemGroup>
