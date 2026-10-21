@@ -51,4 +51,9 @@ internal static class HorseLogEvents
     /// A client message reached a node that cannot process it (Replica or Successor in a Reliable cluster)
     /// </summary>
     internal const int ClusterMisdirectedMessage = 1001;
+
+    /// <summary>
+    /// Processing a node to node cluster message failed
+    /// </summary>
+    internal const int ClusterMessageProcess = 1002;
 }

@@ -58,7 +58,7 @@ public class ReliableClusterTest
     /// NodeInfo.Name MUST equal the peer's Cluster.Options.Name — HorseNetworkHandler matches an
     /// incoming node by client name against Cluster.Clients (Network/HorseNetworkHandler.cs:113).
     /// </summary>
-    private List<ClusterNode> StartReliableCluster(int[] ports, ReplicaAcknowledge acknowledge, string sharedSecret = "top-secret", string[] secretsPerNode = null)
+    private List<ClusterNode> StartReliableCluster(int[] ports, ReplicaAcknowledge acknowledge, string sharedSecret = "top-secret", string[] secretsPerNode = null, bool persistQueueOptions = true)
     {
         List<ClusterNode> nodes = new();
 
@@ -73,6 +73,8 @@ public class ReliableClusterTest
                     q.UseMemoryQueues();
                     q.Options.Type = QueueType.RoundRobin;
                     q.Options.AutoQueueCreation = true;
+                    if (!persistQueueOptions)
+                        q.UseCustomPersistentConfigurator(null);
                 })
                 .Build();
 
@@ -347,6 +349,63 @@ public class ReliableClusterTest
         }
     }
 
+    [Theory]
+    [InlineData(MessageTimeoutPolicy.Delete)]
+    [InlineData(MessageTimeoutPolicy.PushQueue)]
+    public async Task Replication_MessageTimeout_ExpiresOnMainAndSuccessor(MessageTimeoutPolicy policy)
+    {
+        int firstPort = policy == MessageTimeoutPolicy.Delete ? 28901 : 28911;
+        List<ClusterNode> nodes = StartReliableCluster(new[] { firstPort, firstPort + 1 }, ReplicaAcknowledge.OnlySuccessor, persistQueueOptions: false);
+
+        try
+        {
+            (ClusterNode main, ClusterNode successor) = await WaitForConnectedSuccessor(nodes);
+            Assert.True(await WaitUntil(() =>
+                successor.Rider.Cluster.MainNode?.Id == main.Rider.Cluster.Id &&
+                successor.Rider.Cluster.Clients.Any(c => c.IsConnected && c.Info.Id == main.Rider.Cluster.Id)),
+                "successor did not finish identifying the main node");
+            string name = $"replicated-timeout-{_run}";
+            string targetName = $"timeout-target-{_run}";
+            QueueOptions options = QueueOptions.CloneFrom(main.Rider.Queue.Options);
+            options.Type = QueueType.Pull;
+            options.MessageTimeout = new MessageTimeoutStrategy
+            {
+                Policy = policy,
+                MessageDuration = 10,
+                TargetName = policy == MessageTimeoutPolicy.PushQueue ? targetName : null
+            };
+            HorseMessage request = new(MessageType.Server, name, KnownContentTypes.CreateQueue);
+            HorseQueue queue = await main.Rider.Queue.Create(name, options, request, false, false);
+            Assert.True(await WaitUntil(() => successor.Rider.Queue.Find(name)?.Manager != null), "source queue did not replicate");
+
+            HorseMessage message = new HorseMessage(MessageType.QueueMessage, name);
+            message.SetMessageId($"timeout-{_run}");
+            message.SetStringContent("expires");
+            Assert.Equal(PushResult.Success, await queue.Push(message));
+            HorseQueue replica = successor.Rider.Queue.Find(name);
+            Assert.False(queue.IsEmpty);
+            Assert.False(replica.IsEmpty);
+
+            Assert.True(await WaitUntil(() => queue.IsEmpty && replica.IsEmpty, 20000),
+                $"expired messages remain: main={queue.Manager.MessageStore.Count()}, successor={replica.Manager.MessageStore.Count()}");
+            Assert.Equal(NodeState.Successor, successor.Rider.Cluster.State);
+
+            if (policy == MessageTimeoutPolicy.PushQueue)
+            {
+                Assert.True(await WaitUntil(() =>
+                    main.Rider.Queue.Find(targetName)?.Manager?.MessageStore.Count() == 1 &&
+                    successor.Rider.Queue.Find(targetName)?.Manager?.MessageStore.Count() == 1),
+                    "forwarded message did not reach the newly created target and its replica");
+            }
+            else
+                Assert.Null(main.Rider.Queue.Find(targetName));
+        }
+        finally
+        {
+            await StopCluster(nodes);
+        }
+    }
+
     /// <summary>
     /// Scenario 3 — Replication with ReplicaAcknowledge.None.
     /// SendMessagePush fires to all node clients without waiting for ack and returns true immediately
@@ -497,10 +556,8 @@ public class ReliableClusterTest
     /// stores the replicated message.
     ///
     /// Notes on this in-process harness:
-    ///  - Creation is driven via client push (production route), not Rider.Queue.Create(name, ...):
-    ///    a direct programmatic Create with no manager name leaves ManagerName null, which propagates
-    ///    as NodeQueueInfo.HandlerName=null so the replica's CreateReplica can't resolve a factory and
-    ///    stays NotInitialized (QueueRider.cs:642).
+    ///  - Creation is driven via client push (production route). Programmatic creates replicate too
+    ///    since ManagerName defaults to "Default" there (covered by PartitionClusterTest).
     ///  - We do NOT assert HorseQueue.Status here: both riders run in the same working directory and
     ///    share one on-disk OptionsConfigurator (data/queues.json). They clobber each other's config for
     ///    the same queue name, so the reported Status is unreliable in this harness (observed

@@ -169,23 +169,31 @@ namespace Horse.Messaging.Server.Queues.Delivery
 
             foreach (MessageDelivery delivery in ackTimeoutList)
             {
-                bool marked = delivery.MarkAsAcknowledgeTimeout();
-                if (!marked)
-                    continue;
+                _queue.BeginAcknowledgeProcessing();
+                try
+                {
+                    bool marked = delivery.MarkAsAcknowledgeTimeout();
+                    if (!marked)
+                        continue;
 
-                _queue.Info.AddUnacknowledge();
-                Decision decision = await _manager.DeliveryHandler.AcknowledgeTimeout(_queue, delivery);
+                    _queue.Info.AddUnacknowledge();
+                    Decision decision = await _manager.DeliveryHandler.AcknowledgeTimeout(_queue, delivery);
 
-                HorseMessage ackTimeoutMessage = delivery.Message.Message.CreateAcknowledge("ack-timeout");
-                ackTimeoutMessage.ContentType = (ushort)HorseResultCode.RequestTimeout;
+                    HorseMessage ackTimeoutMessage = delivery.Message.Message.CreateAcknowledge("ack-timeout");
+                    ackTimeoutMessage.ContentType = (ushort)HorseResultCode.RequestTimeout;
 
-                if (delivery.Message != null)
-                    _ = _queue.ApplyDecision(decision, delivery.Message, ackTimeoutMessage);
+                    if (delivery.Message != null)
+                        await _queue.ApplyDecision(decision, delivery.Message, ackTimeoutMessage);
 
-                foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
-                    _ = handler.OnAcknowledgeTimedOut(_queue, delivery);
+                    foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
+                        _ = handler.OnAcknowledgeTimedOut(_queue, delivery);
 
-                _queue.MessageUnackEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, delivery.Message.Message.MessageId));
+                    _queue.MessageUnackEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, delivery.Message.Message.MessageId));
+                }
+                finally
+                {
+                    _queue.EndAcknowledgeProcessing();
+                }
             }
 
             if (atLeastOneRemoved)

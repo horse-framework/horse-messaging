@@ -125,7 +125,7 @@ internal class PushQueueState : IQueueState
             //send the message
             bool sent;
             if (client.Client.SwitchingProtocol != null)
-                sent = await client.Client.SendAsync(data);
+                sent = await client.Client.SendRawAsync(data);
             else
                 sent = await client.Client.SendAsync(message.Message);
 

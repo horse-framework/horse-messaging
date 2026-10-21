@@ -22,6 +22,10 @@ public class NodeQueueTest
 {
     private readonly ITestOutputHelper _output;
 
+    // Queue configs persist in data/queues.json across runs. CreateReplica returns an existing queue
+    // of the same name, so replica names must be unique per run for these pre-init scenarios.
+    private readonly string _replicaPrefix = Guid.NewGuid().ToString("N").Substring(0, 8) + "-";
+
     public NodeQueueTest(ITestOutputHelper output)
     {
         _output = output;
@@ -65,7 +69,7 @@ public class NodeQueueTest
         HorseQueue source = rider.Queue.Find("SourceTemplate") ?? await rider.Queue.Create("SourceTemplate");
         Assert.NotNull(source);
         NodeQueueInfo info = source.ClusterNotifier.CreateNodeQueueInfo();
-        info.Name = "ReplicaBugQueue";
+        info.Name = _replicaPrefix + "ReplicaBugQueue";
         info.HandlerName = "Default";
         info.Initialized = false;
 
@@ -81,7 +85,7 @@ public class NodeQueueTest
         Assert.Null(replica.Manager);
 
         // 3. Deliver a replicated push (what NodeClient.PushByNode does on the successor).
-        HorseMessage message = new HorseMessage(MessageType.QueueMessage, "ReplicaBugQueue");
+        HorseMessage message = new HorseMessage(MessageType.QueueMessage, _replicaPrefix + "ReplicaBugQueue");
         message.SetStringContent("replicated-payload");
         message.CalculateLengths();
 
@@ -138,7 +142,7 @@ public class NodeQueueTest
             HorseQueue source = rider.Queue.Find("SourceTemplate2") ?? await rider.Queue.Create("SourceTemplate2");
             Assert.NotNull(source);
             NodeQueueInfo info = source.ClusterNotifier.CreateNodeQueueInfo();
-            info.Name = "PushBugQueue";
+            info.Name = _replicaPrefix + "PushBugQueue";
             info.HandlerName = "Default";
             info.Initialized = false;
 
@@ -150,7 +154,7 @@ public class NodeQueueTest
             Assert.Null(replica.Manager);
 
             // Direct client-publish Push (sender null, as a node/system push).
-            HorseMessage message = new HorseMessage(MessageType.QueueMessage, "PushBugQueue");
+            HorseMessage message = new HorseMessage(MessageType.QueueMessage, _replicaPrefix + "PushBugQueue");
             message.SetStringContent("push-payload");
             message.CalculateLengths();
 
@@ -203,7 +207,7 @@ public class NodeQueueTest
             HorseQueue source = rider.Queue.Find("SourceTemplate3") ?? await rider.Queue.Create("SourceTemplate3");
             Assert.NotNull(source);
             NodeQueueInfo info = source.ClusterNotifier.CreateNodeQueueInfo();
-            info.Name = "PushRunningBugQueue";
+            info.Name = _replicaPrefix + "PushRunningBugQueue";
             info.HandlerName = "Default";
             info.Initialized = false;
 
@@ -220,7 +224,7 @@ public class NodeQueueTest
             Assert.Null(replica.Manager);
 
             // 3. Client-publish Push on the Running+Manager=null replica.
-            HorseMessage message = new HorseMessage(MessageType.QueueMessage, "PushRunningBugQueue");
+            HorseMessage message = new HorseMessage(MessageType.QueueMessage, _replicaPrefix + "PushRunningBugQueue");
             message.SetStringContent("push-payload");
             message.CalculateLengths();
 
@@ -370,7 +374,7 @@ public class NodeQueueTest
             HorseQueue source = rider.Queue.Find("SourceTemplateP") ?? await rider.Queue.Create("SourceTemplateP");
             Assert.NotNull(source);
             NodeQueueInfo info = source.ClusterNotifier.CreateNodeQueueInfo();
-            info.Name = "BcCargoReadyToShipEvent-standard"; // the exact prod queue that logs 209
+            info.Name = _replicaPrefix + "BcCargoReadyToShipEvent-standard"; // the exact prod queue that logs 209
             info.HandlerName = "Default";
             info.Initialized = false;
 
@@ -380,7 +384,7 @@ public class NodeQueueTest
             Assert.Equal(QueueStatus.NotInitialized, replica.Status);
             Assert.Null(replica.Manager);
 
-            HorseMessage message = new HorseMessage(MessageType.QueueMessage, "BcCargoReadyToShipEvent-standard");
+            HorseMessage message = new HorseMessage(MessageType.QueueMessage, _replicaPrefix + "BcCargoReadyToShipEvent-standard");
             message.SetStringContent("bc-ready-payload");
             message.CalculateLengths();
 
@@ -492,7 +496,7 @@ public class NodeQueueTest
         {
             HorseQueue source = rider.Queue.Find("SrcTpl-" + port) ?? await rider.Queue.Create("SrcTpl-" + port);
             NodeQueueInfo info = source.ClusterNotifier.CreateNodeQueueInfo();
-            info.Name = "DropRepro-" + port;
+            info.Name = _replicaPrefix + "DropRepro-" + port;
             info.HandlerName = "Default";
             info.Initialized = false;
 

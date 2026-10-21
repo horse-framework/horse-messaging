@@ -11,6 +11,7 @@ using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Channels;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Helpers;
+using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Routing;
 
@@ -206,18 +207,30 @@ public class NodeClient
 
     internal void ProcessReceivedMessage(HorseClient client, HorseMessage message)
     {
-        if (message.Type == MessageType.Cluster)
-            ProcessClusterMessage(message, false);
-        else
-            ProcessScaledMessage(message);
+        ProcessReceivedMessage(message, false);
     }
 
     internal void ProcessReceivedMessage(MessagingClient client, HorseMessage message)
     {
-        if (message.Type == MessageType.Cluster)
-            ProcessClusterMessage(message, true);
-        else
-            ProcessScaledMessage(message);
+        ProcessReceivedMessage(message, true);
+    }
+
+    private void ProcessReceivedMessage(HorseMessage message, bool fromIncomingClient)
+    {
+        // A failing message must not escape: on the incoming side the network handler answers an
+        // exception by disconnecting the node, which drops every cluster message sent after it.
+        try
+        {
+            if (message.Type == MessageType.Cluster)
+                ProcessClusterMessage(message, fromIncomingClient);
+            else
+                ProcessScaledMessage(message);
+        }
+        catch (Exception e)
+        {
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.ClusterMessageProcess,
+                $"Cluster message {message.ContentType} for {message.Target} from {Info?.Name}", e);
+        }
     }
 
     private void ProcessScaledMessage(HorseMessage message)
@@ -319,7 +332,7 @@ public class NodeClient
                     if (queue != null)
                         _ = queue.Manager.Synchronizer.BeginSharing(this);
                     else
-                        _ = SendMessage(new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.RemoveQueue));
+                        _ = SendMessage(new HorseMessage(MessageType.Cluster, message.Target, KnownContentTypes.RemoveQueue));
                 }
 
                 break;
@@ -448,8 +461,14 @@ public class NodeClient
 
             case KnownContentTypes.NodeQueueStateMessage:
             {
+                // The Main sends the status by its description ("paused"), see
+                // QueueClusterNotifier.SendStateChanged. Parsing it as a name threw on every queue
+                // removal, and the exception tore down the node connection right before the
+                // RemoveQueue message that follows it, so replicas never removed the queue.
                 HorseQueue queue = Rider.Queue.Find(message.Target);
-                queue?.SetStatus(Enums.Parse<QueueStatus>(message.GetStringContent()));
+                if (queue != null && Enums.TryParse(message.GetStringContent(), true, out QueueStatus status, EnumFormat.Description, EnumFormat.Name))
+                    queue.SetStatus(status);
+
                 break;
             }
 

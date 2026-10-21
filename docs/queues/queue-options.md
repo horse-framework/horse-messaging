@@ -88,6 +88,12 @@ Controls what happens when a message stays in the queue longer than the specifie
 | `PushQueue` | Expired messages are moved to another queue (specified by `TargetName`). |
 | `PublishRouter` | Expired messages are published to a router (specified by `TargetName`). |
 
+In a Reliable cluster, each node removes its own expired message copies. Only the Main node
+forwards expired messages and emits timeout events; a standalone node does both. `PushQueue`
+creates a missing target queue using the server's default queue options, even when
+`AutoQueueCreation` is disabled. If target creation or the push fails, the source message is
+retained and the error is logged for another attempt on the next timeout check.
+
 ```csharp
 cfg.Options.MessageTimeout = new MessageTimeoutStrategy
 {
@@ -224,9 +230,9 @@ Controls automatic queue destruction.
 | Value | Behavior |
 |-------|----------|
 | `Disabled` | Queue is never automatically destroyed. |
-| `NoMessages` | Queue is destroyed when it becomes empty and there are no in-flight deliveries (even if consumers are subscribed). All connected consumers are silently unsubscribed — their subscription references are cleared server-side. The consumers remain connected to the server but are no longer associated with the queue. |
+| `NoMessages` | Queue is destroyed when it becomes empty and there are no in-flight deliveries, acknowledge decisions in progress, or delayed putback messages (even if consumers are subscribed). All connected consumers are silently unsubscribed — their subscription references are cleared server-side. The consumers remain connected to the server but are no longer associated with the queue. |
 | `NoConsumers` | Queue is destroyed when the last consumer unsubscribes (even if messages remain). All remaining messages in the queue (both regular and priority stores) are permanently destroyed. For persistent queues, the database files are also deleted. |
-| `Empty` | Queue is destroyed when it has no messages, no in-flight deliveries, **and** no consumers. |
+| `Empty` | Queue is destroyed when it has no messages, no in-flight deliveries, no acknowledge decisions in progress, no delayed putback messages, **and** no consumers. |
 
 ---
 
