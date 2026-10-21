@@ -206,7 +206,12 @@ public class PartitionManager
     ///                     a worker is pulled from the pool and assigned automatically.
     /// - Label absent   → round-robin across active partitions.
     /// </summary>
-    public async Task<(HorseQueue target, PushResult result)> RouteMessage(QueueMessage message, MessagingClient sender)
+    public Task<(HorseQueue target, PushResult result)> RouteMessage(QueueMessage message, MessagingClient sender)
+    {
+        return RouteMessage(message, sender, true);
+    }
+
+    private async Task<(HorseQueue target, PushResult result)> RouteMessage(QueueMessage message, MessagingClient sender, bool rerouteIfClosing)
     {
         string label = message.Message.FindHeader(HorseHeaders.PARTITION_LABEL);
         HorseQueue target;
@@ -276,6 +281,21 @@ public class PartitionManager
             message.Message.AddHeader(HorseHeaders.PARTITION_ID, partitionId);
 
         PushResult pushResult = await target.Push(message, sender);
+
+        // Auto-destroy claimed the partition after it was picked above. Its removal is already
+        // under way, so wait for it and route again: a labeled message re-creates the partition.
+        if (pushResult == PushResult.StatusNotSupported && rerouteIfClosing && target.IsClosingForDestroy)
+        {
+            await target.WaitForDestroy(TimeSpan.FromSeconds(10));
+
+            message.Message.SetTarget(_parentQueue.Name);
+            message.Message.RemoveHeaders(HorseHeaders.PARTITION_ID);
+            if (!string.IsNullOrEmpty(label))
+                message.Message.AddHeader(HorseHeaders.PARTITION_LABEL, label);
+
+            return await RouteMessage(message, sender, false);
+        }
+
         return (target, pushResult);
     }
 
@@ -339,8 +359,20 @@ public class PartitionManager
             partitionOptions.AutoQueueCreation = false;
             partitionOptions.Partition = null; // Prevent recursive partitioning
 
+            var meta = new SubPartitionMeta
+            {
+                ParentQueueName = _parentQueue.Name,
+                PartitionId     = partitionId,
+                Label           = label
+            };
+
             HorseQueue partitionQueue = await _parentQueue.Rider.Queue.Create(
-                queueName, partitionOptions, null, false, true);
+                queueName, partitionOptions, null, false, true, partitionMeta: meta);
+
+            // returnIfExists may hand back a queue this manager did not create: a replica copy on a
+            // node promoted to Main. Copies built by older versions own a PartitionManager of
+            // their own and would swallow every message as NoConsumers, so repair it here.
+            partitionQueue.MarkAsPartitionQueue(meta);
 
             // Partition sub-queues use deterministic names and must NOT be persisted
             // in queues.json. InitializeQueue() may have already written an entry;
@@ -353,26 +385,7 @@ public class PartitionManager
                 configurator.Save();
             }
 
-            partitionQueue.IsPartitionQueue = true;
-            partitionQueue.PartitionMeta = new SubPartitionMeta
-            {
-                ParentQueueName = _parentQueue.Name,
-                PartitionId     = partitionId,
-                Label           = label
-            };
-
-            var entry = new PartitionEntry
-            {
-                PartitionId = partitionId,
-                Label = label,
-                Queue = partitionQueue
-            };
-
-            if (!string.IsNullOrEmpty(label))
-                _labelIndex[label] = entry;
-
-            _partitions[partitionId] = entry;
-            partitionQueue.OnDestroyed += _ => OnPartitionQueueDestroyed(entry);
+            PartitionEntry entry = RegisterPartition(partitionQueue, partitionId, label);
             FirePartitionCreatedEvent(entry);
 
             foreach (IPartitionEventHandler handler in _parentQueue.Rider.Queue.PartitionEventHandlers.All())
@@ -386,6 +399,51 @@ public class PartitionManager
         }
     }
 
+
+    private PartitionEntry RegisterPartition(HorseQueue partitionQueue, string partitionId, string label)
+    {
+        var entry = new PartitionEntry
+        {
+            PartitionId = partitionId,
+            Label = label,
+            Queue = partitionQueue
+        };
+
+        if (!string.IsNullOrEmpty(label))
+            _labelIndex[label] = entry;
+
+        _partitions[partitionId] = entry;
+        partitionQueue.OnDestroyed += _ => OnPartitionQueueDestroyed(entry);
+        return entry;
+    }
+
+    /// <summary>
+    /// Registers a partition sub-queue that exists on this node but is unknown to this manager.
+    /// A replica mirrors sub-queues without registering them, so after it is promoted to Main
+    /// they would be orphans: label-less routing would not see them and auto-destroy would never
+    /// remove them. Returns false when the queue is already registered or cannot be adopted.
+    /// </summary>
+    internal async Task<bool> AdoptPartitionQueue(HorseQueue queue)
+    {
+        SubPartitionMeta meta = queue.PartitionMeta;
+        if (meta == null || string.IsNullOrEmpty(meta.PartitionId) || queue.IsDestroyed)
+            return false;
+
+        await _createLock.WaitAsync();
+        try
+        {
+            if (_partitions.ContainsKey(meta.PartitionId))
+                return false;
+
+            queue.MarkAsPartitionQueue(meta);
+            RegisterPartition(queue, meta.PartitionId, meta.Label);
+            return true;
+        }
+        finally
+        {
+            _createLock.Release();
+        }
+    }
 
     private void OnPartitionQueueDestroyed(PartitionEntry entry)
     {
@@ -743,15 +801,17 @@ public class PartitionManager
             if (entry.Queue.IsDestroyed)
                 continue;
 
-            // HorseQueue.IsIdleForDestroy is the single shared definition of "safe to destroy".
+            // HorseQueue.IsIdleForDestroy is the single shared definition of "safe to destroy";
+            // TryCloseForDestroy applies it and refuses pushes from that moment on, so a push that
+            // picked this partition just before cannot store into it after the check.
             // This path used to test IsEmpty on its own, which sees neither an in-flight delivery
             // nor a message held inside Push — destroying the partition underneath them dropped the
             // message with no error, no DLQ and no log.
             bool shouldDestroy = _options.AutoDestroy switch
             {
                 PartitionAutoDestroy.NoConsumers => !entry.Queue.HasAnyClient(),
-                PartitionAutoDestroy.NoMessages  => entry.Queue.IsIdleForDestroy,
-                PartitionAutoDestroy.Empty       => !entry.Queue.HasAnyClient() && entry.Queue.IsIdleForDestroy,
+                PartitionAutoDestroy.NoMessages  => entry.Queue.TryCloseForDestroy(),
+                PartitionAutoDestroy.Empty       => !entry.Queue.HasAnyClient() && entry.Queue.TryCloseForDestroy(),
                 _                                => false
             };
 

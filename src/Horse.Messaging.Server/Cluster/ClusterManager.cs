@@ -199,6 +199,12 @@ public class ClusterManager
         {
             if (State == NodeState.Replica || State == NodeState.Successor)
                 Rider.Client.DisconnectAllClients();
+
+            // Mirrored partition sub-queues are unknown to their parents' PartitionManagers.
+            // Now that this node serves clients, attach them before traffic reaches them.
+            if ((prev == NodeState.Replica || prev == NodeState.Successor) &&
+                (State == NodeState.Main || State == NodeState.Single))
+                _ = Rider.Queue.AdoptOrphanPartitions();
         }
 
         if (MainNode != null)

@@ -448,7 +448,8 @@ public class QueueRider
         bool hideException,
         bool returnIfExists,
         MessagingClient client = null,
-        string customManagerName = null)
+        string customManagerName = null,
+        SubPartitionMeta partitionMeta = null)
     {
         string handlerName;
 
@@ -505,20 +506,26 @@ public class QueueRider
 
             queue = new HorseQueue(Rider, queueName, options);
 
+            // Marked before initialization and before SendCreated, so the replicas learn that
+            // this is a partition sub-queue from the create message itself.
+            if (partitionMeta != null)
+                queue.MarkAsPartitionQueue(partitionMeta);
+
             if (requestMessage != null)
                 queue.UpdateOptionsByMessage(requestMessage);
 
+            // ManagerName is set for programmatic creates too (partition sub-queues among them).
+            // It used to stay null there, and the replica's CreateReplica threw on the null
+            // HandlerName, so the copy was only built later by PushByNode from server defaults.
             QueueManagerBuilder handlerBuilder = new QueueManagerBuilder
             {
                 Server = Rider,
-                Queue = queue
+                Queue = queue,
+                ManagerName = handlerName
             };
 
             if (requestMessage != null)
-            {
-                handlerBuilder.ManagerName = handlerName;
                 handlerBuilder.Headers = requestMessage.Headers;
-            }
 
             queue.ManagerName = handlerBuilder.ManagerName;
             queue.InitializationMessageHeaders = handlerBuilder.Headers;
@@ -608,10 +615,30 @@ public class QueueRider
 
         if (!string.IsNullOrEmpty(info.LimitExceededStrategy))
             options.LimitExceededStrategy = Enums.Parse<MessageLimitExceededStrategy>(info.LimitExceededStrategy, true, EnumFormat.Description);
+
+        // Without this the copy kept the server default partition options: a sub-queue copy got a
+        // PartitionManager of its own and a parent copy lost the Main's partition settings.
+        if (info.IsPartitionQueue)
+            options.Partition = null;
+        else if (info.Partition != null)
+            options.Partition = new PartitionOptions
+            {
+                Enabled = info.Partition.Enabled,
+                MaxPartitionCount = info.Partition.MaxPartitionCount,
+                SubscribersPerPartition = info.Partition.SubscribersPerPartition,
+                AutoDestroy = info.Partition.AutoDestroy,
+                AutoDestroyIdleSeconds = info.Partition.AutoDestroyIdleSeconds,
+                AutoAssignWorkers = info.Partition.AutoAssignWorkers,
+                MaxPartitionsPerWorker = info.Partition.MaxPartitionsPerWorker
+            };
     }
 
     internal async Task<HorseQueue> CreateReplica(NodeQueueInfo info)
     {
+        // Older Main nodes send a null HandlerName for programmatically created queues.
+        if (string.IsNullOrEmpty(info.HandlerName))
+            info.HandlerName = "Default";
+
         Func<QueueManagerBuilder, Task<IHorseQueueManager>> queueManagerFactory = null;
         QueueManagerFactories?.TryGetValue(info.HandlerName, out queueManagerFactory);
         if (queueManagerFactory == null)
@@ -620,10 +647,23 @@ public class QueueRider
         await _createLock.WaitAsync();
         try
         {
+            // A replicated push can reach PushByNode before this create message is processed and
+            // build the copy from server defaults. Bring that copy in line instead of dropping
+            // this info on the floor.
+            if (_queues.TryGetValue(info.Name, out HorseQueue existing))
+            {
+                existing.UpdateOptionsByNodeInfo(info);
+                return existing;
+            }
+
             QueueOptions options = QueueOptions.CloneFrom(Options);
             FillQueueOptions(options, info);
 
             HorseQueue queue = new HorseQueue(Rider, info.Name, options);
+
+            SubPartitionMeta partitionMeta = info.CreatePartitionMeta();
+            if (partitionMeta != null)
+                queue.MarkAsPartitionQueue(partitionMeta);
 
             QueueManagerBuilder handlerBuilder = new QueueManagerBuilder
             {
@@ -647,7 +687,7 @@ public class QueueRider
 
             _queues.TryAdd(queue.Name, queue);
 
-            if (OptionsConfigurator != null)
+            if (OptionsConfigurator != null && !queue.SkipPersistence)
             {
                 QueueConfiguration configuration = OptionsConfigurator.Find(x => x.Name == queue.Name);
 
@@ -677,6 +717,32 @@ public class QueueRider
             }
             catch
             {
+            }
+        }
+    }
+
+    /// <summary>
+    /// Registers mirrored partition sub-queues with their parent's PartitionManager.
+    /// Called when this node starts serving clients (promoted to Main, or left Single).
+    /// </summary>
+    internal async Task AdoptOrphanPartitions()
+    {
+        foreach (HorseQueue queue in _queues.Values.ToArray())
+        {
+            if (!queue.IsPartitionQueue || queue.PartitionMeta == null)
+                continue;
+
+            HorseQueue parent = Find(queue.PartitionMeta.ParentQueueName);
+            if (parent?.PartitionManager == null)
+                continue;
+
+            try
+            {
+                await parent.PartitionManager.AdoptPartitionQueue(queue);
+            }
+            catch (Exception e)
+            {
+                Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueCreate, $"Adopt Partition Queue: {queue.Name}", e);
             }
         }
     }
