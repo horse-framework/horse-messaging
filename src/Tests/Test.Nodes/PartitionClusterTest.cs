@@ -10,6 +10,8 @@ using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Queues.Delivery;
+using Horse.Messaging.Server.Queues.Managers;
 using Horse.Messaging.Server.Queues.Partitions;
 using Horse.Server;
 using Xunit;
@@ -305,5 +307,86 @@ public class PartitionClusterTest
             DumpErrors();
             await StopCluster(nodes);
         }
+    }
+
+    /// <summary>
+    /// A replica that is not waited on (here ReplicaAcknowledge.None, in production the replicas
+    /// beside the successor) receives the replicated push and, after a fast consumer ack, the
+    /// message removal on the same link. Both used to run concurrently: when the removal ran before
+    /// the push had stored the message, it removed nothing and the copy stayed on the replica.
+    /// </summary>
+    [Fact]
+    public async Task RemovalArrivingWhileReplicaStillStoresPush_IsAppliedAfterThePush()
+    {
+        List<ClusterNode> nodes = StartCluster(new[] { 28841, 28842 });
+
+        try
+        {
+            (ClusterNode main, ClusterNode successor) = await WaitForConnectedSuccessor(nodes);
+
+            string name = $"OrderEvent-{_run}";
+            HorseQueue mainQueue = await main.Rider.Queue.Create(name, o => o.Partition = null);
+            Assert.True(await WaitUntil(() => successor.Rider.Queue.Find(name)?.Manager != null, 10000), "queue not replicated");
+
+            HorseQueue replica = successor.Rider.Queue.Find(name);
+            BlockingProducerHandler handler = new(replica.Manager.DeliveryHandler);
+            replica.Manager.GetType().GetProperty(nameof(IHorseQueueManager.DeliveryHandler)).SetValue(replica.Manager, handler);
+
+            HorseMessage message = new HorseMessage(MessageType.QueueMessage, name);
+            message.SetMessageId($"msg-{_run}");
+            message.SetStringContent("consumed-on-main");
+            Assert.Equal(PushResult.Success, await mainQueue.Push(message));
+
+            try
+            {
+                await handler.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+                // The consumer acks on the Main while the replica is still storing the push.
+                QueueMessage stored = mainQueue.Manager.MessageStore.Find(message.MessageId);
+                Assert.NotNull(stored);
+                await mainQueue.RemoveMessage(stored);
+                await Task.Delay(500);
+            }
+            finally
+            {
+                handler.Release.TrySetResult(true);
+            }
+
+            // Checked once the push has finished instead of polling: a later sync pass may clean
+            // the copy up in this harness, but in production it stayed until the queue was removed.
+            Assert.True(await WaitUntil(() => replica.Info.ReceivedMessages > 0, 5000), "replica never finished the push");
+            await Task.Delay(300);
+            Assert.Equal(0, replica.Manager.MessageStore.Count());
+        }
+        finally
+        {
+            DumpErrors();
+            await StopCluster(nodes);
+        }
+    }
+
+    private sealed class BlockingProducerHandler(IQueueDeliveryHandler inner) : IQueueDeliveryHandler
+    {
+        public IHorseQueueManager Manager => inner.Manager;
+        public IDeliveryTracker Tracker => inner.Tracker;
+        internal TaskCompletionSource<bool> Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal TaskCompletionSource<bool> Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task<Decision> ReceivedFromProducer(HorseQueue queue, QueueMessage message, MessagingClient sender)
+        {
+            Entered.TrySetResult(true);
+            await Release.Task;
+            return await inner.ReceivedFromProducer(queue, message, sender);
+        }
+
+        public Task<Decision> BeginSend(HorseQueue queue, QueueMessage message) => inner.BeginSend(queue, message);
+        public Task<bool> CanConsumerReceive(HorseQueue queue, QueueMessage message, MessagingClient receiver)
+            => inner.CanConsumerReceive(queue, message, receiver);
+        public Task<Decision> ConsumerReceiveFailed(HorseQueue queue, MessageDelivery delivery, MessagingClient receiver)
+            => inner.ConsumerReceiveFailed(queue, delivery, receiver);
+        public Task<Decision> EndSend(HorseQueue queue, QueueMessage message) => inner.EndSend(queue, message);
+        public Task<Decision> AcknowledgeTimeout(HorseQueue queue, MessageDelivery delivery) => inner.AcknowledgeTimeout(queue, delivery);
+        public Task<Decision> AcknowledgeReceived(HorseQueue queue, HorseMessage acknowledgeMessage, MessageDelivery delivery, bool success)
+            => inner.AcknowledgeReceived(queue, acknowledgeMessage, delivery, success);
     }
 }
