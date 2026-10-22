@@ -277,6 +277,12 @@ public class DefaultQueueSynchronizer : IQueueSynchronizer
     /// <inheritdoc />
     public virtual Task EndSharing()
     {
+        // A completion can reach a queue this node is not sharing (roles flip at startup, or the
+        // timeout already ended it). Ending again would release a QueueLock this sync no longer
+        // holds, and with RemoteNode cleared it threw a NullReferenceException.
+        if (Status != QueueSyncStatus.Sharing || RemoteNode == null)
+            return Task.CompletedTask;
+
         Status = QueueSyncStatus.None;
         _syncStartDate = DateTime.UtcNow;
         RemoteNode.OnDisconnected -= OnNodeDisconnected;
