@@ -556,10 +556,8 @@ public class ReliableClusterTest
     /// stores the replicated message.
     ///
     /// Notes on this in-process harness:
-    ///  - Creation is driven via client push (production route), not Rider.Queue.Create(name, ...):
-    ///    a direct programmatic Create with no manager name leaves ManagerName null, which propagates
-    ///    as NodeQueueInfo.HandlerName=null so the replica's CreateReplica can't resolve a factory and
-    ///    stays NotInitialized (QueueRider.cs:642).
+    ///  - Creation is driven via client push (production route). Programmatic creates replicate too
+    ///    since ManagerName defaults to "Default" there (covered by PartitionClusterTest).
     ///  - We do NOT assert HorseQueue.Status here: both riders run in the same working directory and
     ///    share one on-disk OptionsConfigurator (data/queues.json). They clobber each other's config for
     ///    the same queue name, so the reported Status is unreliable in this harness (observed

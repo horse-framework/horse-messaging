@@ -190,7 +190,12 @@ internal class QueueClusterNotifier
             {
                 Key = x.Key,
                 Value = x.Value
-            }).ToArray()
+            }).ToArray(),
+            Partition = _queue.IsPartitionQueue ? null : _queue.Options.Partition,
+            IsPartitionQueue = _queue.IsPartitionQueue,
+            PartitionParent = _queue.PartitionMeta?.ParentQueueName,
+            PartitionId = _queue.PartitionMeta?.PartitionId,
+            PartitionLabel = _queue.PartitionMeta?.Label
         };
     }
 }

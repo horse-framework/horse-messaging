@@ -1,4 +1,5 @@
 ﻿using Horse.Messaging.Protocol;
+using Horse.Messaging.Server.Queues.Partitions;
 
 namespace Horse.Messaging.Server.Cluster;
 
@@ -35,4 +36,29 @@ internal class NodeQueueInfo
         
     public bool MessageIdUniqueCheck { get; set; }
 
+    /// <summary>
+    /// Partition options of a partitioned parent queue. Null for partition sub-queues and for
+    /// infos sent by older nodes, in which case the replica keeps its server default.
+    /// </summary>
+    public PartitionOptions Partition { get; set; }
+
+    /// <summary>True when the queue is a partition sub-queue of <see cref="PartitionParent"/>.</summary>
+    public bool IsPartitionQueue { get; set; }
+
+    public string PartitionParent { get; set; }
+    public string PartitionId { get; set; }
+    public string PartitionLabel { get; set; }
+
+    internal SubPartitionMeta CreatePartitionMeta()
+    {
+        if (!IsPartitionQueue)
+            return null;
+
+        return new SubPartitionMeta
+        {
+            ParentQueueName = PartitionParent,
+            PartitionId = PartitionId,
+            Label = PartitionLabel
+        };
+    }
 }
