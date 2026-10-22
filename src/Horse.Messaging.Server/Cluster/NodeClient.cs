@@ -28,6 +28,7 @@ public class NodeClient
     private readonly NodeDeliveryTracker _deliveryTracker;
     private MessagingClient _incomingClient;
     private bool _connectedToRemote;
+    private readonly Dictionary<string, Task> _queueOperations = new();
     public event Action<NodeClient> OnDisconnected;
 
     /// <summary>
@@ -391,7 +392,7 @@ public class NodeClient
             {
                 string content = message.GetStringContent();
                 NodeQueueInfo queueInfo = JsonSerializer.Deserialize<NodeQueueInfo>(content, SerializerFactory.Default());
-                _ = Rider.Queue.CreateReplica(queueInfo);
+                RunInQueueOrder(message, () => Rider.Queue.CreateReplica(queueInfo));
                 break;
             }
 
@@ -410,54 +411,28 @@ public class NodeClient
             }
 
             case KnownContentTypes.RemoveQueue:
-                _ = Rider.Queue.Remove(message.Target);
+                RunInQueueOrder(message, () => Rider.Queue.Remove(message.Target));
                 break;
 
             case KnownContentTypes.NodePushQueueMessage:
-                _ = PushByNode(message);
+                RunInQueueOrder(message, () => PushByNode(message));
                 break;
 
             case KnownContentTypes.NodePutBackQueueMessage:
-            {
-                HorseQueue queue = Rider.Queue.Find(message.Target);
-
-                if (queue != null)
-                {
-                    QueueMessage found;
-                    if (message.HighPriority)
-                    {
-                        found = queue.Manager.MessageStore.Find(message.MessageId)
-                                ?? queue.Manager.PriorityMessageStore.Find(message.MessageId);
-                    }
-                    else
-                    {
-                        found = queue.Manager.PriorityMessageStore.Find(message.MessageId)
-                                ?? queue.Manager.MessageStore.Find(message.MessageId);
-                    }
-
-                    if (found != null)
-                        _ = queue.Manager.ChangeMessagePriority(found, message.HighPriority);
-                }
-
+                RunInQueueOrder(message, () => PutBackByNode(message));
                 break;
-            }
 
             case KnownContentTypes.NodeRemoveQueueMessage:
-            {
-                HorseQueue queue = Rider.Queue.Find(message.Target);
-
-                if (queue != null)
-                    _ = queue.RemoveMessage(message.MessageId);
-
+                RunInQueueOrder(message, () => Rider.Queue.Find(message.Target)?.RemoveMessage(message.MessageId) ?? Task.CompletedTask);
                 break;
-            }
 
             case KnownContentTypes.NodeClearQueueMessage:
-            {
-                HorseQueue queue = Rider.Queue.Find(message.Target);
-                queue?.ClearMessages(false);
+                RunInQueueOrder(message, () =>
+                {
+                    Rider.Queue.Find(message.Target)?.ClearMessages(false);
+                    return Task.CompletedTask;
+                });
                 break;
-            }
 
             case KnownContentTypes.NodeQueueStateMessage:
             {
@@ -632,6 +607,73 @@ public class NodeClient
 
         NodeMessageDelivery delivery = await source.Task;
         return delivery.IsCommitted;
+    }
+
+    /// <summary>
+    /// Runs a replicated operation after every earlier operation on the same queue has finished.
+    /// The Main sends them in order on one link, but each used to start as a fire-and-forget task:
+    /// a message removal that followed a push could run while the push was still storing the
+    /// message, remove nothing, and leave a copy of an already consumed message on the replica.
+    /// </summary>
+    private void RunInQueueOrder(HorseMessage message, Func<Task> operation)
+    {
+        string queueName = message.Target ?? string.Empty;
+
+        lock (_queueOperations)
+        {
+            _queueOperations.TryGetValue(queueName, out Task previous);
+            Task next = RunAfter(previous, message, operation);
+            _queueOperations[queueName] = next;
+
+            _ = next.ContinueWith(_ =>
+            {
+                lock (_queueOperations)
+                {
+                    if (_queueOperations.TryGetValue(queueName, out Task current) && current == next)
+                        _queueOperations.Remove(queueName);
+                }
+            }, TaskScheduler.Default);
+        }
+    }
+
+    private async Task RunAfter(Task previous, HorseMessage message, Func<Task> operation)
+    {
+        if (previous != null)
+            await previous;
+
+        // Never runs inline under the _queueOperations lock.
+        await Task.Yield();
+
+        try
+        {
+            await operation();
+        }
+        catch (Exception e)
+        {
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.ClusterMessageProcess,
+                $"Cluster message {message.ContentType} for {message.Target} from {Info?.Name}", e);
+        }
+    }
+
+    private Task PutBackByNode(HorseMessage message)
+    {
+        HorseQueue queue = Rider.Queue.Find(message.Target);
+        if (queue?.Manager == null)
+            return Task.CompletedTask;
+
+        QueueMessage found;
+        if (message.HighPriority)
+        {
+            found = queue.Manager.MessageStore.Find(message.MessageId)
+                    ?? queue.Manager.PriorityMessageStore.Find(message.MessageId);
+        }
+        else
+        {
+            found = queue.Manager.PriorityMessageStore.Find(message.MessageId)
+                    ?? queue.Manager.MessageStore.Find(message.MessageId);
+        }
+
+        return found != null ? queue.Manager.ChangeMessagePriority(found, message.HighPriority) : Task.CompletedTask;
     }
 
     private async Task PushByNode(HorseMessage message)
