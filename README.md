@@ -142,11 +142,3 @@ await client.ConnectAsync("horse://localhost:2626");
 
 Navigate to Jockey panel http://localhost:2627 with empty username and password.
 You can see your connected client in clients page.
-
-<p align="center">
-<picture>
-  <source media="(prefers-color-scheme: light)" srcset="https://avatars.githubusercontent.com/u/14873804?s=400&u=b0533ffa4ca335a2d497b648e9b13a0d0885cac2&v=4">
-  <source media="(prefers-color-scheme: dark)" srcset="https://avatars.githubusercontent.com/u/14873804?s=400&u=b0533ffa4ca335a2d497b648e9b13a0d0885cac2&v=4">
-  <img src="https://avatars.githubusercontent.com/u/14873804?s=400&u=b0533ffa4ca335a2d497b648e9b13a0d0885cac2&v=4" alt="Arad ITC Logo" width="30%"> 
-</picture>
-</p>
