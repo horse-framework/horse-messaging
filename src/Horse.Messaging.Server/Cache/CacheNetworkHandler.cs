@@ -152,7 +152,7 @@ internal class CacheNetworkHandler : INetworkMessageHandler
                 if (!string.IsNullOrEmpty(messageTimeout))
                     timeout = TimeSpan.FromSeconds(Convert.ToInt32(messageTimeout));
 
-                GetCacheItemResult getResult = _cache.GetIncremental(message.Target, timeout, increment, tagNames);
+                GetCacheItemResult getResult = await _cache.GetIncrementalAsync(message.Target, timeout, increment, tagNames);
                 if (getResult?.Item == null)
                 {
                     await client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
@@ -186,7 +186,7 @@ internal class CacheNetworkHandler : INetworkMessageHandler
                     }
                 }
 
-                _cache.Remove(client, message.Target, true);
+                await _cache.RemoveAsync(client, message.Target, true);
                 await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
                 return;
             }
@@ -206,9 +206,9 @@ internal class CacheNetworkHandler : INetworkMessageHandler
                 string tagName = message.FindHeader(HorseHeaders.TAG);
 
                 if (string.IsNullOrEmpty(tagName))
-                    _cache.Purge(client, true);
+                    await _cache.PurgeAsync(client, true);
                 else
-                    _cache.PurgeByTag(tagName.Trim(), client, true);
+                    await _cache.PurgeByTagAsync(tagName.Trim(), client, true);
 
                 await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
                 return;

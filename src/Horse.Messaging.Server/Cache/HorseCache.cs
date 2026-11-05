@@ -32,6 +32,26 @@ public class HorseCache : IDisposable, IAsyncDisposable
         internal readonly Dictionary<string, HashSet<string>> Tags = new(StringComparer.OrdinalIgnoreCase);
     }
 
+    /// <summary>How a caller's stream becomes an immutable cache payload.</summary>
+    private enum PayloadMode : byte
+    {
+        /// <summary>The caller keeps using its stream, so the bytes are copied.</summary>
+        Copy,
+
+        /// <summary>The cache created the stream itself; it is already read-only and unshared.</summary>
+        Owned,
+
+        /// <summary>
+        /// The caller hands over a buffer it never writes again (a received protocol
+        /// message). An exposed, compact buffer is wrapped read-only without copying.
+        /// </summary>
+        Adopt
+    }
+
+    // About 1 ms of gate time per partition (~0.9 µs per removal); with the 1 s
+    // timer this drains up to ~65k expirations per second.
+    private const int MaxExpirationsPerPartitionPerPass = 1024;
+
     private readonly Partition[] _partitions = CreatePartitions();
     private readonly object _lifecycleGate = new();
     private readonly Action<HorseCacheItem> _metadataChanged;
@@ -221,26 +241,35 @@ public class HorseCache : IDisposable, IAsyncDisposable
         }
     }
 
-    // All dictionary mutations, index mutations and persistence submissions for
-    // a key occur under its partition gate. Readers remain lock-free.
-    private Task RemoveCurrent(Partition partition, HorseCacheItem expected, bool notifyRemoval = false)
+    // Under a key's partition gate: dictionary and index mutations, persistence
+    // admission and cluster notification. Admitting persistence and replication
+    // there keeps both in commit order for the key. Payload preparation happens
+    // before the gate; events and persistence waits happen after it is released.
+    // Readers remain lock-free.
+    private bool RemoveCurrent(Partition partition, HorseCacheItem expected, out Task persistence)
     {
+        persistence = Task.CompletedTask;
         if (!_items.TryGetValue(expected.Key, out HorseCacheItem current) || !ReferenceEquals(current, expected))
-            return Task.CompletedTask;
+            return false;
         _items.TryRemove(expected.Key, out _);
         Interlocked.Decrement(ref _keyCount);
         partition.Expirations.Remove(expected.Key);
         UnindexTags(partition, expected);
         expected.MetadataChanged = null;
-        if (notifyRemoval)
-        {
-            RemoveEvent.Trigger((MessagingClient)null, expected.Key);
-            ClusterNotifier.SendRemove(expected.Key);
-        }
-        return expected.IsPersistent ? _persistence.DeleteAsync(expected.CacheKey ?? expected.Key) : Task.CompletedTask;
+        if (expected.IsPersistent)
+            persistence = _persistence.DeleteAsync(expected.CacheKey ?? expected.Key);
+        return true;
     }
 
-    private void RemoveExpiredKeys()
+    /// <summary>Timer pass: removes at most <see cref="MaxExpirationsPerPartitionPerPass"/> entries per partition.</summary>
+    private void RemoveExpiredKeys() => RemoveExpiredKeysCore(MaxExpirationsPerPartitionPerPass);
+
+    /// <summary>
+    /// The per-partition limit bounds how long one pass holds a gate when many
+    /// entries expire together. Readers already treat expired entries as missing,
+    /// so a remainder simply waits for the next pass.
+    /// </summary>
+    private void RemoveExpiredKeysCore(int maxPerPartition)
     {
         if (Volatile.Read(ref _disposed) != 0 || Interlocked.Exchange(ref _cleanupRunning, 1) != 0)
             return;
@@ -253,8 +282,13 @@ public class HorseCache : IDisposable, IAsyncDisposable
                 {
                     if (_disposed != 0)
                         return;
-                    while (partition.Expirations.TryPeek(out HorseCacheItem item) && item.Expiration < now)
-                        ObservePersistence(RemoveCurrent(partition, item));
+                    for (int removed = 0; removed < maxPerPartition && partition.Expirations.TryPeek(out HorseCacheItem item) && item.Expiration < now; removed++)
+                    {
+                        if (RemoveCurrent(partition, item, out Task persistence))
+                            ObservePersistence(persistence);
+                        else
+                            RepairExpiration(partition, item.Key);
+                    }
                 }
             }
         }
@@ -262,6 +296,16 @@ public class HorseCache : IDisposable, IAsyncDisposable
         {
             Volatile.Write(ref _cleanupRunning, 0);
         }
+    }
+
+    // Heap entries are always the key's current item. Should that ever not hold,
+    // re-point the entry so an unbounded pass cannot spin on it under the gate.
+    private void RepairExpiration(Partition partition, string key)
+    {
+        if (_items.TryGetValue(key, out HorseCacheItem current))
+            partition.Expirations.Set(current);
+        else
+            partition.Expirations.Remove(key);
     }
 
     private void ObservePersistence(Task task)
@@ -347,116 +391,142 @@ public class HorseCache : IDisposable, IAsyncDisposable
 
     /// <summary>Adds or replaces a string entry, waiting for its persistent write if requested.</summary>
     public CacheOperation Set(string key, string value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null, bool persistent = false)
-        => SetStringCore(key, value, duration, expirationWarning, tags, persistent, true).GetAwaiter().GetResult();
+        => Wait(SetAsync(key, value, duration, expirationWarning, tags, persistent));
 
     /// <summary>Adds or replaces an entry, waiting for its persistent write if requested.</summary>
     public CacheOperation Set(string key, MemoryStream value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null, bool persistent = false)
-        => SetAsyncCore(null, true, key, value, duration, expirationWarning, tags, persistent, false, true).GetAwaiter().GetResult();
+        => Wait(SetAsyncCore(null, true, key, value, duration, expirationWarning, tags, persistent, PayloadMode.Copy));
 
     /// <summary>Adds or replaces a string entry without blocking on persistent IO.</summary>
     public ValueTask<CacheOperation> SetAsync(string key, string value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null, bool persistent = false)
-        => SetStringCore(key, value, duration, expirationWarning, tags, persistent, false);
-
-    private ValueTask<CacheOperation> SetStringCore(string key, string value, TimeSpan duration, TimeSpan? expirationWarning, string[] tags, bool persistent, bool synchronousIO)
     {
         byte[] bytes = Encoding.UTF8.GetBytes(value);
-        return SetAsyncCore(null, true, key, new MemoryStream(bytes, 0, bytes.Length, false, true), duration, expirationWarning, tags, persistent, true, synchronousIO);
+        return SetAsyncCore(null, true, key, new MemoryStream(bytes, 0, bytes.Length, false, true), duration, expirationWarning, tags, persistent, PayloadMode.Owned);
     }
 
     /// <summary>Copies the supplied value once and asynchronously waits for persistent IO.</summary>
     public ValueTask<CacheOperation> SetAsync(string key, MemoryStream value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null, bool persistent = false)
-        => SetAsyncCore(null, true, key, value, duration, expirationWarning, tags, persistent, false);
+        => SetAsyncCore(null, true, key, value, duration, expirationWarning, tags, persistent, PayloadMode.Copy);
 
-    internal CacheOperation Set(MessagingClient client, bool notifyCluster, string key, MemoryStream value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null, bool persistent = false)
-        => SetAsyncCore(client, notifyCluster, key, value, duration, expirationWarning, tags, persistent, false, true).GetAwaiter().GetResult();
-
+    /// <summary>
+    /// Stores the content of a received protocol message. The cache takes over the
+    /// message's buffer, so the caller must not write to <paramref name="value"/> afterwards.
+    /// The entry is committed before this returns; only persistent IO completes later.
+    /// </summary>
     internal ValueTask<CacheOperation> SetAsync(MessagingClient client, bool notifyCluster, string key, MemoryStream value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null, bool persistent = false)
-        => SetAsyncCore(client, notifyCluster, key, value, duration, expirationWarning, tags, persistent, false);
+        => SetAsyncCore(client, notifyCluster, key, value, duration, expirationWarning, tags, persistent, PayloadMode.Adopt);
 
-    private ValueTask<CacheOperation> SetAsyncCore(MessagingClient client, bool notifyCluster, string key, MemoryStream value, TimeSpan duration, TimeSpan? warning, string[] tags, bool persistent, bool ownBuffer, bool synchronousIO = false)
-    {
-        CacheOperation operation = SetCore(client, notifyCluster, key, value, duration, warning, tags, persistent, ownBuffer, out Task pending, synchronousIO);
-        if (operation.Result == CacheResult.KeyLimit)
-        {
-            RemoveExpiredKeys();
-            operation = SetCore(client, notifyCluster, key, value, duration, warning, tags, persistent, ownBuffer, out pending, synchronousIO);
-        }
-        return pending.IsCompletedSuccessfully ? new ValueTask<CacheOperation>(operation) : AwaitWrite(operation, pending);
-    }
-
-    private static async ValueTask<CacheOperation> AwaitWrite(CacheOperation operation, Task pending)
-    {
-        await pending.ConfigureAwait(false);
-        return operation;
-    }
-
-    private CacheOperation SetCore(MessagingClient client, bool notifyCluster, string key, MemoryStream value, TimeSpan duration, TimeSpan? warning, string[] tags, bool persistent, bool ownBuffer, out Task pending, bool synchronousIO = false)
+    private ValueTask<CacheOperation> SetAsyncCore(MessagingClient client, bool notifyCluster, string key, MemoryStream value, TimeSpan duration, TimeSpan? warning, string[] tags, bool persistent, PayloadMode payloadMode)
     {
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
         Partition partition = GetPartition(key);
-        pending = Task.CompletedTask;
         if (persistent)
             CachePersistenceWriter.ValidateKey(key);
-        long length = value?.Length ?? 0;
-        if (Options.ValueMaxSize > 0 && length > Options.ValueMaxSize)
-            return new CacheOperation(CacheResult.ItemSizeLimit, null);
+        if (Options.ValueMaxSize > 0 && (value?.Length ?? 0) > Options.ValueMaxSize)
+            return new ValueTask<CacheOperation>(new CacheOperation(CacheResult.ItemSizeLimit, null));
+
+        // Copying the payload and formatting metadata happen before the gate.
+        HorseCacheItem item = CreateItem(key, value, duration, warning, tags, persistent, payloadMode);
+        CacheResult result = CommitSet(partition, key, item, notifyCluster, out Task persistence);
+        if (result == CacheResult.KeyLimit)
+        {
+            // Expired entries still count towards the limit until removed; free them all.
+            RemoveExpiredKeysCore(int.MaxValue);
+            result = CommitSet(partition, key, item, notifyCluster, out persistence);
+        }
+
+        if (result != CacheResult.Ok)
+            return new ValueTask<CacheOperation>(new CacheOperation(result, null));
+
+        SetEvent.Trigger(client, key);
+        CacheOperation operation = new CacheOperation(CacheResult.Ok, item);
+        return persistence.IsCompletedSuccessfully ? new ValueTask<CacheOperation>(operation) : AwaitPersistence(operation, persistence);
+    }
+
+    private HorseCacheItem CreateItem(string key, MemoryStream value, TimeSpan duration, TimeSpan? warning, string[] tags, bool persistent, PayloadMode payloadMode)
+    {
         TimeSpan d = duration == TimeSpan.Zero ? Options.DefaultDuration : duration;
         if (Options.MinimumDuration > TimeSpan.Zero && d < Options.MinimumDuration)
             d = Options.MinimumDuration;
         else if (Options.MaximumDuration > TimeSpan.Zero && d > Options.MaximumDuration)
             d = Options.MaximumDuration;
         DateTime now = DateTime.UtcNow;
-        DateTime expiration = now + d;
-        DateTime warningDate = now + (warning ?? (Options.ExpirationWarningIsEnabled ? Options.DefaultExpirationWarning : d));
+        return new HorseCacheItem
+        {
+            Key = key,
+            Tags = tags,
+            Expiration = now + d,
+            ExpirationWarning = now + (warning ?? (Options.ExpirationWarningIsEnabled ? Options.DefaultExpirationWarning : d)),
+            Value = CreatePayload(value, payloadMode),
+            IsPersistent = persistent
+        };
+    }
+
+    private static MemoryStream CreatePayload(MemoryStream value, PayloadMode mode)
+    {
+        if (mode == PayloadMode.Owned)
+            return value;
+
+        // Received messages own an exactly sized buffer (HorseProtocolReader allocates
+        // the content length). Wrapping it avoids a second payload-sized allocation,
+        // which is a large-object allocation for values over 85 KB. A buffer with
+        // notable spare capacity is copied so the cache does not retain the slack.
+        if (mode == PayloadMode.Adopt && value != null && value.TryGetBuffer(out ArraySegment<byte> buffer) &&
+            buffer.Array.Length - buffer.Count <= buffer.Count / 8)
+            return new MemoryStream(buffer.Array, buffer.Offset, buffer.Count, false, true);
+
+        byte[] bytes = value?.ToArray() ?? Array.Empty<byte>();
+        return new MemoryStream(bytes, 0, bytes.Length, false, true);
+    }
+
+    /// <summary>
+    /// Publishes a prepared, not yet stored item under the key's gate. The caller
+    /// triggers the event and waits for persistence after the gate is released.
+    /// </summary>
+    private CacheResult CommitSet(Partition partition, string key, HorseCacheItem item, bool notifyCluster, out Task persistence)
+    {
+        persistence = Task.CompletedTask;
         lock (partition.Gate)
         {
             ObjectDisposedException.ThrowIf(_disposed != 0, this);
             _items.TryGetValue(key, out HorseCacheItem previous);
             if (previous == null && !ReserveKey())
-                return new CacheOperation(CacheResult.KeyLimit, null);
-            HorseCacheItem item;
-            try
-            {
-                MemoryStream payload;
-                if (ownBuffer)
-                    payload = value;
-                else
-                {
-                    byte[] bytes = value?.ToArray() ?? Array.Empty<byte>();
-                    payload = new MemoryStream(bytes, 0, bytes.Length, false, true);
-                }
-                item = new HorseCacheItem
-                {
-                    Key = previous?.CacheKey ?? key, Tags = tags,
-                    Expiration = expiration, ExpirationWarning = warningDate, Value = payload, IsPersistent = persistent
-                };
-                item.CacheKey = item.Key;
-                item.MetadataGate = partition.Gate;
-                item.MetadataChanged = _metadataChanged;
-            }
-            catch
-            {
-                if (previous == null)
-                    Interlocked.Decrement(ref _keyCount);
-                throw;
-            }
+                return CacheResult.KeyLimit;
             if (previous != null)
             {
+                // Keep the stored casing; a persistent entry's file is named after it.
+                item.Key = previous.CacheKey ?? key;
                 UnindexTags(partition, previous);
                 previous.MetadataChanged = null;
             }
+            item.CacheKey = item.Key;
+            item.MetadataGate = partition.Gate;
+            item.MetadataChanged = _metadataChanged;
             _items[key] = item;
             partition.Expirations.Set(item);
             IndexTags(partition, item);
-            if (persistent)
-                pending = synchronousIO ? _persistence.Write(item) : _persistence.WriteAsync(item);
+            if (item.IsPersistent)
+                persistence = _persistence.WriteAsync(item);
             else if (previous?.IsPersistent == true)
-                pending = _persistence.DeleteAsync(previous.CacheKey ?? previous.Key);
-            SetEvent.Trigger(client, key);
+                persistence = _persistence.DeleteAsync(previous.CacheKey ?? previous.Key);
             if (notifyCluster)
                 ClusterNotifier.SendSet(item);
-            return new CacheOperation(CacheResult.Ok, item);
+            return CacheResult.Ok;
         }
+    }
+
+    private static async ValueTask<T> AwaitPersistence<T>(T result, Task persistence)
+    {
+        await persistence.ConfigureAwait(false);
+        return result;
+    }
+
+    private static T Wait<T>(ValueTask<T> task) => task.IsCompletedSuccessfully ? task.Result : task.AsTask().GetAwaiter().GetResult();
+
+    private static void Wait(Task task)
+    {
+        if (!task.IsCompletedSuccessfully)
+            task.GetAwaiter().GetResult();
     }
 
     /// <summary>Looks up a live entry without allocating a Task or a result object.</summary>
@@ -471,10 +541,19 @@ public class HorseCache : IDisposable, IAsyncDisposable
         if (item.Expiration < now)
         {
             Partition partition = GetPartition(key);
-            Task pending;
+            bool removed;
+            Task persistence = Task.CompletedTask;
             lock (partition.Gate)
-                pending = _disposed == 0 ? RemoveCurrent(partition, item, true) : Task.CompletedTask;
-            ObservePersistence(pending);
+            {
+                removed = _disposed == 0 && RemoveCurrent(partition, item, out persistence);
+                if (removed)
+                    ClusterNotifier.SendRemove(item.Key);
+            }
+            if (removed)
+            {
+                RemoveEvent.Trigger((MessagingClient)null, item.Key);
+                ObservePersistence(persistence);
+            }
             result = default;
             return false;
         }
@@ -487,12 +566,26 @@ public class HorseCache : IDisposable, IAsyncDisposable
     public Task<GetCacheItemResult> Get(string key)
         => Task.FromResult(TryGet(key, out CacheReadResult result) ? new GetCacheItemResult(result.IsFirstWarningReceiver, result.Item) : null);
 
-    /// <summary>Increments a four-byte integer value. New and expired entries start at incrementValue.</summary>
+    /// <summary>
+    /// Increments a four-byte integer value, waiting for its persistent write.
+    /// New and expired entries start at incrementValue.
+    /// </summary>
     public GetCacheItemResult GetIncremental(string key, TimeSpan duration, int incrementValue = 1, string[] tags = null)
+        => Wait(GetIncrementalAsync(key, duration, incrementValue, tags));
+
+    /// <summary>
+    /// Increments a four-byte integer value without blocking on persistent IO.
+    /// New and expired entries start at incrementValue. The new value is visible
+    /// before this returns; only persistent IO completes later.
+    /// </summary>
+    public ValueTask<GetCacheItemResult> GetIncrementalAsync(string key, TimeSpan duration, int incrementValue = 1, string[] tags = null)
     {
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
         Partition partition = GetPartition(key);
-        Task pending;
+        Task expiredDeletion = Task.CompletedTask;
+        Task written = Task.CompletedTask;
+        string expiredKey = null;
+        bool created = false;
         HorseCacheItem next;
         lock (partition.Gate)
         {
@@ -500,11 +593,16 @@ public class HorseCache : IDisposable, IAsyncDisposable
             _items.TryGetValue(key, out HorseCacheItem item);
             if (item == null || item.Expiration < DateTime.UtcNow)
             {
-                Task removed = item == null ? Task.CompletedTask : RemoveCurrent(partition, item, true);
+                if (item != null && RemoveCurrent(partition, item, out expiredDeletion))
+                {
+                    expiredKey = item.Key;
+                    ClusterNotifier.SendRemove(expiredKey);
+                }
                 byte[] bytes = BitConverter.GetBytes(incrementValue);
-                CacheOperation operation = SetCore(null, true, key, new MemoryStream(bytes, 0, bytes.Length, false, true), duration, null, tags, false, true, out Task written);
-                next = operation.Item;
-                pending = written.IsCompletedSuccessfully ? removed : Task.WhenAll(removed, written);
+                next = CreateItem(key, new MemoryStream(bytes, 0, bytes.Length, false, true), duration, null, tags, false, PayloadMode.Owned);
+                created = CommitSet(partition, key, next, true, out written) == CacheResult.Ok;
+                if (!created)
+                    next = null;
             }
             else
             {
@@ -520,12 +618,22 @@ public class HorseCache : IDisposable, IAsyncDisposable
                 item.MetadataChanged = null;
                 _items[key] = next;
                 partition.Expirations.Set(next);
-                pending = next.IsPersistent ? _persistence.Write(next) : Task.CompletedTask;
+                if (next.IsPersistent)
+                    written = _persistence.WriteAsync(next);
                 ClusterNotifier.SendSet(next);
             }
         }
-        pending.GetAwaiter().GetResult();
-        return new GetCacheItemResult(false, next);
+
+        if (expiredKey != null)
+            RemoveEvent.Trigger((MessagingClient)null, expiredKey);
+        if (created)
+            SetEvent.Trigger((MessagingClient)null, key);
+
+        GetCacheItemResult result = new GetCacheItemResult(false, next);
+        Task persistence = written.IsCompletedSuccessfully ? expiredDeletion
+            : expiredDeletion.IsCompletedSuccessfully ? written
+            : Task.WhenAll(expiredDeletion, written);
+        return persistence.IsCompletedSuccessfully ? new ValueTask<GetCacheItemResult>(result) : AwaitPersistence(result, persistence);
     }
 
     private static int ReadInteger(MemoryStream value)
@@ -537,33 +645,49 @@ public class HorseCache : IDisposable, IAsyncDisposable
     }
 
     /// <summary>Removes an entry and waits for its persistent deletion.</summary>
-    public void Remove(string key) => Remove(null, key, true);
+    public void Remove(string key) => Wait(RemoveCore(null, key, true));
 
-    internal void Remove(MessagingClient client, string key, bool notifyCluster)
+    /// <summary>
+    /// Removes an entry without blocking on persistent IO. The entry is gone
+    /// before this returns; the task completes when its file is deleted.
+    /// </summary>
+    public Task RemoveAsync(string key) => RemoveCore(null, key, true);
+
+    internal Task RemoveAsync(MessagingClient client, string key, bool notifyCluster) => RemoveCore(client, key, notifyCluster);
+
+    private Task RemoveCore(MessagingClient client, string key, bool notifyCluster)
     {
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
         Partition partition = GetPartition(key);
-        Task pending = Task.CompletedTask;
+        Task persistence = Task.CompletedTask;
         lock (partition.Gate)
         {
             ObjectDisposedException.ThrowIf(_disposed != 0, this);
             if (_items.TryGetValue(key, out HorseCacheItem item))
-                pending = RemoveCurrent(partition, item);
-            RemoveEvent.Trigger(client, key);
+                RemoveCurrent(partition, item, out persistence);
             if (notifyCluster)
                 ClusterNotifier.SendRemove(key);
         }
-        pending.GetAwaiter().GetResult();
+        RemoveEvent.Trigger(client, key);
+        return persistence;
     }
 
-    /// <summary>Purges entries bearing a tag using the tag index.</summary>
-    public void PurgeByTag(string tagName) => PurgeByTag(tagName, null, true);
+    /// <summary>Purges entries bearing a tag using the tag index, waiting for persistent deletions.</summary>
+    public void PurgeByTag(string tagName) => Wait(PurgeByTagCore(tagName, null, true));
 
-    internal void PurgeByTag(string tagName, MessagingClient client, bool notifyCluster)
+    /// <summary>
+    /// Purges entries bearing a tag without blocking on persistent IO. The entries
+    /// are gone before this returns; the task completes when their files are deleted.
+    /// </summary>
+    public Task PurgeByTagAsync(string tagName) => PurgeByTagCore(tagName, null, true);
+
+    internal Task PurgeByTagAsync(string tagName, MessagingClient client, bool notifyCluster) => PurgeByTagCore(tagName, client, notifyCluster);
+
+    private Task PurgeByTagCore(string tagName, MessagingClient client, bool notifyCluster)
     {
         ArgumentNullException.ThrowIfNull(tagName);
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
-        List<Task> pending = new();
+        List<Task> pending = null;
         foreach (Partition partition in _partitions)
         {
             lock (partition.Gate)
@@ -574,28 +698,32 @@ public class HorseCache : IDisposable, IAsyncDisposable
                 string[] keys = new string[indexed.Count];
                 indexed.CopyTo(keys);
                 foreach (string key in keys)
-                    if (_items.TryGetValue(key, out HorseCacheItem item))
-                    {
-                        Task task = RemoveCurrent(partition, item);
-                        if (!task.IsCompletedSuccessfully)
-                            pending.Add(task);
-                    }
+                    if (_items.TryGetValue(key, out HorseCacheItem item) &&
+                        RemoveCurrent(partition, item, out Task persistence) && !persistence.IsCompletedSuccessfully)
+                        (pending ??= new List<Task>()).Add(persistence);
             }
         }
         PurgeEvent.Trigger(client);
         if (notifyCluster)
             ClusterNotifier.SendPurge(tagName);
-        if (pending.Count > 0)
-            Task.WhenAll(pending).GetAwaiter().GetResult();
+        return pending == null ? Task.CompletedTask : Task.WhenAll(pending);
     }
 
-    /// <summary>Purges all entries and persistent files.</summary>
-    public void Purge() => Purge(null, true);
+    /// <summary>Purges all entries and waits for persistent files to be deleted.</summary>
+    public void Purge() => Wait(PurgeCore(null, true));
 
-    internal void Purge(MessagingClient client, bool notifyCluster)
+    /// <summary>
+    /// Purges all entries without blocking on persistent IO. The entries are gone
+    /// before this returns; the task completes when the files are deleted.
+    /// </summary>
+    public Task PurgeAsync() => PurgeCore(null, true);
+
+    internal Task PurgeAsync(MessagingClient client, bool notifyCluster) => PurgeCore(client, notifyCluster);
+
+    private Task PurgeCore(MessagingClient client, bool notifyCluster)
     {
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
-        Task pending;
+        Task persistence;
         foreach (Partition partition in _partitions)
             Monitor.Enter(partition.Gate);
         try
@@ -610,8 +738,8 @@ public class HorseCache : IDisposable, IAsyncDisposable
                 partition.Expirations.Clear();
                 partition.Tags.Clear();
             }
-            pending = _persistence?.PurgeAsync() ?? Task.CompletedTask;
-            PurgeEvent.Trigger(client);
+            persistence = _persistence?.PurgeAsync() ?? Task.CompletedTask;
+            // Sent under the gates so replicas apply the purge before any later write.
             if (notifyCluster)
                 ClusterNotifier.SendPurge(null);
         }
@@ -620,7 +748,8 @@ public class HorseCache : IDisposable, IAsyncDisposable
             for (int i = _partitions.Length - 1; i >= 0; i--)
                 Monitor.Exit(_partitions[i].Gate);
         }
-        pending.GetAwaiter().GetResult();
+        PurgeEvent.Trigger(client);
+        return persistence;
     }
 
     private void LoadPersistentItems()

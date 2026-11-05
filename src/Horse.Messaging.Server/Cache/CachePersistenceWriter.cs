@@ -49,37 +49,12 @@ internal sealed class CachePersistenceWriter : IAsyncDisposable
         _atomicWrites = atomicWrites;
     }
 
+    /// <summary>
+    /// Queues a write. Callers admit it under the key's partition gate, which
+    /// fixes the per-key order, and wait for the returned task after releasing it.
+    /// </summary>
     internal Task WriteAsync(HorseCacheItem item)
         => Enqueue(CreateWrite(item));
-
-    /// <summary>
-    /// Avoids a ThreadPool round trip for synchronous callers when the writer
-    /// is idle. Concurrent mutations still enter the ordered bounded queue.
-    /// </summary>
-    internal Task Write(HorseCacheItem item)
-    {
-        Request request = CreateWrite(item);
-        lock (_admissionGate)
-        {
-            if (_disposed != 0)
-                return Task.FromException(new ObjectDisposedException(nameof(CachePersistenceWriter)));
-
-            if (!_admissionTail.IsCompleted || _requests.Reader.TryPeek(out _) || Interlocked.CompareExchange(ref _processing, 1, 0) != 0)
-                return Enqueue(request);
-
-            Interlocked.Increment(ref _workers);
-        }
-
-        try
-        {
-            ProcessSingleWrite(request);
-        }
-        finally
-        {
-            FinishWorker();
-        }
-        return request.Completion.Task;
-    }
 
     private static Request CreateWrite(HorseCacheItem item)
     {

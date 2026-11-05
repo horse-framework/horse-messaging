@@ -15,14 +15,14 @@ namespace Test.Cache;
 public class CachePersistenceWriterTest
 {
     [Fact]
-    public async Task DirectFileMode_PreservesFormatAndOrdersSynchronousAndQueuedMutations()
+    public async Task DirectFileMode_PreservesFormatAndOrdersQueuedMutations()
     {
         await using WriterScope scope = new(false);
         HorseCacheItem first = Item("same", "first");
         first.Tags = ["tag"];
         first.ExpirationWarning = first.Expiration.AddMinutes(-1);
         first.ExpirationWarnCount = 3;
-        await scope.WriteSynchronously(first);
+        await scope.Write(first);
         StoredValue initial = Read(scope.Filename("same"));
         Assert.Equal("first", initial.Payload);
         Assert.Equal(["tag"], initial.Tags);
@@ -32,35 +32,22 @@ public class CachePersistenceWriterTest
         using BlockingStream gate = new();
         Task older = scope.Write(Item("same", gate));
         await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        Task synchronous = scope.WriteSynchronously(Item("same", "middle"));
+        Task middle = scope.Write(Item("same", "middle"));
         Task delete = scope.Delete("same");
         Task last = scope.Write(Item("same", "last"));
         gate.Release.Set();
-        await Task.WhenAll(older, synchronous, delete, last).WaitAsync(TimeSpan.FromSeconds(10));
+        await Task.WhenAll(older, middle, delete, last).WaitAsync(TimeSpan.FromSeconds(10));
 
         Assert.Equal("last", Read(scope.Filename("same")).Payload);
         Assert.Equal(["same.hci"], Directory.GetFiles(scope.DirectoryPath).Select(Path.GetFileName).ToArray());
     }
 
     [Fact]
-    public async Task SynchronousWrite_WhenIdle_CompletesOnCallingThread()
-    {
-        await using WriterScope scope = new();
-        int caller = Environment.CurrentManagedThreadId;
-        int writer = -1;
-        Task write = scope.WriteSynchronously(Item("inline", new CountingStream("value", () => writer = Environment.CurrentManagedThreadId)));
-
-        Assert.True(write.IsCompletedSuccessfully);
-        Assert.Equal(caller, writer);
-        Assert.Equal("value", Read(scope.Filename("inline")).Payload);
-    }
-
-    [Fact]
-    public async Task SynchronousWrite_DoesNotHoldAdmissionGateDuringIOAndHandsOffQueuedBarriers()
+    public async Task InFlightWrite_HoldsQueuedBarriersInSubmissionOrder()
     {
         await using WriterScope scope = new();
         using BlockingStream gate = new();
-        Task direct = Task.Run(() => scope.WriteSynchronously(Item("same", gate)));
+        Task inFlight = scope.Write(Item("same", gate));
         await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
 
         Task[] operations = await Task.Run(() => new[]
@@ -74,28 +61,11 @@ public class CachePersistenceWriterTest
         Assert.All(operations, operation => Assert.False(operation.IsCompleted));
 
         gate.Release.Set();
-        await direct.WaitAsync(TimeSpan.FromSeconds(10));
+        await inFlight.WaitAsync(TimeSpan.FromSeconds(10));
         await Task.WhenAll(operations).WaitAsync(TimeSpan.FromSeconds(10));
 
         Assert.Equal(["after-purge.hci"], Directory.GetFiles(scope.DirectoryPath).Select(Path.GetFileName).ToArray());
         Assert.Equal("last", Read(scope.Filename("after-purge")).Payload);
-    }
-
-    [Fact]
-    public async Task SynchronousWrite_WhenBusy_QueuesBehindOlderOperations()
-    {
-        await using WriterScope scope = new();
-        using BlockingStream gate = new();
-        Task older = scope.Write(Item("same", gate));
-        await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        Task direct = scope.WriteSynchronously(Item("same", "middle"));
-        Task delete = scope.Delete("same");
-        Task newest = scope.Write(Item("same", "newest"));
-
-        Assert.False(direct.IsCompleted);
-        gate.Release.Set();
-        await Task.WhenAll(older, direct, delete, newest).WaitAsync(TimeSpan.FromSeconds(10));
-        Assert.Equal("newest", Read(scope.Filename("same")).Payload);
     }
 
     [Fact]
@@ -368,7 +338,6 @@ public class CachePersistenceWriterTest
 
         internal string Filename(string key) => Path.Combine(DirectoryPath, key + ".hci");
         internal Task Write(HorseCacheItem item) => Invoke("WriteAsync", item);
-        internal Task WriteSynchronously(HorseCacheItem item) => Invoke("Write", item);
         internal Task Delete(string key) => Invoke("DeleteAsync", key);
         internal Task Purge() => Invoke("PurgeAsync");
         internal Task Flush() => Invoke("FlushAsync");
