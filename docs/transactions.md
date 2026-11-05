@@ -110,7 +110,9 @@ The pushed message is a new message built from the begin message:
 | Headers | Custom headers of the begin message |
 | Source | The client that began the transaction |
 
-Headers that change queue behavior (`Queue-Type`, `Queue-Manager`, `Acknowledge`, `Message-Timeout`, `Client-Limit`, partition headers, `CC` and similar) are not copied. A client cannot change the queue through its transaction.
+Headers that change queue behavior (`Queue-Type`, `Queue-Manager`, `Acknowledge`, `Message-Timeout`, `Client-Limit`, `Partition-Limit`, `Partition-Subscribers`, `CC` and similar) are not copied. A client cannot change the queue through its transaction.
+
+`Partition-Label` is copied. If the endpoint queue is partitioned, the message is routed to the partition of the label the client set on the begin message, like a normal push with a label.
 
 #### Custom Endpoints
 

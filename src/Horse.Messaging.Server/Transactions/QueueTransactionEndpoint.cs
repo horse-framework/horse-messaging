@@ -15,6 +15,7 @@ namespace Horse.Messaging.Server.Transactions;
 /// A new message is pushed for each transaction. Its message id is the transaction id,
 /// it has the Transaction-Id header, and it carries the content and the custom headers
 /// of the begin message. Headers that change queue behaviour are not carried.
+/// Partition-Label is carried, so messages sent to a partitioned queue are routed by the client's label.
 /// </remarks>
 public class QueueTransactionEndpoint : IServerTransactionEndpoint
 {
@@ -41,7 +42,6 @@ public class QueueTransactionEndpoint : IServerTransactionEndpoint
         HorseHeaders.AUTO_DESTROY,
         HorseHeaders.MESSAGE_SIZE_LIMIT,
         HorseHeaders.CC,
-        HorseHeaders.PARTITION_LABEL,
         HorseHeaders.PARTITION_ID,
         HorseHeaders.PARTITION_LIMIT,
         HorseHeaders.PARTITION_SUBSCRIBERS

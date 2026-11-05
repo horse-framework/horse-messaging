@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Queues.Partitions;
 using Horse.Messaging.Server.Transactions;
 using Test.Transactions.Core;
 using Xunit;
@@ -180,5 +183,35 @@ public class TransactionClientTest
         Assert.Equal("payload", message.GetStringContent());
 
         Assert.Equal(1, server.Rider.Queue.Find("tx-commit").Info.ReceivedMessages);
+    }
+
+    [Fact]
+    public async Task QueueEndpoint_RoutesToPartitionByLabel()
+    {
+        await using TransactionTestServer server = await TransactionTestServer.Start();
+        HorseQueue partitioned = await server.Rider.Queue.Create("tx-partitioned", o =>
+        {
+            o.Partition = new PartitionOptions { Enabled = true, MaxPartitionCount = 0, SubscribersPerPartition = 1 };
+        });
+
+        server.Rider.Transaction.CreateContainer("tx", TimeSpan.FromSeconds(30),
+            new QueueTransactionEndpoint(partitioned),
+            new RecordingEndpoint($"rollback-{Guid.NewGuid():N}"));
+
+        HorseClient client = await server.Connect();
+        string transactionId = Guid.NewGuid().ToString("N");
+
+        HorseMessage begin = new HorseMessage(MessageType.Transaction, "tx", KnownContentTypes.TransactionBegin);
+        begin.AddHeader(HorseHeaders.TRANSACTION_ID, transactionId);
+        begin.AddHeader(HorseHeaders.PARTITION_LABEL, "tenant-a");
+        begin.SetStringContent("payload");
+        HorseMessage response = await client.Request(begin, CancellationToken.None);
+        Assert.Equal(HorseResultCode.Ok, (HorseResultCode) response.ContentType);
+
+        Assert.Equal(HorseResultCode.Ok, await Raw.Send(client, "tx", KnownContentTypes.TransactionCommit, transactionId));
+
+        PartitionEntry entry = partitioned.PartitionManager.Partitions.SingleOrDefault(x => x.Label == "tenant-a");
+        Assert.NotNull(entry);
+        Assert.Equal(1, entry.Queue.Info.ReceivedMessages);
     }
 }
