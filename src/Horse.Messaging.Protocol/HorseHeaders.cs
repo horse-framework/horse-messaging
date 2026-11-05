@@ -211,6 +211,16 @@ public class HorseHeaders
     public const string FILTER = "Filter";
 
     /// <summary>
+    /// "Cache-Offset" — Number of matching cache entries to skip when listing.
+    /// </summary>
+    public const string CACHE_OFFSET = "Cache-Offset";
+
+    /// <summary>
+    /// "Cache-Limit" — Maximum matching cache entries to return; zero means unlimited.
+    /// </summary>
+    public const string CACHE_LIMIT = "Cache-Limit";
+
+    /// <summary>
     /// "Put-Back"
     /// </summary>
     public const string PUT_BACK = "Put-Back";

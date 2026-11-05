@@ -6,19 +6,22 @@ internal class Filter
 {
     public static bool CheckMatch(string value, string filter)
     {
-        bool jstart = filter.StartsWith('*');
-        bool jend = filter.EndsWith('*');
+        ReadOnlySpan<char> pattern = filter.AsSpan();
+        if (pattern.Length == 1 && pattern[0] == '*')
+            return true;
+        bool jstart = pattern.Length > 0 && pattern[0] == '*';
+        bool jend = pattern.Length > 0 && pattern[^1] == '*';
 
         if (jstart && jend)
-            return value.Contains(filter.Substring(1, filter.Length - 2), StringComparison.OrdinalIgnoreCase);
+            return value.AsSpan().Contains(pattern[1..^1], StringComparison.OrdinalIgnoreCase);
 
         if (jstart)
-            return value.EndsWith(filter.Substring(1), StringComparison.OrdinalIgnoreCase);
+            return value.AsSpan().EndsWith(pattern[1..], StringComparison.OrdinalIgnoreCase);
 
         if (jend)
-            return value.StartsWith(filter.Substring(0, filter.Length - 1), StringComparison.OrdinalIgnoreCase);
+            return value.AsSpan().StartsWith(pattern[..^1], StringComparison.OrdinalIgnoreCase);
 
-        return value.Equals(filter, StringComparison.OrdinalIgnoreCase);
+        return value.AsSpan().Equals(pattern, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

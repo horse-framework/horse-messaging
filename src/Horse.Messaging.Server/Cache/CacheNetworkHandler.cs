@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Globalization;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Models;
 using Horse.Messaging.Server.Clients;
-using Horse.Messaging.Server.Helpers;
 using Horse.Messaging.Server.Network;
 
 namespace Horse.Messaging.Server.Cache;
@@ -21,22 +20,20 @@ internal class CacheNetworkHandler : INetworkMessageHandler
         _cache = rider.Cache;
     }
 
-    public Task Handle(MessagingClient client, HorseMessage message, bool fromNode)
+    public async Task Handle(MessagingClient client, HorseMessage message, bool fromNode)
     {
         try
         {
-            return HandleUnsafe(client, message);
+            await HandleUnsafe(client, message);
         }
         catch (OperationCanceledException)
         {
-            _ = client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
+            await client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
         }
         catch
         {
-            _ = client.SendAsync(message.CreateResponse(HorseResultCode.Failed));
+            await client.SendAsync(message.CreateResponse(HorseResultCode.Failed));
         }
-
-        return Task.CompletedTask;
     }
 
     private async Task HandleUnsafe(MessagingClient client, HorseMessage message)
@@ -55,8 +52,7 @@ internal class CacheNetworkHandler : INetworkMessageHandler
                     }
                 }
 
-                GetCacheItemResult result = await _cache.Get(message.Target);
-                if (result?.Item == null)
+                if (!_cache.TryGet(message.Target, out var result))
                 {
                     await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
                     return;
@@ -66,17 +62,7 @@ internal class CacheNetworkHandler : INetworkMessageHandler
                 HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
                 response.SetSource(message.Target);
 
-                if (item.Tags != null && item.Tags.Length > 0)
-                    response.AddHeader(HorseHeaders.TAG, item.Tags.Aggregate((t, i) => $"{t},{i}"));
-
-                response.AddHeader(HorseHeaders.EXPIRY, item.Expiration.ToUnixSeconds().ToString());
-
-                if (item.ExpirationWarning.HasValue)
-                {
-                    response.AddHeader(HorseHeaders.WARNING, item.ExpirationWarning.Value.ToUnixSeconds().ToString());
-                    if (item.ExpirationWarnCount > 0)
-                        response.AddHeader(HorseHeaders.WARN_COUNT, item.ExpirationWarnCount.ToString());
-                }
+                AddItemHeaders(response, item);
 
                 client.Stats.CacheGets++;
                 response.HighPriority = result.IsFirstWarningReceiver;
@@ -104,7 +90,7 @@ internal class CacheNetworkHandler : INetworkMessageHandler
                 string persistentCache = message.FindHeader(HorseHeaders.PERSISTENT_CACHE);
                 string tags = message.FindHeader(HorseHeaders.TAG);
 
-                string[] tagNames = string.IsNullOrEmpty(tags) ? [] : tags.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
+                string[] tagNames = string.IsNullOrEmpty(tags) ? [] : tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
                 TimeSpan timeout = TimeSpan.Zero;
                 TimeSpan? warning = null;
@@ -119,7 +105,7 @@ internal class CacheNetworkHandler : INetworkMessageHandler
                 if (!string.IsNullOrEmpty(persistentCache))
                     persistent = string.Equals(persistentCache, "1") || string.Equals(persistentCache, "true", StringComparison.OrdinalIgnoreCase);
 
-                CacheOperation operation = _cache.Set(client, !client.IsNodeClient, message.Target, message.Content, timeout, warning, tagNames, persistent);
+                CacheOperation operation = await _cache.SetAsync(client, !client.IsNodeClient, message.Target, message.Content, timeout, warning, tagNames, persistent);
                 switch (operation.Result)
                 {
                     case CacheResult.Ok:
@@ -160,29 +146,24 @@ internal class CacheNetworkHandler : INetworkMessageHandler
                 string incrementalValue = message.FindHeader(HorseHeaders.VALUE);
                 int increment = string.IsNullOrEmpty(incrementalValue) ? 1 : Convert.ToInt32(incrementalValue);
                 string tags = message.FindHeader(HorseHeaders.TAG);
-                string[] tagNames = string.IsNullOrEmpty(tags) ? Array.Empty<string>() : tags.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
+                string[] tagNames = string.IsNullOrEmpty(tags) ? Array.Empty<string>() : tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
                 TimeSpan timeout = TimeSpan.Zero;
                 if (!string.IsNullOrEmpty(messageTimeout))
                     timeout = TimeSpan.FromSeconds(Convert.ToInt32(messageTimeout));
 
                 GetCacheItemResult getResult = _cache.GetIncremental(message.Target, timeout, increment, tagNames);
+                if (getResult?.Item == null)
+                {
+                    await client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
+                    return;
+                }
                 HorseCacheItem item = getResult.Item;
 
                 HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
                 response.SetSource(message.Target);
 
-                if (item.Tags != null && item.Tags.Length > 0)
-                    response.AddHeader(HorseHeaders.TAG, item.Tags.Aggregate((t, i) => $"{t},{i}"));
-
-                response.AddHeader(HorseHeaders.EXPIRY, item.Expiration.ToUnixSeconds().ToString());
-
-                if (item.ExpirationWarning.HasValue)
-                {
-                    response.AddHeader(HorseHeaders.WARNING, item.ExpirationWarning.Value.ToUnixSeconds().ToString());
-                    if (item.ExpirationWarnCount > 0)
-                        response.AddHeader(HorseHeaders.WARN_COUNT, item.ExpirationWarnCount.ToString());
-                }
+                AddItemHeaders(response, item);
 
                 client.Stats.CacheGets++;
                 response.HighPriority = getResult.IsFirstWarningReceiver;
@@ -236,17 +217,55 @@ internal class CacheNetworkHandler : INetworkMessageHandler
             case KnownContentTypes.GetCacheList:
             {
                 string filter = message.FindHeader(HorseHeaders.FILTER);
-                List<CacheInformation> caches = _cache.GetCacheKeys();
-
-                if (!string.IsNullOrEmpty(filter))
-                    caches = caches.Where(x => Filter.CheckMatch(x.Key, filter)).ToList();
+                int offset = ReadPageValue(message, HorseHeaders.CACHE_OFFSET);
+                int limit = ReadPageValue(message, HorseHeaders.CACHE_LIMIT);
+                ICacheAuthorization[] authorizations = _cache.Authorizations.All();
+                List<CacheInformation> caches = authorizations.Length == 0
+                    ? _cache.GetCacheKeys(filter, offset, limit)
+                    : _cache.GetCacheKeys(filter, offset, limit, key =>
+                    {
+                        foreach (ICacheAuthorization authorization in authorizations)
+                            if (!authorization.CanGet(client, key))
+                                return false;
+                        return true;
+                    });
 
                 HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
                 response.ContentType = KnownContentTypes.ChannelList;
+                if (offset > 0 || limit > 0)
+                {
+                    response.AddHeader(HorseHeaders.CACHE_OFFSET, offset.ToString(CultureInfo.InvariantCulture));
+                    response.AddHeader(HorseHeaders.CACHE_LIMIT, limit.ToString(CultureInfo.InvariantCulture));
+                }
                 response.Serialize(caches, _rider.MessageContentSerializer);
                 await client.SendAsync(response);
                 return;
             }
         }
+    }
+
+    private static void AddItemHeaders(HorseMessage response, HorseCacheItem item)
+    {
+        if (item.TagHeader != null)
+            response.AddHeader(HorseHeaders.TAG, item.TagHeader);
+
+        response.AddHeader(HorseHeaders.EXPIRY, item.ExpirationHeader);
+
+        if (item.WarningHeader != null)
+        {
+            response.AddHeader(HorseHeaders.WARNING, item.WarningHeader);
+            if (item.ExpirationWarnCount > 0)
+                response.AddHeader(HorseHeaders.WARN_COUNT, item.ExpirationWarnCount.ToString(CultureInfo.InvariantCulture));
+        }
+    }
+
+    private static int ReadPageValue(HorseMessage message, string header)
+    {
+        string value = message.FindHeader(header);
+        if (string.IsNullOrEmpty(value))
+            return 0;
+        if (!int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out int result))
+            throw new ArgumentException("Cache paging values must be non-negative integers.", header);
+        return result;
     }
 }

@@ -534,6 +534,7 @@ public class NodeClient
             {
                 string messageTimeout = message.FindHeader(HorseHeaders.MESSAGE_TIMEOUT);
                 string warningDuration = message.FindHeader(HorseHeaders.WARNING_DURATION);
+                string persistentCache = message.FindHeader(HorseHeaders.PERSISTENT_CACHE);
                 string tags = message.FindHeader(HorseHeaders.TAG);
 
                 string[] tagNames = string.IsNullOrEmpty(tags) ? Array.Empty<string>() : tags.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
@@ -547,7 +548,8 @@ public class NodeClient
                 if (!string.IsNullOrEmpty(warningDuration))
                     warning = TimeSpan.FromSeconds(Convert.ToInt32(warningDuration));
 
-                _ = Rider.Cache.Set(null, false, message.Target, message.Content, timeout, warning, tagNames);
+                bool persistent = persistentCache == "1" || string.Equals(persistentCache, "true", StringComparison.OrdinalIgnoreCase);
+                _ = Rider.Cache.Set(null, false, message.Target, message.Content, timeout, warning, tagNames, persistent);
                 break;
             }
 

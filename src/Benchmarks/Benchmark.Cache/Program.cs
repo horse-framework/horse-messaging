@@ -12,6 +12,12 @@ class Program
 {
     static async Task Main(string[] args)
     {
+        if (Array.Exists(args, argument => argument == "--local"))
+        {
+            await LocalCacheBenchmark.Run();
+            return;
+        }
+
         string hostname = "horse://localhost:2626";
 
         Console.ForegroundColor = ConsoleColor.Red;

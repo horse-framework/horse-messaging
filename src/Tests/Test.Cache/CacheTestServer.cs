@@ -91,11 +91,13 @@ internal class CacheTestContext : IAsyncDisposable
         DataPath = dataPath;
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         try
         {
-            Rider.Server.StopAsync();
+            if (Rider.Server.IsRunning)
+                await Rider.Server.StopAsync();
+            await Rider.Cache.DisposeAsync();
             string path = Rider.Options.DataPath;
             if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
                 Directory.Delete(path, true);
@@ -104,8 +106,6 @@ internal class CacheTestContext : IAsyncDisposable
         {
             // best effort cleanup
         }
-
-        return ValueTask.CompletedTask;
     }
 }
 

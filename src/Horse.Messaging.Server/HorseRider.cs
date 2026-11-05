@@ -142,7 +142,11 @@ public class HorseRider
     internal void Initialize()
     {
         if (_initialized)
+        {
+            // A pre-built rider can receive its server after cache initialization.
+            Cache.Initialize();
             return;
+        }
 
         _initialized = true;
 
