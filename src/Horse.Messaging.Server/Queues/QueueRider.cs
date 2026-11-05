@@ -472,9 +472,6 @@ public class QueueRider
             if (!Filter.CheckNameEligibility(queueName))
                 throw new InvalidOperationException("Invalid queue name");
 
-            if (Rider.Options.QueueLimit > 0 && Rider.Options.QueueLimit >= _queues.Count())
-                throw new OperationCanceledException("Queue limit is exceeded for the server");
-
             _queues.TryGetValue(queueName, out HorseQueue queue);
 
             if (queue != null)
@@ -484,6 +481,10 @@ public class QueueRider
 
                 throw new DuplicateNameException($"The server has already a queue with same name: {queueName}");
             }
+
+            //checked after the existence check, so an existing queue is still returned when the server is at its limit
+            if (Rider.Options.QueueLimit > 0 && _queues.Count >= Rider.Options.QueueLimit)
+                throw new OperationCanceledException("Queue limit is exceeded for the server");
 
             bool typeSpecified = false; //when queue is created by subscriber, it will be initialized if type is specified
             if (requestMessage != null)
