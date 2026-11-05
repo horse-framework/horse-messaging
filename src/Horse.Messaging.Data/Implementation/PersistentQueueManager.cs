@@ -260,6 +260,16 @@ public class PersistentQueueManager : IHorseQueueManager
     }
 
     /// <inheritdoc />
+    public async Task FlushToDisk()
+    {
+        await _priorityMessageStore.Database.File.FlushToDisk();
+        await _messageStore.Database.File.FlushToDisk();
+
+        if (UseRedelivery && RedeliveryService != null)
+            await RedeliveryService.Flush();
+    }
+
+    /// <inheritdoc />
     public async Task Flush()
     {
         PriorityMessageStore.TimeoutTracker.Stop();

@@ -1,107 +1,63 @@
 using System;
 using System.Threading;
-using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
 
 namespace Horse.Messaging.Server.Transactions;
 
 /// <summary>
-/// Represents a single transaction in server
+/// Represents a single transaction in server.
+/// A transaction is open until it is committed, rolled back or timed out,
+/// or until its client disconnects (then it is rolled back).
 /// </summary>
 public class ServerTransaction
 {
     /// <summary>
-    /// Unique Transaction Id
+    /// Unique transaction id. It is the value of the Transaction-Id header.
     /// </summary>
     public string Id { get; }
-        
+
     /// <summary>
-    /// Transaction deadline
+    /// Container of the transaction
+    /// </summary>
+    public ServerTransactionContainer Container { get; }
+
+    /// <summary>
+    /// Transaction deadline in UTC
     /// </summary>
     public DateTime Deadline { get; }
 
     /// <summary>
-    /// The message that starts the transaction
+    /// The message that begins the transaction.
+    /// Its content and headers are the payload of the transaction.
     /// </summary>
     public HorseMessage Message { get; }
-        
+
     /// <summary>
-    /// Transaction client
+    /// Owner client of the transaction.
+    /// Only the owner client can commit or roll back the transaction.
     /// </summary>
     public MessagingClient Client { get; }
 
-    internal TaskCompletionSource<ServerTransaction> TimeoutHandler { get; } = new();
-
-    private ServerTransactionStatus _status;
-    private Task _waiterTask;
-    private CancellationTokenSource _waiterCancellation;
+    private int _status = (int) ServerTransactionStatus.Begin;
 
     /// <summary>
-    /// Transaction status
+    /// Transaction status.
+    /// It is Begin while the transaction is open.
+    /// When the transaction is finished, it is the operation that finished it.
     /// </summary>
     public ServerTransactionStatus Status
     {
-        get => _status;
-        internal set
-        {
-            _status = value;
-
-            if (Status == ServerTransactionStatus.None || Status == ServerTransactionStatus.Begin)
-                return;
-
-            if (_waiterTask == null || _waiterCancellation == null || _waiterTask.IsCompleted)
-                return;
-
-            try
-            {
-                TimeoutHandler.SetResult(this);
-                _waiterCancellation.Cancel();
-                _waiterCancellation.Dispose();
-                _waiterTask.Dispose();
-            }
-            catch
-            {
-            }
-        }
+        get => (ServerTransactionStatus) Volatile.Read(ref _status);
+        internal set => Volatile.Write(ref _status, (int) value);
     }
 
-    /// <summary>
-    /// Creates new transaction
-    /// </summary>
-    public ServerTransaction(MessagingClient client, HorseMessage messsage, DateTime deadline)
+    internal ServerTransaction(ServerTransactionContainer container, MessagingClient client, HorseMessage message, string id, DateTime deadline)
     {
+        Container = container;
         Client = client;
-        Message = messsage;
-        Id = messsage.MessageId;
+        Message = message;
+        Id = id;
         Deadline = deadline;
-        Status = ServerTransactionStatus.Begin;
-    }
-
-    internal void Track()
-    {
-        _waiterCancellation = new CancellationTokenSource();
-        _waiterTask = Task.Run(async () =>
-        {
-            try
-            {
-                int milliseconds = Convert.ToInt32((Deadline - DateTime.UtcNow).TotalMilliseconds);
-                    
-                if (milliseconds > 0)
-                    await Task.Delay(milliseconds, _waiterCancellation.Token);
-
-                if (Status == ServerTransactionStatus.Begin)
-                {
-                    _status = ServerTransactionStatus.Rollback;
-                    TimeoutHandler.SetResult(this);
-                }
-
-                _waiterCancellation.Dispose();
-                _waiterTask.Dispose();
-            }
-            catch
-            {
-            }
-        }, _waiterCancellation.Token);
     }
 }

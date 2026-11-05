@@ -2,17 +2,13 @@ using System;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Network;
 
 namespace Horse.Messaging.Server.Transactions;
 
 internal class TransactionMessageHandler : INetworkMessageHandler
 {
-    #region Fields
-
-    /// <summary>
-    /// Messaging Queue Server
-    /// </summary>
     private readonly HorseRider _rider;
 
     internal TransactionMessageHandler(HorseRider rider)
@@ -20,39 +16,27 @@ internal class TransactionMessageHandler : INetworkMessageHandler
         _rider = rider;
     }
 
-    #endregion
-
     public async Task Handle(MessagingClient client, HorseMessage message, bool fromNode)
     {
+        HorseResultCode code;
+
         try
         {
-            await HandleUnsafe(client, message);
+            code = message.ContentType switch
+            {
+                KnownContentTypes.TransactionBegin => await _rider.Transaction.Begin(client, message),
+                KnownContentTypes.TransactionCommit => await _rider.Transaction.Finish(client, message, ServerTransactionStatus.Commit),
+                KnownContentTypes.TransactionRollback => await _rider.Transaction.Finish(client, message, ServerTransactionStatus.Rollback),
+                _ => HorseResultCode.BadRequest
+            };
         }
-        catch (OperationCanceledException)
+        catch (Exception e)
         {
-            await client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
+            _rider.SendError(HorseLogLevel.Error, HorseLogEvents.TransactionRequest, $"Transaction request failed: {message.Target}", e);
+            code = HorseResultCode.Failed;
         }
-        catch
-        {
-            await client.SendAsync(message.CreateResponse(HorseResultCode.Failed));
-        }
-    }
 
-    private Task<bool> HandleUnsafe(MessagingClient client, HorseMessage message)
-    {
-        switch (message.ContentType)
-        {
-            case KnownContentTypes.TransactionBegin:
-                return _rider.Transaction.Begin(client, message);
-
-            case KnownContentTypes.TransactionCommit:
-                return _rider.Transaction.Commit(client, message);
-
-            case KnownContentTypes.TransactionRollback:
-                return _rider.Transaction.Rollback(client, message);
-
-            default:
-                throw new OperationCanceledException();
-        }
+        if (message.WaitResponse && !string.IsNullOrEmpty(message.MessageId))
+            await client.SendAsync(message.CreateResponse(code));
     }
 }

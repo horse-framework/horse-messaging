@@ -16,7 +16,10 @@ public interface IServerTransactionEndpoint
     public string InitParameter { get; }
 
     /// <summary>
-    /// Sends message for transaction to the endpoint 
+    /// Sends the transaction to the endpoint.
+    /// Returns true if the transaction is delivered.
+    /// A transaction is sent to the same endpoint at most once.
+    /// Exceptions are treated as failed delivery.
     /// </summary>
     Task<bool> Send(ServerTransaction transaction);
 }
