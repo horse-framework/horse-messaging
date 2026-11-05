@@ -390,4 +390,10 @@ public class HorseHeaders
     /// </summary>
     public const string PARTITION_SUBSCRIBERS = "Partition-Subscribers";
 
+    /// <summary>
+    /// "Transaction-Id" — Id of the transaction a transaction message (begin, commit, rollback) belongs to.
+    /// It is also added to the messages that are sent to transaction endpoints.
+    /// </summary>
+    public const string TRANSACTION_ID = "Transaction-Id";
+
 }

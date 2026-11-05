@@ -347,6 +347,16 @@ public class QueueRider
                 continue;
             }
 
+            //transactions are rolled back first, their rollback messages are pushed into queues
+            //and queues reject pushes after their shutdown begins
+            try
+            {
+                rider.Rider.Transaction.ShutdownAsync().GetAwaiter().GetResult();
+            }
+            catch
+            {
+            }
+
             try
             {
                 rider.BeginShutdownAsync().GetAwaiter().GetResult();

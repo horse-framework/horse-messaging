@@ -3,43 +3,47 @@ using System.Threading.Tasks;
 namespace Horse.Messaging.Server.Transactions;
 
 /// <summary>
-/// Custom transaction handler implementation
+/// Custom transaction handler implementation.
+/// Except CanCreate, all methods are notifications.
+/// Exceptions thrown by notifications are logged and do not change the result of the operation.
 /// </summary>
 public interface IServerTransactionHandler
 {
     /// <summary>
-    /// Called when a transaction container created and being loaded
-    /// </summary>
-    Task Load(ServerTransactionContainer container);
-
-    /// <summary>
-    /// Called when the container is destroyed
-    /// </summary>
-    Task Destroy(ServerTransactionContainer container);
-
-    /// <summary>
-    /// Authentication implementation for transactions.
-    /// Before a transaction has started, that method is called
+    /// Called before a transaction begins.
+    /// If it returns false, the transaction is not created and the client receives Unauthorized.
     /// </summary>
     Task<bool> CanCreate(ServerTransaction transaction);
 
     /// <summary>
-    /// Tansaction commit implementation
+    /// Called after the transaction is delivered to the commit endpoint
     /// </summary>
     Task Commit(ServerTransaction transaction);
 
     /// <summary>
-    /// Transaction rollback implementation
+    /// Called after the transaction is delivered to the rollback endpoint.
+    /// The rollback may be requested by the client or done by the server
+    /// (client disconnect, server shutdown, container delete or failed commit/timeout delivery).
     /// </summary>
     Task Rollback(ServerTransaction transaction);
 
     /// <summary>
-    /// Executed when a transaction is timed out
+    /// Called after a timed out transaction is delivered to the timeout endpoint
+    /// (or to the rollback endpoint if the container has no timeout endpoint)
     /// </summary>
     Task Timeout(ServerTransaction transaction);
 
     /// <summary>
-    /// Executed when a transaction is timed out, but sending the message to timeout endpoint is failed
+    /// Called when sending a finished transaction to an endpoint fails.
+    /// If commit or timeout delivery fails, the transaction is rolled back after this call.
     /// </summary>
-    Task TimeoutSendFailed(ServerTransaction transaction, IServerTransactionEndpoint timeoutEndpoint);
+    /// <param name="transaction">The transaction</param>
+    /// <param name="operation">The operation that could not be delivered</param>
+    /// <param name="endpoint">The endpoint that failed</param>
+    Task SendFailed(ServerTransaction transaction, ServerTransactionStatus operation, IServerTransactionEndpoint endpoint);
+
+    /// <summary>
+    /// Called after the container is deleted and its open transactions are rolled back
+    /// </summary>
+    Task Destroy(ServerTransactionContainer container);
 }

@@ -47,7 +47,7 @@ public class AdvancedSampleHostedService : IHostedService
     {
         HorseRider rider = _riderBuilder.Build();
         rider.ConfigureServiceRoutes();
-        rider.Transaction.CreateContainer("test", TimeSpan.FromSeconds(30),
+        rider.Transaction.CreateOrUpdateContainer("test", TimeSpan.FromSeconds(30),
             new QueueTransactionEndpoint(rider.Queue, "CommitQueue"),
             new QueueTransactionEndpoint(rider.Queue, "RollbackQueue"),
             new QueueTransactionEndpoint(rider.Queue, "TimeoutQueue"));

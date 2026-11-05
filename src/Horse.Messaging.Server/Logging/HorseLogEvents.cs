@@ -36,6 +36,11 @@ internal static class HorseLogEvents
     internal const int PluginHandlerExecution = 503;
 
     internal const int SaveTransactionContainer = 601;
+    internal const int LoadTransactionContainer = 602;
+    internal const int TransactionEndpointSend = 603;
+    internal const int TransactionHandler = 604;
+    internal const int TransactionFinish = 605;
+    internal const int TransactionRequest = 606;
 
     internal const int LoadPersistentCache = 701;
     

@@ -54,7 +54,7 @@ namespace Sample.Server
 
             /*
 
-            rider.Transaction.CreateContainer("TransactionName",
+            rider.Transaction.CreateOrUpdateContainer("TransactionName",
                 TimeSpan.FromSeconds(30),
                 new QueueTransactionEndpoint(rider.Queue, "CommitQueue"),
                 new QueueTransactionEndpoint(rider.Queue, "RollbackQueue"),

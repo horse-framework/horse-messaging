@@ -87,18 +87,19 @@ Built-in distributed key-value cache. Clients can set, get, and remove cache ent
   - Listing Cache Keys (with filter)
   - Persistent Cache Entries
 
-## 6. Transactions
+## 6. [Transactions](transactions.md)
 
-Server-side distributed transactions. A client begins a transaction, performs operations, and then commits or rolls back. The server tracks transaction state and can auto-timeout.
+Server-side transactions. A client begins a transaction with a payload and later commits or rolls it back. The server delivers the payload to the commit, rollback or timeout endpoint. Each transaction finishes exactly once; it is rolled back when its client disconnects or the server shuts down.
 
-- Transaction Lifecycle (Begin, Commit, Rollback, Timeout)
-- Transaction Status (None, Begin, Commit, Rollback, Timeout)
+- Transaction Lifecycle (Begin, Commit, Rollback, Timeout, Disconnect, Shutdown)
+- Server Configuration (`TransactionRider`, `CreateContainer`, `CreateOrUpdateContainer`)
+- Container Persistence (`transactions.json`)
 - Server-Side Endpoints (`IServerTransactionEndpoint`, `QueueTransactionEndpoint`)
 - Server-Side Handlers (`IServerTransactionHandler`)
-- Server Configuration (`TransactionRider`)
 - Client-Side API (`HorseTransaction`)
-  - Begin, Commit, Rollback
-  - Auto-Dispose on Rollback
+  - Begin, Commit, Rollback, `TransactionResult`
+  - `Dispose` / `DisposeAsync`
+- Protocol (`Transaction-Id` header, result codes)
 
 ## 7. Client Management
 
