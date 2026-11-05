@@ -37,6 +37,12 @@ public class QueueMessage
     public bool IsSaved { get; internal set; }
 
     /// <summary>
+    /// True, if the message is accepted while queues are shutting down.
+    /// Used for transaction messages, so open transactions can be rolled back during shutdown.
+    /// </summary>
+    internal bool AllowDuringShutdown { get; set; }
+
+    /// <summary>
     /// True, if producer received ack
     /// </summary>
     public bool IsProducerAckSent { get; internal set; }

@@ -157,17 +157,26 @@ The deadline of a transaction is set when it begins (`now + container timeout`).
 
 ### Shutdown
 
-When shutdown starts, the transaction rider rejects new begin, commit and rollback requests with `Busy` and rolls back all open transactions.
+On process exit and termination signals (SIGTERM, SIGINT), the server shuts down in this order:
 
-- On process exit and termination signals (SIGTERM, SIGINT), this happens automatically, before queues stop accepting messages.
-- When the server is stopped by code, call `ShutdownAsync` before stopping it:
+1. Queues stop accepting pushes and deliveries. Transaction requests are rejected with `Busy`. Timeout checks stop.
+2. Queues are flushed to disk. The stores stay open.
+3. Open transactions are rolled back. The server also waits for the commits and rollbacks that are already in progress, whoever started them (client requests, client disconnects, timeouts). Transaction messages are the only pushes queues accept during shutdown. This step waits at most 15 seconds (`TransactionRider.DefaultShutdownTimeout`). Deliveries that do not finish in time are logged and the shutdown continues.
+4. Queues are flushed again and closed, so the rollback messages are saved too.
+
+Everything that was in the queues when shutdown started is on disk before any rollback runs. If the process is killed early (for example, the container runtime's stop timeout expires), only rollback messages can be lost. A slow or hanging endpoint cannot block the queue flush for more than 15 seconds.
+
+When the server is stopped by code, call `ShutdownAsync` before stopping it:
 
 ```csharp
-await rider.Transaction.ShutdownAsync();
+bool completed = await rider.Transaction.ShutdownAsync();          // waits at most 15 seconds
+// or: await rider.Transaction.ShutdownAsync(TimeSpan.FromSeconds(5));
 server.Stop();
 ```
 
-If the server is stopped without `ShutdownAsync`, the clients are disconnected and their open transactions are rolled back by the disconnect rule.
+`ShutdownAsync` returns false if the rollbacks did not finish in time. If the server is stopped without `ShutdownAsync`, the clients are disconnected and their open transactions are rolled back by the disconnect rule.
+
+Custom queue managers can implement `IHorseQueueManager.FlushToDisk` to write pending data in step 2 without closing their stores. The default implementation does nothing.
 
 ### Clustering
 

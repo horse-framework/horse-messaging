@@ -143,6 +143,27 @@ public class RedeliveryService
     }
 
     /// <summary>
+    /// Writes buffered redelivery data to disk without closing the file
+    /// </summary>
+    public async Task Flush()
+    {
+        await _slim.WaitAsync();
+        try
+        {
+            if (_stream == null)
+                return;
+
+            await _stream.FlushAsync();
+            if (_stream is FileStream fileStream)
+                fileStream.Flush(true);
+        }
+        finally
+        {
+            _slim.Release();
+        }
+    }
+
+    /// <summary>
     /// Closes redelivery file and releases all resources
     /// </summary>
     public async Task Close()

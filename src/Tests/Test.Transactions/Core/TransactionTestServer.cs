@@ -5,6 +5,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
+using Horse.Messaging.Data;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Logging;
@@ -41,7 +42,11 @@ internal sealed class TransactionTestServer : IAsyncDisposable
 
     public static string NewDataPath() => $"tx-test-{Guid.NewGuid():N}";
 
-    public static async Task<TransactionTestServer> Start(string dataPath = null)
+    /// <summary>
+    /// Starts a server. Persistent queues are flushed only on shutdown (auto flush interval is one hour),
+    /// so tests can see what is written to disk by the shutdown sequence.
+    /// </summary>
+    public static async Task<TransactionTestServer> Start(string dataPath = null, bool persistentQueues = false)
     {
         dataPath ??= NewDataPath();
         ErrorCollector errors = new ErrorCollector();
@@ -55,7 +60,11 @@ internal sealed class TransactionTestServer : IAsyncDisposable
                 q.Options.Acknowledge = QueueAckDecision.None;
                 q.Options.CommitWhen = CommitWhen.AfterReceived;
                 q.Options.AutoQueueCreation = true;
-                q.UseMemoryQueues();
+
+                if (persistentQueues)
+                    q.UsePersistentQueues(db => db.UseAutoFlush(TimeSpan.FromHours(1)).SetAutoShrink(false), _ => { });
+                else
+                    q.UseMemoryQueues();
             })
             .Build();
 

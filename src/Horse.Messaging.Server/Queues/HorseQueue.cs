@@ -995,6 +995,19 @@ public class HorseQueue
     }
 
     /// <summary>
+    /// Pushes a transaction endpoint message into the queue.
+    /// Unlike other pushes, it is accepted while queues are shutting down,
+    /// so open transactions can be rolled back before the final flush.
+    /// </summary>
+    internal Task<PushResult> PushTransactionMessage(HorseMessage message)
+    {
+        message.Type = MessageType.QueueMessage;
+        message.SetTarget(Name);
+
+        return Push(new QueueMessage(message) { AllowDuringShutdown = true }, null);
+    }
+
+    /// <summary>
     /// Pushes a message into the queue.
     /// </summary>
     internal async Task<PushResult> Push(QueueMessage message, MessagingClient sender)
@@ -1017,7 +1030,7 @@ public class HorseQueue
 
     private async Task<PushResult> PushCore(QueueMessage message, MessagingClient sender)
     {
-        if (Rider.Queue.IsShuttingDown)
+        if (Rider.Queue.IsShuttingDown && !message.AllowDuringShutdown)
             return PushResult.StatusNotSupported;
 
         // Guard on Manager==null in addition to Status: a replica can reach Status=Running while its

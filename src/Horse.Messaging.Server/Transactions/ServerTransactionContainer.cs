@@ -125,7 +125,9 @@ public class ServerTransactionContainer
         // the client is told that the transaction is not created, so it is removed without any delivery.
         if (_destroyed || _rider.IsShuttingDown)
         {
-            TryClaim(transaction);
+            if (TryClaim(transaction))
+                _rider.EndCompletion();
+
             return _destroyed ? HorseResultCode.NotFound : HorseResultCode.Busy;
         }
 
@@ -146,7 +148,7 @@ public class ServerTransactionContainer
         if (!TryClaim(transaction))
             return HorseResultCode.NotFound;
 
-        bool delivered = await Complete(transaction, operation);
+        bool delivered = await TrackedComplete(transaction, operation);
         return delivered ? HorseResultCode.Ok : HorseResultCode.Failed;
     }
 
@@ -161,7 +163,7 @@ public class ServerTransactionContainer
 
         try
         {
-            await Complete(transaction, operation);
+            await TrackedComplete(transaction, operation);
         }
         catch (Exception e)
         {
@@ -216,14 +218,37 @@ public class ServerTransactionContainer
     /// <summary>
     /// Removes the transaction from the container.
     /// Only one caller can remove a transaction, so only one operation can finish it.
+    /// If it returns true, the caller must complete the transaction with TrackedComplete
+    /// or call the rider's EndCompletion.
     /// </summary>
     private bool TryClaim(ServerTransaction transaction)
     {
+        _rider.BeginCompletion();
+
         if (!_transactions.TryRemove(new KeyValuePair<string, ServerTransaction>(transaction.Id, transaction)))
+        {
+            _rider.EndCompletion();
             return false;
+        }
 
         _rider.UntrackClientTransaction(transaction);
         return true;
+    }
+
+    /// <summary>
+    /// Completes a claimed transaction and ends the completion started by TryClaim,
+    /// so shutdown waits for it whoever started it (client request, disconnect, timeout).
+    /// </summary>
+    private async Task<bool> TrackedComplete(ServerTransaction transaction, ServerTransactionStatus operation)
+    {
+        try
+        {
+            return await Complete(transaction, operation);
+        }
+        finally
+        {
+            _rider.EndCompletion();
+        }
     }
 
     /// <summary>

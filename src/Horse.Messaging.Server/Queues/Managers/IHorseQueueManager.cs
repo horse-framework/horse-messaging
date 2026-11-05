@@ -76,8 +76,17 @@ public interface IHorseQueueManager
 
     /// <summary>
     /// Flushes pending writes of the queue manager.
+    /// It is called at the end of shutdown, persistent managers close their stores.
     /// </summary>
     Task Flush();
+
+    /// <summary>
+    /// Writes pending writes to disk without closing the stores.
+    /// It is called at the beginning of shutdown, before open transactions are rolled back,
+    /// so the queue can still store the rollback messages.
+    /// Non persistent managers do not need to implement it.
+    /// </summary>
+    Task FlushToDisk() => Task.CompletedTask;
 
     /// <summary>
     /// Changes message priority

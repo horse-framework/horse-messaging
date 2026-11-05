@@ -52,6 +52,7 @@ public class QueueRider
     /// </summary>
     private readonly SemaphoreSlim _createLock = new(1, 1);
     private Task _shutdownTask;
+    private Task _fullShutdownTask;
     private volatile bool _shuttingDown;
 
     /// <summary>
@@ -269,6 +270,44 @@ public class QueueRider
         QueueManagerFactories = QueueManagerFactoriesMutable.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// Shutdown sequence on process exit and termination signals.
+    /// 1. Queues stop accepting pushes and deliveries, transactions stop accepting requests.
+    /// 2. Queues are flushed, so the messages already in queues are safe even if the process is killed early.
+    /// 3. Open transactions are rolled back (at most transactionTimeout, 15 seconds by default).
+    ///    Their rollback messages are the only pushes accepted during shutdown.
+    /// 4. Queues are flushed again with the grace period, so rollback messages are saved too.
+    /// If the process is killed before it ends, only the rollback messages can be lost.
+    /// </summary>
+    internal Task ShutdownAsync(TimeSpan? gracePeriod = null, TimeSpan? transactionTimeout = null)
+    {
+        lock (_shutdownSync)
+        {
+            _fullShutdownTask ??= ShutdownCoreAsync(gracePeriod ?? TimeSpan.FromSeconds(2), transactionTimeout ?? Transactions.TransactionRider.DefaultShutdownTimeout);
+            return _fullShutdownTask;
+        }
+    }
+
+    private async Task ShutdownCoreAsync(TimeSpan gracePeriod, TimeSpan transactionTimeout)
+    {
+        _shuttingDown = true;
+        Rider.Transaction.StopAcceptingRequests();
+
+        //stores are not closed here, they must accept rollback messages
+        await FlushQueuesToDiskAsync();
+
+        try
+        {
+            await Rider.Transaction.ShutdownAsync(transactionTimeout);
+        }
+        catch (Exception e)
+        {
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueShutdownFlush, "Transaction rollback on shutdown", e);
+        }
+
+        await BeginShutdownAsync(gracePeriod);
+    }
+
     internal Task BeginShutdownAsync(TimeSpan? gracePeriod = null)
     {
         lock (_shutdownSync)
@@ -299,6 +338,24 @@ public class QueueRider
             catch
             {
                 // Posix signal registration may not be available on all platforms.
+            }
+        }
+    }
+
+    private async Task FlushQueuesToDiskAsync()
+    {
+        foreach (HorseQueue queue in Queues.ToArray())
+        {
+            if (queue.Manager == null)
+                continue;
+
+            try
+            {
+                await queue.Manager.FlushToDisk();
+            }
+            catch (Exception e)
+            {
+                Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueShutdownFlush, $"Flush Queue To Disk On Shutdown: {queue.Name}", e);
             }
         }
     }
@@ -347,19 +404,9 @@ public class QueueRider
                 continue;
             }
 
-            //transactions are rolled back first, their rollback messages are pushed into queues
-            //and queues reject pushes after their shutdown begins
             try
             {
-                rider.Rider.Transaction.ShutdownAsync().GetAwaiter().GetResult();
-            }
-            catch
-            {
-            }
-
-            try
-            {
-                rider.BeginShutdownAsync().GetAwaiter().GetResult();
+                rider.ShutdownAsync().GetAwaiter().GetResult();
             }
             catch
             {

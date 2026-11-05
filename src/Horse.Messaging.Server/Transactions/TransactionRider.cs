@@ -29,6 +29,11 @@ public class TransactionRider
     private static readonly TimeSpan MaxTimeout = TimeSpan.FromMilliseconds(int.MaxValue);
 
     /// <summary>
+    /// Maximum time to wait for rolling back open transactions on shutdown
+    /// </summary>
+    public static readonly TimeSpan DefaultShutdownTimeout = TimeSpan.FromSeconds(15);
+
+    /// <summary>
     /// Root horse rider object
     /// </summary>
     public HorseRider Rider { get; }
@@ -47,6 +52,7 @@ public class TransactionRider
 
     private readonly ConcurrentDictionary<string, ServerTransactionContainer> _containers = new();
     private readonly ConcurrentDictionary<MessagingClient, ConcurrentDictionary<ServerTransaction, byte>> _clientTransactions = new();
+    private int _completions;
 
     private readonly object _containerLock = new();
     private readonly object _dataLock = new();
@@ -586,12 +592,37 @@ public class TransactionRider
     #region Shutdown
 
     /// <summary>
-    /// Starts shutdown: new transaction requests are rejected with Busy
-    /// and all open transactions are rolled back.
-    /// It is called before queues are shut down on process exit and termination signals.
-    /// Call it before stopping the server when the server is stopped by code.
+    /// Called before a transaction is claimed for completion.
+    /// The counter is increased before the claim, so shutdown cannot miss a claimed transaction
+    /// whoever claims it (client request, disconnect, timeout, shutdown).
     /// </summary>
-    public async Task ShutdownAsync()
+    internal void BeginCompletion()
+    {
+        Interlocked.Increment(ref _completions);
+    }
+
+    /// <summary>
+    /// Called when the claim fails or the claimed transaction is completed
+    /// </summary>
+    internal void EndCompletion()
+    {
+        Interlocked.Decrement(ref _completions);
+    }
+
+    /// <summary>
+    /// Waits until there is no transaction completion in progress
+    /// </summary>
+    private async Task WaitForCompletions()
+    {
+        while (Volatile.Read(ref _completions) > 0)
+            await Task.Delay(10);
+    }
+
+    /// <summary>
+    /// Stops accepting transaction requests (they are rejected with Busy) and stops timeout checks.
+    /// Open transactions stay open until they are rolled back by ShutdownAsync.
+    /// </summary>
+    internal void StopAcceptingRequests()
     {
         _shuttingDown = true;
 
@@ -600,9 +631,45 @@ public class TransactionRider
             _sweeper?.Dispose();
             _sweeper = null;
         }
+    }
 
+    /// <summary>
+    /// Shuts down the transaction rider with the default timeout (15 seconds):
+    /// new transaction requests are rejected with Busy and all open transactions are rolled back.
+    /// On process exit and termination signals it is called during queue shutdown, between two queue flushes.
+    /// Call it before stopping the server when the server is stopped by code.
+    /// Returns false if the rollbacks did not finish in time.
+    /// </summary>
+    public Task<bool> ShutdownAsync()
+    {
+        return ShutdownAsync(DefaultShutdownTimeout);
+    }
+
+    /// <summary>
+    /// Shuts down the transaction rider:
+    /// new transaction requests are rejected with Busy and all open transactions are rolled back.
+    /// Waits for the rollbacks at most for the timeout, so a slow or hanging endpoint cannot block shutdown.
+    /// Rollbacks that do not finish in time are logged; they may still complete in background.
+    /// Returns false if the rollbacks did not finish in time.
+    /// </summary>
+    public async Task<bool> ShutdownAsync(TimeSpan timeout)
+    {
+        StopAcceptingRequests();
+
+        //rollbacks are started first: each one claims its transaction synchronously,
+        //so the completion counter already includes them when waiting starts
         ServerTransactionContainer[] containers = _containers.Values.ToArray();
-        await Task.WhenAll(containers.Select(x => x.RollbackAll()));
+        Task rollbacks = Task.WhenAll(containers.Select(x => x.RollbackAll()));
+        Task all = Task.WhenAll(rollbacks, WaitForCompletions());
+
+        Task completed = await Task.WhenAny(all, Task.Delay(timeout));
+        if (completed == all)
+            return true;
+
+        Rider.SendError(HorseLogLevel.Error, HorseLogEvents.TransactionFinish,
+            $"Transaction rollbacks did not finish in {timeout.TotalSeconds} seconds on shutdown", null);
+
+        return false;
     }
 
     #endregion

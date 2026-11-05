@@ -92,7 +92,7 @@ public class QueueTransactionEndpoint : IServerTransactionEndpoint
         if (queue == null)
             return false;
 
-        PushResult result = await queue.Push(CreateMessage(transaction));
+        PushResult result = await queue.PushTransactionMessage(CreateMessage(transaction));
         return result == PushResult.Success;
     }
 
