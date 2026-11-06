@@ -190,6 +190,11 @@ public class ProtocolWriterBufferTest
             wireLength = HorseProtocolWriter.Create(message).Length;
         long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
 
-        Assert.InRange(allocated, (long)wireLength * iterations, (long)(wireLength + 256) * iterations);
+        // The output array is the only payload-sized allocation. An exposable source is
+        // copied span-to-span; a non-exposable one goes through MemoryStream.WriteTo into
+        // a small destination wrapper, which costs a few hundred bytes per call. That is
+        // not payload-proportional, so the bound still rules out a second payload copy.
+        long perCallSlack = exposeBuffer ? 256 : 2048;
+        Assert.InRange(allocated, (long)wireLength * iterations, (wireLength + perCallSlack) * iterations);
     }
 }
