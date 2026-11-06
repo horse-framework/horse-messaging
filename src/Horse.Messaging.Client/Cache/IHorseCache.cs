@@ -130,6 +130,51 @@ public interface IHorseCache
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<HorseModelResult<List<CacheInformation>>> List(string filter, CancellationToken cancellationToken);
 
+    /// <inheritdoc cref="List(int, int, CancellationToken)"/>
+    Task<HorseModelResult<List<CacheInformation>>> List(int offset, int limit)
+        => List(offset, limit, CancellationToken.None);
+
+    /// <summary>
+    /// Lists a page of cache entries. A positive offset or limit selects a page ordered by key.
+    /// </summary>
+    /// <remarks>Pages can change while entries are concurrently added, removed or replaced.</remarks>
+    /// <param name="offset">Number of matching entries to skip.</param>
+    /// <param name="limit">Maximum entries to return; zero means unlimited.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<HorseModelResult<List<CacheInformation>>> List(int offset, int limit, CancellationToken cancellationToken)
+        => List(null, offset, limit, cancellationToken);
+
+    /// <inheritdoc cref="List(string, int, int, CancellationToken)"/>
+    Task<HorseModelResult<List<CacheInformation>>> List(string filter, int offset, int limit)
+        => List(filter, offset, limit, CancellationToken.None);
+
+    /// <summary>
+    /// Lists a page of cache entries after applying the filter. A positive offset or limit selects a page ordered by key.
+    /// </summary>
+    /// <remarks>Pages can change while entries are concurrently added, removed or replaced.</remarks>
+    /// <param name="filter">Filter pattern (supports wildcards).</param>
+    /// <param name="offset">Number of matching entries to skip.</param>
+    /// <param name="limit">Maximum entries to return; zero means unlimited.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    async Task<HorseModelResult<List<CacheInformation>>> List(string filter, int offset, int limit, CancellationToken cancellationToken)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(offset);
+        ArgumentOutOfRangeException.ThrowIfNegative(limit);
+        HorseModelResult<List<CacheInformation>> result = string.IsNullOrEmpty(filter)
+            ? await List(cancellationToken).ConfigureAwait(false)
+            : await List(filter, cancellationToken).ConfigureAwait(false);
+        if (result?.Model == null || (offset == 0 && limit == 0))
+            return result;
+
+        // Existing implementations only need the original List methods. The
+        // built-in client overrides this fallback to request a server-side page.
+        List<CacheInformation> ordered = new(result.Model);
+        ordered.Sort((a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.Key, b.Key));
+        int start = Math.Min(offset, ordered.Count);
+        int count = limit == 0 ? ordered.Count - start : Math.Min(limit, ordered.Count - start);
+        return new HorseModelResult<List<CacheInformation>>(result.Result, ordered.GetRange(start, count));
+    }
+
     #endregion
 
     #region Set<TData>

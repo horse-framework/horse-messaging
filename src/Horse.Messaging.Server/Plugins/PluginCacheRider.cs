@@ -15,18 +15,16 @@ internal class PluginCacheRider : IPluginCacheRider
         _rider = rider;
     }
 
-    public Task<PluginCacheOperation> Set(string key, string value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null, bool persistent = false)
+    public async Task<PluginCacheOperation> Set(string key, string value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null, bool persistent = false)
     {
-        CacheOperation result = _rider.Cache.Set(key, value, duration, expirationWarning, tags, persistent);
-        PluginCacheOperation operation = new PluginCacheOperation((PluginCacheResult)result.Result, GetCacheItem(result.Item));
-        return Task.FromResult(operation);
+        CacheOperation result = await _rider.Cache.SetAsync(key, value, duration, expirationWarning, tags, persistent);
+        return new PluginCacheOperation((PluginCacheResult)result.Result, GetCacheItem(result.Item));
     }
 
-    public Task<PluginCacheOperation> Set(string key, MemoryStream value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null, bool persistent = false)
+    public async Task<PluginCacheOperation> Set(string key, MemoryStream value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null, bool persistent = false)
     {
-        CacheOperation result = _rider.Cache.Set(key, value, duration, expirationWarning, tags, persistent);
-        PluginCacheOperation operation = new PluginCacheOperation((PluginCacheResult)result.Result, GetCacheItem(result.Item));
-        return Task.FromResult(operation); 
+        CacheOperation result = await _rider.Cache.SetAsync(key, value, duration, expirationWarning, tags, persistent);
+        return new PluginCacheOperation((PluginCacheResult)result.Result, GetCacheItem(result.Item));
     }
 
     public async Task<PluginCacheItemResult> Get(string key)
@@ -38,36 +36,24 @@ internal class PluginCacheRider : IPluginCacheRider
         return new PluginCacheItemResult(result.IsFirstWarningReceiver, GetCacheItem(result.Item));
     }
 
-    public Task<PluginCacheItemResult> GetIncremental(string key, TimeSpan duration, int incrementValue = 1, string[] tags = null)
+    public async Task<PluginCacheItemResult> GetIncremental(string key, TimeSpan duration, int incrementValue = 1, string[] tags = null)
     {
-        var result = _rider.Cache.GetIncremental(key, duration, incrementValue, tags);
-        if (result == null)
-            return null;
-
-        var itemResult = new PluginCacheItemResult(result.IsFirstWarningReceiver, GetCacheItem(result.Item));
-        return Task.FromResult(itemResult);
+        GetCacheItemResult result = await _rider.Cache.GetIncrementalAsync(key, duration, incrementValue, tags);
+        return new PluginCacheItemResult(result.IsFirstWarningReceiver, GetCacheItem(result.Item));
     }
 
-    public Task Remove(string key)
-    {
-        _rider.Cache.Remove(key);
-        return Task.CompletedTask;
-    }
+    public Task Remove(string key) => _rider.Cache.RemoveAsync(key);
 
-    public Task PurgeByTag(string tagName)
-    {
-        _rider.Cache.PurgeByTag(tagName);
-        return Task.CompletedTask;
-    }
+    public Task PurgeByTag(string tagName) => _rider.Cache.PurgeByTagAsync(tagName);
 
-    public Task Purge()
-    {
-        _rider.Cache.Purge();
-        return Task.CompletedTask;
-    }
+    public Task Purge() => _rider.Cache.PurgeAsync();
 
+    // Rejected operations (key or size limit) carry no item.
     private static PluginCacheItem GetCacheItem(HorseCacheItem item)
     {
+        if (item == null)
+            return null;
+
         return new PluginCacheItem
         {
             Expiration = item.Expiration,

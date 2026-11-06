@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client.Queues;
@@ -131,17 +131,55 @@ internal class HorseCache : IHorseCache
     public Task<HorseModelResult<List<CacheInformation>>> List(CancellationToken cancellationToken = default)
         => List(null, cancellationToken);
 
-    public async Task<HorseModelResult<List<CacheInformation>>> List(string filter, CancellationToken cancellationToken = default)
+    public Task<HorseModelResult<List<CacheInformation>>> List(string filter, CancellationToken cancellationToken = default)
+        => List(filter, 0, 0, cancellationToken);
+
+    public Task<HorseModelResult<List<CacheInformation>>> List(int offset, int limit, CancellationToken cancellationToken = default)
+        => List(null, offset, limit, cancellationToken);
+
+    public Task<HorseModelResult<List<CacheInformation>>> List(string filter, int offset, int limit, CancellationToken cancellationToken = default)
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(offset);
+        ArgumentOutOfRangeException.ThrowIfNegative(limit);
+
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Cache;
         message.SetMessageId(_client.UniqueIdGenerator.Create());
         message.ContentType = KnownContentTypes.GetCacheList;
 
-        if (!string.IsNullOrEmpty(filter))
+        // A lone '*' means no filter. Older servers cannot parse that pattern.
+        if (!string.IsNullOrEmpty(filter) && filter != "*")
             message.AddHeader(HorseHeaders.FILTER, filter);
 
-        return await _client.SendAsync<List<CacheInformation>>(message, cancellationToken);
+        if (offset > 0)
+            message.AddHeader(HorseHeaders.CACHE_OFFSET, offset.ToString(CultureInfo.InvariantCulture));
+        if (limit > 0)
+            message.AddHeader(HorseHeaders.CACHE_LIMIT, limit.ToString(CultureInfo.InvariantCulture));
+
+        Task<HorseModelResult<List<CacheInformation>>> response = _client.SendAsync<List<CacheInformation>>(message, cancellationToken);
+        return offset == 0 && limit == 0 ? response : ReadPage(response, offset, limit);
+    }
+
+    private static async Task<HorseModelResult<List<CacheInformation>>> ReadPage(
+        Task<HorseModelResult<List<CacheInformation>>> response, int offset, int limit)
+    {
+        HorseModelResult<List<CacheInformation>> result = await response.ConfigureAwait(false);
+        if (result?.Result?.Code != HorseResultCode.Ok || result.Model == null)
+            return result;
+
+        HorseMessage message = result.Result.Message;
+        if (message != null &&
+            message.FindHeader(HorseHeaders.CACHE_OFFSET) == offset.ToString(CultureInfo.InvariantCulture) &&
+            message.FindHeader(HorseHeaders.CACHE_LIMIT) == limit.ToString(CultureInfo.InvariantCulture))
+            return result;
+
+        // Old servers ignore unknown paging headers and return the complete
+        // filtered list. Only trust server-side paging after an explicit echo.
+        List<CacheInformation> ordered = new(result.Model);
+        ordered.Sort((a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.Key, b.Key));
+        int start = Math.Min(offset, ordered.Count);
+        int count = limit == 0 ? ordered.Count - start : Math.Min(limit, ordered.Count - start);
+        return new HorseModelResult<List<CacheInformation>>(result.Result, ordered.GetRange(start, count));
     }
 
     #endregion
@@ -156,7 +194,7 @@ internal class HorseCache : IHorseCache
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
         _client.MessageSerializer.Serialize(message, data);
         if (persistent) message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
-        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
+        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, string.Join(',', tags));
         return _client.SendAsync(message, true, cancellationToken);
     }
 
@@ -169,7 +207,7 @@ internal class HorseCache : IHorseCache
         _client.MessageSerializer.Serialize(message, data);
         message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
         if (persistent) message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
-        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
+        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, string.Join(',', tags));
         return _client.SendAsync(message, true, cancellationToken);
     }
 
@@ -180,7 +218,7 @@ internal class HorseCache : IHorseCache
         message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
         message.SetOrAddHeader(HorseHeaders.WARNING_DURATION, Convert.ToInt32(expirationWarningDuration.TotalSeconds).ToString());
         if (persistent) message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
-        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
+        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, string.Join(',', tags));
         return _client.SendAsync(message, true, cancellationToken);
     }
 
@@ -192,7 +230,7 @@ internal class HorseCache : IHorseCache
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
         message.SetStringContent(data);
         if (persistent) message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
-        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
+        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, string.Join(',', tags));
         return _client.SendAsync(message, true, cancellationToken);
     }
 
@@ -205,7 +243,7 @@ internal class HorseCache : IHorseCache
         message.SetStringContent(data);
         message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
         if (persistent) message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
-        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
+        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, string.Join(',', tags));
         return _client.SendAsync(message, true, cancellationToken);
     }
 
@@ -216,7 +254,7 @@ internal class HorseCache : IHorseCache
         message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
         message.SetOrAddHeader(HorseHeaders.WARNING_DURATION, Convert.ToInt32(expirationWarningDuration.TotalSeconds).ToString());
         if (persistent) message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
-        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
+        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, string.Join(',', tags));
         return _client.SendAsync(message, true, cancellationToken);
     }
 
@@ -227,7 +265,7 @@ internal class HorseCache : IHorseCache
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
         if (persistent) message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
-        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
+        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, string.Join(',', tags));
         message.Content = new MemoryStream(data);
         message.CalculateLengths();
         return _client.SendAsync(message, true, cancellationToken);
@@ -241,7 +279,7 @@ internal class HorseCache : IHorseCache
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
         message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
         if (persistent) message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
-        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
+        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, string.Join(',', tags));
         message.Content = new MemoryStream(data);
         message.CalculateLengths();
         return _client.SendAsync(message, true, cancellationToken);
@@ -253,7 +291,7 @@ internal class HorseCache : IHorseCache
         message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
         message.SetOrAddHeader(HorseHeaders.WARNING_DURATION, Convert.ToInt32(expirationWarningDuration.TotalSeconds).ToString());
         if (persistent) message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
-        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
+        if (tags != null && tags.Length > 0) message.SetOrAddHeader(HorseHeaders.TAG, string.Join(',', tags));
         message.Content = new MemoryStream(data);
         message.CalculateLengths();
         return _client.SendAsync(message, true, cancellationToken);

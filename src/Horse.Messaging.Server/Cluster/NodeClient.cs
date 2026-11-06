@@ -534,6 +534,7 @@ public class NodeClient
             {
                 string messageTimeout = message.FindHeader(HorseHeaders.MESSAGE_TIMEOUT);
                 string warningDuration = message.FindHeader(HorseHeaders.WARNING_DURATION);
+                string persistentCache = message.FindHeader(HorseHeaders.PERSISTENT_CACHE);
                 string tags = message.FindHeader(HorseHeaders.TAG);
 
                 string[] tagNames = string.IsNullOrEmpty(tags) ? Array.Empty<string>() : tags.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
@@ -547,26 +548,51 @@ public class NodeClient
                 if (!string.IsNullOrEmpty(warningDuration))
                     warning = TimeSpan.FromSeconds(Convert.ToInt32(warningDuration));
 
-                _ = Rider.Cache.Set(null, false, message.Target, message.Content, timeout, warning, tagNames);
+                bool persistent = persistentCache == "1" || string.Equals(persistentCache, "true", StringComparison.OrdinalIgnoreCase);
+                var set = Rider.Cache.SetAsync(null, false, message.Target, message.Content, timeout, warning, tagNames, persistent);
+                if (!set.IsCompletedSuccessfully)
+                    ObserveCachePersistence(set.AsTask(), message);
                 break;
             }
 
             case KnownContentTypes.RemoveCache:
             {
-                Rider.Cache.Remove(null, message.Target, false);
+                ObserveCachePersistence(Rider.Cache.RemoveAsync(null, message.Target, false), message);
                 break;
             }
 
             case KnownContentTypes.PurgeCache:
             {
-                if (string.IsNullOrEmpty(message.Target))
-                    Rider.Cache.Purge(null, false);
-                else
-                    Rider.Cache.PurgeByTag(message.Target, null, false);
+                ObserveCachePersistence(string.IsNullOrEmpty(message.Target)
+                    ? Rider.Cache.PurgeAsync(null, false)
+                    : Rider.Cache.PurgeByTagAsync(message.Target, null, false), message);
                 break;
             }
 
             #endregion
+        }
+    }
+
+    /// <summary>
+    /// A replicated cache mutation is applied before the cache call returns; only
+    /// its persistent IO completes later, so the receive path does not wait for it.
+    /// </summary>
+    private void ObserveCachePersistence(Task task, HorseMessage message)
+    {
+        if (!task.IsCompletedSuccessfully)
+            _ = ReportCachePersistenceFailure(task, message.ContentType, message.Target);
+    }
+
+    private async Task ReportCachePersistenceFailure(Task task, ushort contentType, string target)
+    {
+        try
+        {
+            await task.ConfigureAwait(false);
+        }
+        catch (Exception e)
+        {
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.ClusterMessageProcess,
+                $"Cluster message {contentType} for {target} from {Info?.Name}", e);
         }
     }
 

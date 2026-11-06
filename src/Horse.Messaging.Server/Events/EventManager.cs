@@ -31,6 +31,7 @@ public class EventManager : IDisposable
     public string Target { get; }
 
     private Timer _cleanup;
+    private readonly object _cleanupGate = new();
     private readonly HorseRider _server;
 
     /// <summary>
@@ -51,9 +52,24 @@ public class EventManager : IDisposable
     /// </summary>
     public void Dispose()
     {
-        Subscribers.Clear();
-        _cleanup.Dispose();
-        _cleanup = null;
+        lock (_cleanupGate)
+        {
+            Subscribers.Clear();
+            _cleanup?.Dispose();
+            _cleanup = null;
+        }
+    }
+
+    internal void PauseCleanup()
+    {
+        lock (_cleanupGate)
+            _cleanup?.Change(Timeout.Infinite, Timeout.Infinite);
+    }
+
+    internal void ResumeCleanup()
+    {
+        lock (_cleanupGate)
+            _cleanup?.Change(60000, 60000);
     }
 
     /// <summary>

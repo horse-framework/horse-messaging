@@ -44,4 +44,12 @@ public class HorseCacheOptions
     /// Maximum value size in bytes
     /// </summary>
     public int ValueMaxSize { get; set; }
+
+    /// <summary>
+    /// Writes persistent values to a temporary file and atomically replaces the
+    /// destination when true. Default false preserves the existing direct-write
+    /// latency and crash guarantees. Configure before cache initialization.
+    /// Neither mode requests a physical disk flush.
+    /// </summary>
+    public bool AtomicPersistentWrites { get; set; }
 }

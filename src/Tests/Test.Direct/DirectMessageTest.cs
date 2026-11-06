@@ -65,15 +65,23 @@ public class DirectMessageTest
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);
 
-            bool received = false;
-            client2.MessageReceived += (c, m) => received = m.Source == "client-1";
+            var delivered = new TaskCompletionSource<HorseMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+            client2.MessageReceived += (_, incoming) =>
+            {
+                if (incoming.Type == MessageType.DirectMessage)
+                    delivered.TrySetResult(incoming);
+            };
 
             HorseMessage message = new HorseMessage(MessageType.DirectMessage, "client-2");
             message.SetStringContent("Hello, World!");
 
             HorseResult sent = await client1.SendAsync(message, true, CancellationToken.None);
             Assert.Equal(HorseResultCode.Ok, sent.Code);
-            Assert.True(received);
+            // Auto-acknowledgement is sent before user-event dispatch. Verify
+            // both independently instead of assuming the event ran first.
+            HorseMessage received = await delivered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Equal("client-1", received.Source);
+            Assert.Equal("Hello, World!", received.GetStringContent());
         });
     }
 
