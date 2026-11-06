@@ -218,6 +218,7 @@ public class RouterRider
     {
         _routers.TryRemove(router.Name, out _);
         RemoveEvent.Trigger(router.Name);
+        router.PublishEvent.Dispose();
 
         if (OptionsConfigurator != null)
         {

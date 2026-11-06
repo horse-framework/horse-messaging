@@ -448,11 +448,15 @@ public class HorseQueue
         if (newStatus == QueueStatus.NotInitialized)
             return;
 
-        Rider.Queue.StatusChangeEvent.Trigger(Name,
-            new KeyValuePair<string, string>($"Previous-{HorseHeaders.STATUS}", Status.ToString()),
-            new KeyValuePair<string, string>($"Next-{HorseHeaders.STATUS}", newStatus.ToString()));
-
+        QueueStatus previousStatus = Status;
         Status = newStatus;
+
+        // triggered after the change, so a subscriber reading the queue sees the new status
+        if (Rider.Queue.StatusChangeEvent.HasSubscribers)
+            Rider.Queue.StatusChangeEvent.Trigger(Name,
+                new KeyValuePair<string, string>($"Previous-{HorseHeaders.STATUS}", previousStatus.ToString()),
+                new KeyValuePair<string, string>($"Next-{HorseHeaders.STATUS}", newStatus.ToString()));
+
         UpdateConfiguration(true);
 
         if (Rider.Cluster.State == NodeState.Replica || Rider.Cluster.State == NodeState.Successor)
@@ -576,6 +580,15 @@ public class HorseQueue
                 // and a replica promoted to Main later served (and lost) messages on it.
                 ClusterNotifier.SendRemoved();
                 _destroyed.TrySetResult();
+
+                // Queue event subscriptions are kept by queue name in the rider registry and are not
+                // removed here: a queue created later with the same name keeps them. Disposing only stops
+                // a partition sub-queue from forwarding its events to the parent queue.
+                PushEvent.Dispose();
+                MessageAckEvent.Dispose();
+                MessageNackEvent.Dispose();
+                MessageUnackEvent.Dispose();
+                MessageTimeoutEvent.Dispose();
             }
         }
     }
@@ -599,6 +612,47 @@ public class HorseQueue
             PartitionManager.Dispose();
             PartitionManager = null;
         }
+
+        ForwardEventsToParent(meta);
+    }
+
+    private HorseQueue _parentQueue;
+
+    /// <summary>
+    /// Clients subscribe to queue events by the parent queue name, but messages of a partitioned
+    /// queue are pushed, delivered and acknowledged on its sub-queues. Every queue event of this
+    /// sub-queue is also published on the parent queue, with the partition as event parameters.
+    /// </summary>
+    private void ForwardEventsToParent(SubPartitionMeta meta)
+    {
+        KeyValuePair<string, string>[] parameters =
+        [
+            new(HorseHeaders.PARTITION_ID, meta.PartitionId ?? string.Empty),
+            new(HorseHeaders.PARTITION_LABEL, meta.Label ?? string.Empty),
+            new("Partition-Queue", Name)
+        ];
+
+        PushEvent.ForwardTo(() => FindParentQueue()?.PushEvent, parameters);
+        MessageAckEvent.ForwardTo(() => FindParentQueue()?.MessageAckEvent, parameters);
+        MessageNackEvent.ForwardTo(() => FindParentQueue()?.MessageNackEvent, parameters);
+        MessageUnackEvent.ForwardTo(() => FindParentQueue()?.MessageUnackEvent, parameters);
+        MessageTimeoutEvent.ForwardTo(() => FindParentQueue()?.MessageTimeoutEvent, parameters);
+    }
+
+    private HorseQueue FindParentQueue()
+    {
+        // The parent can be created after the sub-queue (replica) or destroyed and created again.
+        HorseQueue parent = _parentQueue;
+        if (parent != null && !parent.IsDestroyed)
+            return parent;
+
+        string parentName = PartitionMeta?.ParentQueueName;
+        if (string.IsNullOrEmpty(parentName))
+            return null;
+
+        parent = Rider.Queue.Find(parentName);
+        _parentQueue = parent;
+        return parent;
     }
 
     /// <summary>
@@ -1177,7 +1231,8 @@ public class HorseQueue
                 _ = handler.OnProduced(this, message, sender);
 
             Rider.Plugin.TriggerPluginHandlers(HorsePluginEvent.QueuePush, Name, message.Message);
-            PushEvent.Trigger(sender, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
+            if (PushEvent.HasSubscribers)
+                PushEvent.Trigger(sender, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
 
             if (sender != null)
                 sender.Stats.QueuePushes++;
@@ -1733,8 +1788,11 @@ public class HorseQueue
                 _ = handler.OnAcknowledged(this, deliveryMessage, delivery, success);
 
             if (success)
-                MessageAckEvent.Trigger(from, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, deliveryMessage.MessageId));
-            else
+            {
+                if (MessageAckEvent.HasSubscribers)
+                    MessageAckEvent.Trigger(from, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, deliveryMessage.MessageId));
+            }
+            else if (MessageNackEvent.HasSubscribers)
                 MessageNackEvent.Trigger(from,
                     new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, deliveryMessage.MessageId),
                     new KeyValuePair<string, string>(HorseHeaders.REASON, deliveryMessage.FindHeader(HorseHeaders.NEGATIVE_ACKNOWLEDGE_REASON)));

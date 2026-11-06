@@ -132,6 +132,9 @@ public class ClientRider
             if (_clientsByType.TryGetValue(client.Type, out MessagingClient[] typeClients))
                 _clientsByType[client.Type] = typeClients.Where(x => x != client).ToArray();
 
+        //events first: it runs no user code. Queue and channel removal call user event handlers,
+        //one that throws synchronously must not leave the client in event subscriptions (no periodic cleanup exists)
+        client.UnsubscribeFromAllEvents();
         client.UnsubscribeFromAllQueues();
         client.UnsubscribeFromAllChannels();
         DisconnectEvent.Trigger(client);
@@ -145,6 +148,7 @@ public class ClientRider
         foreach (var pair in _clientsById)
         {
             MessagingClient client = pair.Value;
+            client.UnsubscribeFromAllEvents();
             client.UnsubscribeFromAllQueues();
             client.UnsubscribeFromAllChannels();
             client.Disconnect();

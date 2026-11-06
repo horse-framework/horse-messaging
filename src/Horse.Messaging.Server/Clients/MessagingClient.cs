@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Core;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Channels;
 using Horse.Messaging.Server.Cluster;
+using Horse.Messaging.Server.Events;
 
 [assembly: InternalsVisibleTo("Horse.Messaging.Server.WebSocket.Server")]
 
@@ -38,6 +40,18 @@ public class MessagingClient : HorseServerSocket, ISwitchingProtocolClient
     /// Snapshot of subscribed channels for lock-free reads
     /// </summary>
     private volatile ChannelClient[] _channelsSnapshot = [];
+
+    /// <summary>
+    /// Event subscriptions of the client, removed when the client disconnects
+    /// </summary>
+    private HashSet<EventSubscription> _eventSubscriptions;
+
+    private readonly object _eventSubscriptionLock = new();
+
+    /// <summary>
+    /// Outgoing event messages, created with the first event sent to the client
+    /// </summary>
+    private ClientEventOutbox _eventOutbox;
 
     /// <summary>
     /// Connection data of the client.
@@ -264,6 +278,73 @@ public class MessagingClient : HorseServerSocket, ISwitchingProtocolClient
 
         foreach (ChannelClient cc in list)
             cc.Channel?.RemoveClientSilent(cc);
+    }
+
+    /// <summary>
+    /// Adds event subscription into client's subscription list
+    /// </summary>
+    internal void AddEventSubscription(EventSubscription subscription)
+    {
+        lock (_eventSubscriptionLock)
+        {
+            _eventSubscriptions ??= new HashSet<EventSubscription>();
+            _eventSubscriptions.Add(subscription);
+        }
+    }
+
+    /// <summary>
+    /// Removes event subscription from client's subscription list
+    /// </summary>
+    internal void RemoveEventSubscription(EventSubscription subscription)
+    {
+        lock (_eventSubscriptionLock)
+            _eventSubscriptions?.Remove(subscription);
+    }
+
+    /// <summary>
+    /// Unsubscribes from all events and stops sending pending event messages.
+    /// Called when the client disconnects.
+    /// </summary>
+    internal void UnsubscribeFromAllEvents()
+    {
+        EventSubscription[] list;
+        lock (_eventSubscriptionLock)
+        {
+            if (_eventSubscriptions == null || _eventSubscriptions.Count == 0)
+                list = [];
+            else
+            {
+                list = new EventSubscription[_eventSubscriptions.Count];
+                _eventSubscriptions.CopyTo(list);
+                _eventSubscriptions.Clear();
+            }
+        }
+
+        foreach (EventSubscription subscription in list)
+            subscription.Remove(this);
+
+        _eventOutbox?.Complete();
+    }
+
+    /// <summary>
+    /// Queues a serialized event message to be sent to the client.
+    /// Events are sent in order by a single sender per client, the caller does not wait for the send.
+    /// </summary>
+    internal void EnqueueEvent(byte[] data)
+    {
+        ClientEventOutbox outbox = _eventOutbox;
+        if (outbox == null)
+        {
+            ClientEventOutbox created = new ClientEventOutbox(this, HorseRider.Options?.EventBufferSize ?? 0);
+            outbox = Interlocked.CompareExchange(ref _eventOutbox, created, null);
+            if (outbox == null)
+            {
+                outbox = created;
+                outbox.Start();
+            }
+        }
+
+        outbox.Enqueue(data);
     }
 
     #endregion

@@ -119,26 +119,23 @@ public class ArrayContainer<T> where T : class
 
         try
         {
+            // Readers iterate the array returned by All() without locking,
+            // so the current array must never be modified in place.
+            T[] items = _items;
+            T[] kept = new T[items.Length];
             int keepCount = 0;
-            for (int i = 0; i < _items.Length; i++)
+            for (int i = 0; i < items.Length; i++)
             {
-                if (!predicate(_items[i]))
-                    keepCount++;
-                else
-                    _items[i] = null;
+                T item = items[i];
+                if (!predicate(item))
+                    kept[keepCount++] = item;
             }
 
-            if (keepCount == _items.Length)
+            if (keepCount == items.Length)
                 return;
 
-            T[] newItems = new T[keepCount];
-            int idx = 0;
-            for (int i = 0; i < _items.Length; i++)
-            {
-                if (_items[i] != null)
-                    newItems[idx++] = _items[i];
-            }
-            _items = newItems;
+            Array.Resize(ref kept, keepCount);
+            _items = kept;
         }
         finally
         {
@@ -151,6 +148,15 @@ public class ArrayContainer<T> where T : class
     /// </summary>
     public void Clear()
     {
-        _items = new T[0];
+        _semaphore.Wait();
+
+        try
+        {
+            _items = [];
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
     }
 }

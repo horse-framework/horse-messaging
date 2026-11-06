@@ -1710,8 +1710,13 @@ public class HorseClient : IDisposable
             }
         }
 
+        // Several handlers may share an event and target; one subscription serves all of them.
+        HashSet<(Protocol.Events.HorseEventType, string)> subscribedEvents = new();
         foreach (EventSubscriberRegistration registration in Event.Registrations)
         {
+            if (!subscribedEvents.Add((registration.Type, registration.Target ?? string.Empty)))
+                continue;
+
             HorseResult joinResult = await Event.Subscribe(registration.Type, registration.Target, ConsumeToken);
             if (joinResult.Code == HorseResultCode.Ok)
                 continue;

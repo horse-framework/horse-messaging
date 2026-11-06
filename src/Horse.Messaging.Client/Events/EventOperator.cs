@@ -15,28 +15,56 @@ public class EventOperator
 {
     internal HorseClient Client { get; }
 
-    internal List<EventSubscriberRegistration> Registrations { get; } = new();
+    private readonly object _registrationLock = new();
+    private EventSubscriberRegistration[] _registrations = [];
+
+    /// <summary>
+    /// Registered event handlers. Copy-on-write: readers get an immutable snapshot
+    /// and need no lock while handlers are registered concurrently.
+    /// </summary>
+    internal IReadOnlyList<EventSubscriberRegistration> Registrations => Volatile.Read(ref _registrations);
 
     internal EventOperator(HorseClient client)
     {
         Client = client;
     }
 
+    internal void AddRegistration(EventSubscriberRegistration registration)
+    {
+        lock (_registrationLock)
+        {
+            EventSubscriberRegistration[] current = _registrations;
+            EventSubscriberRegistration[] next = new EventSubscriberRegistration[current.Length + 1];
+            Array.Copy(current, next, current.Length);
+            next[^1] = registration;
+            Volatile.Write(ref _registrations, next);
+        }
+    }
+
     internal async Task OnEventMessage(HorseMessage message)
     {
-        EventSubscriberRegistration reg = Registrations.FirstOrDefault(x => (ushort) x.Type == message.ContentType &&
-                                                                            (string.IsNullOrEmpty(x.Target) || x.Target == message.Target));
-        if (reg == null)
-            return;
+        EventSubscriberRegistration[] registrations = Volatile.Read(ref _registrations);
+        HorseEvent horseEvent = null;
 
-        try
+        // Every matching handler receives the event: handlers for the event target
+        // and handlers registered without a target (all targets).
+        foreach (EventSubscriberRegistration reg in registrations)
         {
-            HorseEvent horseEvent = (HorseEvent) Client.MessageSerializer.Deserialize(message, typeof(HorseEvent));
-            await reg.Executer.Execute(Client, message, horseEvent, Client.ConsumeToken);
-        }
-        catch (Exception ex)
-        {
-            Client.OnException(ex, message);
+            if ((ushort) reg.Type != message.ContentType)
+                continue;
+
+            if (!string.IsNullOrEmpty(reg.Target) && reg.Target != message.Target)
+                continue;
+
+            try
+            {
+                horseEvent ??= (HorseEvent) Client.MessageSerializer.Deserialize(message, typeof(HorseEvent));
+                await reg.Executer.Execute(Client, message, horseEvent, Client.ConsumeToken);
+            }
+            catch (Exception ex)
+            {
+                Client.OnException(ex, message);
+            }
         }
     }
 
@@ -62,7 +90,7 @@ public class EventOperator
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Event;
-        message.ContentType = Convert.ToUInt16(eventType);
+        message.ContentType = (ushort) eventType;
         message.SetTarget(target);
         message.WaitResponse = verifyResponse;
 
@@ -94,7 +122,7 @@ public class EventOperator
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Event;
-        message.ContentType = Convert.ToUInt16(eventType);
+        message.ContentType = (ushort) eventType;
         message.SetTarget(target);
         message.AddHeader(HorseHeaders.SUBSCRIBE, "No");
         message.WaitResponse = verifyResponse;

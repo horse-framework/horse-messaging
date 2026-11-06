@@ -1,0 +1,9 @@
+<Project>
+
+    <!-- Deletes data folders left by previous test runs, before any test starts (see TestDataCleanup.cs).
+         Test.Common is a library loaded lazily, its initializer could run after folders are created. -->
+    <ItemGroup Condition="'$(MSBuildProjectName)' != 'Test.Common'">
+        <Compile Include="$(MSBuildThisFileDirectory)TestDataCleanup.cs" Link="TestDataCleanup.cs" />
+    </ItemGroup>
+
+</Project>

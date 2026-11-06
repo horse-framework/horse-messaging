@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
+using Horse.Messaging.Server.Channels;
 using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Sync;
@@ -732,6 +733,55 @@ public class ReliableClusterTest
         }
         finally
         {
+            await StopCluster(nodes);
+        }
+    }
+
+    /// <summary>
+    /// Channel auto destroy is decided by each node's own state. Clients subscribe on the main, so the
+    /// successor's copy of the channel has no subscribers. Its auto destroy must remove only that copy:
+    /// sent to the cluster, it removed the channel and its subscriptions on the main while they were in use.
+    /// </summary>
+    [Fact]
+    public async Task ChannelAutoDestroy_OnNodeWithoutSubscribers_DoesNotRemoveChannelOnOtherNodes()
+    {
+        int[] ports = { 28791, 28792 };
+        List<ClusterNode> nodes = StartReliableCluster(ports, ReplicaAcknowledge.OnlySuccessor);
+        HorseClient client = null;
+
+        try
+        {
+            (ClusterNode main, ClusterNode successor) = await WaitForConnectedSuccessor(nodes);
+
+            string channelName = $"auto-destroy-{_run}";
+            HorseChannel mainChannel = await main.Rider.Channel.Create(channelName, o =>
+            {
+                o.AutoDestroy = true;
+                o.AutoDestroyIdleSeconds = 0;
+            });
+
+            Assert.True(await WaitUntil(() => successor.Rider.Channel.Find(channelName) != null), "channel was not created on the successor");
+
+            client = new HorseClient();
+            await client.ConnectAsync($"horse://localhost:{main.Port}");
+            Assert.Equal(HorseResultCode.Ok, (await client.Channel.Subscribe(channelName, true)).Code);
+            Assert.Equal(1, mainChannel.ClientsCount());
+
+            // the successor's copy is idle and has no subscribers
+            HorseChannel successorChannel = successor.Rider.Channel.Find(channelName);
+            Assert.Equal(0, successorChannel.ClientsCount());
+            successorChannel.CheckAutoDestroy();
+            Assert.Null(successor.Rider.Channel.Find(channelName));
+
+            // a removal sent to the cluster would reach the main within this time
+            await Task.Delay(1000);
+            Assert.Same(mainChannel, main.Rider.Channel.Find(channelName));
+            Assert.Equal(ChannelStatus.Running, mainChannel.Status);
+            Assert.Equal(1, mainChannel.ClientsCount());
+        }
+        finally
+        {
+            client?.Disconnect();
             await StopCluster(nodes);
         }
     }

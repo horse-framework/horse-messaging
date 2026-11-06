@@ -151,10 +151,6 @@ public class HorseCache : IDisposable, IAsyncDisposable
                 return;
             maintenance = _timer?.DisposeAsync().AsTask() ?? Task.CompletedTask;
             _timer = null;
-            GetEvent.PauseCleanup();
-            SetEvent.PauseCleanup();
-            RemoveEvent.PauseCleanup();
-            PurgeEvent.PauseCleanup();
             persistence = _persistence?.FlushAsync() ?? Task.CompletedTask;
         }
         // Stop is reversible: retain entries and the lazy persistence writer.
@@ -169,10 +165,6 @@ public class HorseCache : IDisposable, IAsyncDisposable
             if (_disposed != 0 || !ReferenceEquals(server, _attachedServer))
                 return;
             _timer ??= new Timer(_ => RemoveExpiredKeys(), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
-            GetEvent.ResumeCleanup();
-            SetEvent.ResumeCleanup();
-            RemoveEvent.ResumeCleanup();
-            PurgeEvent.ResumeCleanup();
         }
     }
 

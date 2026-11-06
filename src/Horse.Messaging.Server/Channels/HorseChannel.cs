@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -36,9 +35,17 @@ public class HorseChannel
     public string Name { get; }
 
     /// <summary>
-    /// Queue topic
+    /// Channel topic
     /// </summary>
-    public string Topic { get; set; }
+    public string Topic
+    {
+        get => _topic;
+        set
+        {
+            _topic = value;
+            Info.Topic = value;
+        }
+    }
 
     /// <summary>
     /// Root horse rider
@@ -48,7 +55,15 @@ public class HorseChannel
     /// <summary>
     /// Channel status
     /// </summary>
-    public ChannelStatus Status { get; set; }
+    public ChannelStatus Status
+    {
+        get => _status;
+        set
+        {
+            _status = value;
+            Info.Status = value.ToString();
+        }
+    }
 
     /// <summary>
     /// Channel options.
@@ -79,12 +94,25 @@ public class HorseChannel
     /// <summary>
     /// Returns all clients in the channel.
     /// </summary>
-    public IEnumerable<ChannelClient> Clients => _channelClients.Where(x => x != null);
+    public IEnumerable<ChannelClient> Clients => _channelClients;
 
+    private string _topic;
+    private volatile ChannelStatus _status;
     private Timer _destroyTimer;
     private byte[] _initialMessage;
     private readonly object _channelClientLock = new();
-    private ChannelClient[] _channelClients = new ChannelClient[256];
+
+    /// <summary>
+    /// Subscribers of the channel. Copy-on-write: the array is never mutated after it is published,
+    /// writers replace it under _channelClientLock, so readers (delivery loop) can iterate it lock-free
+    /// without skipping or duplicating clients while subscriptions change.
+    /// </summary>
+    private volatile ChannelClient[] _channelClients = [];
+
+    /// <summary>
+    /// UTC ticks of the last publish, subscribe, unsubscribe or creation. Used for auto destroy idle time.
+    /// </summary>
+    private long _lastActivityTicks;
 
     private readonly Channel<HorseMessage> _channel = Channel.CreateBounded<HorseMessage>(
         new BoundedChannelOptions(50000)
@@ -103,22 +131,15 @@ public class HorseChannel
         Rider = rider;
         Name = name;
         Options = options;
+        //publish event subscriptions belong to this channel instance and end with it (see Destroy)
+        PublishEvent = new EventManager(rider, HorseEventType.ChannelPublish, name, false);
+
+        //created before Status is set, Topic and Status setters keep Info up to date
+        Info = new ChannelInformation { Name = name };
         Status = ChannelStatus.Running;
-        PublishEvent = new EventManager(rider, HorseEventType.ChannelPublish, name);
-        Info = new ChannelInformation
-        {
-            Name = name,
-            Status = Status.ToString()
-        };
 
-        if (options.ClientLimit > 1)
-            _channelClients = new ChannelClient[options.ClientLimit];
-
-        _destroyTimer = new Timer(s =>
-        {
-            if (Options.AutoDestroy && DateTime.UtcNow - LastPublishDate > TimeSpan.FromSeconds(options.AutoDestroyIdleSeconds) && ClientsCount() == 0)
-                Rider.Channel.Remove(this);
-        }, null, 15000, 15000);
+        _lastActivityTicks = DateTime.UtcNow.Ticks;
+        _destroyTimer = new Timer(_ => CheckAutoDestroy(), null, 15000, 15000);
 
         _ = Run();
     }
@@ -135,30 +156,68 @@ public class HorseChannel
         return true;
     }
 
-    internal void EnsureClientCapacity()
+    private void UpdateLastActivity()
     {
-        EnsureClientCapacity(Options?.ClientLimit ?? 0);
+        UpdateLastActivity(DateTime.UtcNow);
     }
 
-    private void EnsureClientCapacity(int clientLimit)
+    /// <summary>
+    /// A plain atomic write, no fence: only the auto destroy timer reads it and a slightly stale value is fine.
+    /// </summary>
+    private void UpdateLastActivity(DateTime now)
     {
-        if (clientLimit <= 0)
-            return;
+        Volatile.Write(ref _lastActivityTicks, now.Ticks);
+    }
 
-        lock (_channelClientLock)
+    internal void CheckAutoDestroy()
+    {
+        try
         {
-            if (clientLimit <= _channelClients.Length)
+            if (!Options.AutoDestroy)
                 return;
 
-            ChannelClient[] clients = new ChannelClient[clientLimit];
-            Array.Copy(_channelClients, clients, _channelClients.Length);
-            _channelClients = clients;
+            lock (_channelClientLock)
+            {
+                if (Status == ChannelStatus.Destroyed || _channelClients.Length > 0)
+                    return;
+
+                DateTime lastActivity = new DateTime(Volatile.Read(ref _lastActivityTicks), DateTimeKind.Utc);
+                if (DateTime.UtcNow - lastActivity < TimeSpan.FromSeconds(Options.AutoDestroyIdleSeconds))
+                    return;
+
+                //marked under the client lock, a concurrent subscription cannot slip into a channel that is being removed
+                Status = ChannelStatus.Destroyed;
+            }
+
+            //Idle and subscriber count are this node's own state, other nodes decide for their copies themselves.
+            //Not sent to the cluster: a copy with no local subscribers would remove the channel on the nodes it is in use.
+            Rider.Channel.Remove(this, false);
+        }
+        catch (Exception e)
+        {
+            //timer callbacks must not throw, an unhandled exception there terminates the process
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.ChannelRemove, "Channel Auto Destroy Error: " + Name, e);
         }
     }
 
     internal void Destroy()
     {
-        Status = ChannelStatus.Destroyed;
+        ChannelClient[] clients;
+        lock (_channelClientLock)
+        {
+            Status = ChannelStatus.Destroyed;
+            clients = _channelClients;
+            _channelClients = [];
+            Info.SubscriberCount = 0;
+        }
+
+        //subscriptions end with the channel. Otherwise clients keep a dead subscription,
+        //and do not receive anything from a new channel that is created with the same name.
+        foreach (ChannelClient cc in clients)
+        {
+            cc.Client.RemoveSubscription(cc);
+            cc.Dispose();
+        }
 
         try
         {
@@ -173,6 +232,10 @@ public class HorseChannel
             _destroyTimer.Dispose();
             _destroyTimer = null;
         }
+
+        //publish event subscriptions end with the channel too, like the subscribers above.
+        //A channel created later with the same name starts without them.
+        PublishEvent.Dispose();
     }
 
     internal bool UpdateOptionsByMessage(HorseMessage message)
@@ -186,7 +249,6 @@ public class HorseChannel
             if (Options.ClientLimit != value)
             {
                 Options.ClientLimit = value;
-                EnsureClientCapacity();
                 changed = true;
             }
         }
@@ -247,16 +309,21 @@ public class HorseChannel
             try
             {
                 byte[] messageData = HorseProtocolWriter.Create(message);
-                _initialMessage = messageData;
+
+                //last message and the receiver list are taken together. A subscriber added before this point
+                //gets the previous message as initial and this one through the loop below, a subscriber added
+                //after gets this one as initial. So it never receives them out of order or twice.
+                //One uncontended lock per message, not per client.
+                ChannelClient[] clients;
+                lock (_channelClientLock)
+                {
+                    _initialMessage = messageData;
+                    clients = _channelClients;
+                }
 
                 int count = 0;
-                ChannelClient[] clients = _channelClients;
-                for (int i = 0; i < clients.Length; i++)
+                foreach (ChannelClient client in clients)
                 {
-                    ChannelClient client = clients[i];
-                    if (client == null)
-                        break;
-
                     //to only online receivers
                     if (!client.Client.IsConnected)
                         continue;
@@ -291,7 +358,7 @@ public class HorseChannel
     /// </summary>
     public PushResult Push(string message)
     {
-        HorseMessage msg = new HorseMessage(MessageType.QueueMessage, Name);
+        HorseMessage msg = new HorseMessage(MessageType.Channel, Name, KnownContentTypes.ChannelPush);
         msg.SetStringContent(message);
         return Push(msg);
     }
@@ -301,7 +368,7 @@ public class HorseChannel
     /// </summary>
     internal PushResult Push(HorseMessage message)
     {
-        if (Status == ChannelStatus.Paused)
+        if (Status == ChannelStatus.Paused || Status == ChannelStatus.Destroyed)
             return PushResult.StatusNotSupported;
 
         if (Options.MessageSizeLimit > 0 && message.Length > Options.MessageSizeLimit)
@@ -310,7 +377,10 @@ public class HorseChannel
         //remove operational headers that are should not be sent to consumers or saved to disk
         message.RemoveHeaders(OperationalHeadersToRemove);
         message.WaitResponse = false;
-        LastPublishDate = DateTime.UtcNow;
+        //one clock read per publish, shared by the publish date and the auto destroy activity time
+        DateTime now = DateTime.UtcNow;
+        LastPublishDate = now;
+        UpdateLastActivity(now);
 
         bool result = _channel.Writer.TryWrite(message);
 
@@ -340,12 +410,6 @@ public class HorseChannel
     /// <returns></returns>
     public int ClientsCount()
     {
-        for (int i = 0; i < _channelClients.Length; i++)
-        {
-            if (_channelClients[i] == null)
-                return i;
-        }
-
         return _channelClients.Length;
     }
 
@@ -362,108 +426,93 @@ public class HorseChannel
         if (!authorizationChecked && !CanSubscribe(client))
             return SubscriptionResult.Unauthorized;
 
-        ChannelClient channelClient = new ChannelClient(this, client);
-        bool added = false;
+        ChannelClient channelClient;
         lock (_channelClientLock)
         {
-            EnsureClientCapacity();
+            //destroyed (or being destroyed by auto destroy) channel cannot accept subscribers
+            if (Status == ChannelStatus.Destroyed)
+                return SubscriptionResult.Full;
 
-            for (int i = 0; i < _channelClients.Length; i++)
+            ChannelClient[] clients = _channelClients;
+
+            //subscribing twice is a no-op, a client must not take two slots and receive each message twice
+            foreach (ChannelClient existing in clients)
             {
-                if (Options.ClientLimit > 0 && i + 1 >= Options.ClientLimit)
-                    return SubscriptionResult.Full;
-
-                if (_channelClients[i] == null)
-                {
-                    _channelClients[i] = channelClient;
-                    added = true;
-                    break;
-                }
+                if (existing.Client == client)
+                    return SubscriptionResult.Success;
             }
+
+            if (Options.ClientLimit > 0 && clients.Length >= Options.ClientLimit)
+                return SubscriptionResult.Full;
+
+            channelClient = new ChannelClient(this, client);
+
+            //queued before the client becomes visible to the delivery loop, see Run()
+            if (Options.SendLastMessageAsInitial)
+            {
+                byte[] initialMessage = _initialMessage;
+                if (initialMessage != null)
+                    channelClient.SendChannelMessage(initialMessage);
+            }
+
+            ChannelClient[] next = new ChannelClient[clients.Length + 1];
+            Array.Copy(clients, next, clients.Length);
+            next[clients.Length] = channelClient;
+            _channelClients = next;
+
+            //updated with the array under the lock, concurrent changes cannot leave a stale count
+            Info.SubscriberCount = next.Length;
         }
 
-        if (!added)
-            return SubscriptionResult.Full;
-
+        UpdateLastActivity();
         client.AddSubscription(channelClient);
         _ = channelClient.Run();
 
         foreach (IChannelEventHandler handler in Rider.Channel.EventHandlers.All())
             _ = handler.OnSubscribe(this, client);
 
-        Info.SubscriberCount = ClientsCount();
         Rider.Channel.SubscribeEvent.Trigger(client, Name);
-
-        if (Options.SendLastMessageAsInitial)
-        {
-            byte[] msg = _initialMessage;
-            if (msg != null)
-                _ = client.SendRawAsync(_initialMessage);
-        }
 
         return SubscriptionResult.Success;
     }
 
-    private ChannelClient RemoveClientFromArray(ChannelClient client)
+    /// <summary>
+    /// Removes the first client that matches from the subscribers array and returns it.
+    /// Returns null if there is no matching client.
+    /// </summary>
+    private ChannelClient RemoveClientFromArray(Predicate<ChannelClient> match)
     {
-        bool removed = false;
-        ChannelClient removedClient = null;
+        ChannelClient removed;
         lock (_channelClientLock)
         {
-            for (int i = 0; i < _channelClients.Length; i++)
-            {
-                ChannelClient cc = _channelClients[i];
+            ChannelClient[] clients = _channelClients;
+            int index = Array.FindIndex(clients, match);
+            if (index < 0)
+                return null;
 
-                if (cc == null)
-                    break;
-
-                if (removed && i > 0)
-                {
-                    _channelClients[i - 1] = cc;
-                    _channelClients[i] = null;
-                }
-                else if (cc == client)
-                {
-                    removedClient = cc;
-                    _channelClients[i] = null;
-                    removed = true;
-                    cc.Dispose();
-                }
-            }
+            removed = clients[index];
+            ChannelClient[] next = new ChannelClient[clients.Length - 1];
+            Array.Copy(clients, 0, next, 0, index);
+            Array.Copy(clients, index + 1, next, index, clients.Length - index - 1);
+            _channelClients = next;
+            Info.SubscriberCount = next.Length;
         }
 
-        return removedClient;
+        UpdateLastActivity();
+        return removed;
     }
 
-    private ChannelClient RemoveClientFromArray(MessagingClient client)
+    /// <summary>
+    /// Completes the removal of a client that is taken out of the subscribers array
+    /// </summary>
+    private void OnClientRemoved(ChannelClient client)
     {
-        bool removed = false;
-        ChannelClient removedClient = null;
-        lock (_channelClientLock)
-        {
-            for (int i = 0; i < _channelClients.Length; i++)
-            {
-                ChannelClient cc = _channelClients[i];
+        client.Dispose();
 
-                if (cc == null)
-                    break;
+        foreach (IChannelEventHandler handler in Rider.Channel.EventHandlers.All())
+            _ = handler.OnUnsubscribe(this, client.Client);
 
-                if (removed && i > 0)
-                {
-                    _channelClients[i - 1] = cc;
-                    _channelClients[i] = null;
-                }
-                else if (cc.Client == client)
-                {
-                    removedClient = cc;
-                    _channelClients[i] = null;
-                    removed = true;
-                    cc.Dispose();
-                }
-            }
-        }
-
-        return removedClient;
+        Rider.Channel.UnsubscribeEvent.Trigger(client.Client, Name);
     }
 
     /// <summary>
@@ -471,15 +520,13 @@ public class HorseChannel
     /// </summary>
     public void RemoveClient(ChannelClient client)
     {
-        RemoveClientFromArray(client);
+        ChannelClient removed = RemoveClientFromArray(x => x == client);
         client.Client.RemoveSubscription(client);
 
-        foreach (IChannelEventHandler handler in Rider.Channel.EventHandlers.All())
-            _ = handler.OnUnsubscribe(this, client.Client);
-
-        Info.SubscriberCount = ClientsCount();
-        Rider.Channel.UnsubscribeEvent.Trigger(client.Client, Name);
-        client.Dispose();
+        if (removed != null)
+            OnClientRemoved(removed);
+        else
+            client.Dispose();
     }
 
     /// <summary>
@@ -487,14 +534,12 @@ public class HorseChannel
     /// </summary>
     internal void RemoveClientSilent(ChannelClient client)
     {
-        RemoveClientFromArray(client);
+        ChannelClient removed = RemoveClientFromArray(x => x == client);
 
-        foreach (IChannelEventHandler handler in Rider.Channel.EventHandlers.All())
-            _ = handler.OnUnsubscribe(this, client.Client);
-
-        Info.SubscriberCount = ClientsCount();
-        Rider.Channel.UnsubscribeEvent.Trigger(client.Client, Name);
-        client.Dispose();
+        if (removed != null)
+            OnClientRemoved(removed);
+        else
+            client.Dispose();
     }
 
     /// <summary>
@@ -502,20 +547,13 @@ public class HorseChannel
     /// </summary>
     public bool RemoveClient(MessagingClient client)
     {
-        ChannelClient cc = RemoveClientFromArray(client);
+        ChannelClient cc = RemoveClientFromArray(x => x.Client == client);
 
         if (cc == null)
             return false;
 
         client.RemoveSubscription(cc);
-
-        foreach (IChannelEventHandler handler in Rider.Channel.EventHandlers.All())
-            _ = handler.OnUnsubscribe(this, client);
-
-        Info.SubscriberCount = ClientsCount();
-        Rider.Channel.UnsubscribeEvent.Trigger(client, Name);
-        cc.Dispose();
-
+        OnClientRemoved(cc);
         return true;
     }
 
@@ -524,7 +562,7 @@ public class HorseChannel
     /// </summary>
     public ChannelClient FindClient(string uniqueId)
     {
-        return _channelClients.FirstOrDefault(x => x?.Client.UniqueId == uniqueId);
+        return Array.Find(_channelClients, x => x.Client.UniqueId == uniqueId);
     }
 
     /// <summary>
@@ -532,7 +570,7 @@ public class HorseChannel
     /// </summary>
     public ChannelClient FindClient(MessagingClient client)
     {
-        return _channelClients.FirstOrDefault(x => x?.Client == client);
+        return Array.Find(_channelClients, x => x.Client == client);
     }
 
     #endregion

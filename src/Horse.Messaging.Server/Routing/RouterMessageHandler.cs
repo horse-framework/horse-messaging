@@ -49,7 +49,7 @@ internal class RouterMessageHandler : INetworkMessageHandler
         }
 
         await SendResponse(result, client, message);
-        if (router is Router r)
+        if (router is Router r && r.PublishEvent.HasSubscribers)
         {
             if (!string.IsNullOrEmpty(message.MessageId))
                 r.PublishEvent.Trigger(client, router.Name, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));

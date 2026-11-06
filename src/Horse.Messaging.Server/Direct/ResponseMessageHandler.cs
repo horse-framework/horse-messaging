@@ -35,8 +35,9 @@ internal class ResponseMessageHandler : INetworkMessageHandler
             {
                 await target.SendAsync(message);
                     
-                _rider.Direct.ResponseEvent.Trigger(sender, message.Target,
-                    new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));
+                if (_rider.Direct.ResponseEvent.HasSubscribers)
+                    _rider.Direct.ResponseEvent.Trigger(sender, message.Target,
+                        new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));
                 return;
             }
         }
@@ -57,8 +58,9 @@ internal class ResponseMessageHandler : INetworkMessageHandler
             if (target != null)
                 await target.SendAsync(message);
 
-            _rider.Direct.ResponseEvent.Trigger(sender, message.Target,
-                new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));
+            if (_rider.Direct.ResponseEvent.HasSubscribers)
+                _rider.Direct.ResponseEvent.Trigger(sender, message.Target,
+                    new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));
         }
     }
 }

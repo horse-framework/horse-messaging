@@ -114,7 +114,10 @@ public class ChannelRider
             ChannelConfiguration[] configurations = OptionsConfigurator.Load();
             foreach (ChannelConfiguration config in configurations)
             {
-                ChannelStatus status = Enums.Parse<ChannelStatus>(config.Status, true, EnumFormat.Description);
+                //missing status (older or hand written files) falls back to the status of a new channel
+                ChannelStatus status = string.IsNullOrWhiteSpace(config.Status)
+                    ? ChannelStatus.Running
+                    : Enums.Parse<ChannelStatus>(config.Status, true, EnumFormat.Description);
                 if (status == ChannelStatus.Destroyed)
                     continue;
 
@@ -123,6 +126,10 @@ public class ChannelRider
                     opt.AutoDestroy = config.AutoDestroy;
                     opt.ClientLimit = config.ClientLimit;
                     opt.MessageSizeLimit = config.MessageSizeLimit;
+                    opt.SendLastMessageAsInitial = config.SendLastMessageAsInitial;
+
+                    if (config.AutoDestroyIdleSeconds.HasValue)
+                        opt.AutoDestroyIdleSeconds = config.AutoDestroyIdleSeconds.Value;
                 }).GetAwaiter().GetResult();
 
                 channel.Topic = config.Topic;
@@ -195,9 +202,6 @@ public class ChannelRider
             if (!Filter.CheckNameEligibility(channelName))
                 throw new InvalidOperationException("Invalid channel name");
 
-            if (Rider.Options.ChannelLimit > 0 && Rider.Options.ChannelLimit >= _channels.Count)
-                throw new OperationCanceledException("Channel limit is exceeded for the server");
-
             _channels.TryGetValue(channelName, out HorseChannel channel);
 
             if (channel != null)
@@ -207,6 +211,10 @@ public class ChannelRider
 
                 throw new DuplicateNameException($"The server has already a channel with same name: {channelName}");
             }
+
+            //checked after the existence check, an existing channel is still returned when the limit is reached
+            if (Rider.Options.ChannelLimit > 0 && _channels.Count >= Rider.Options.ChannelLimit)
+                throw new OperationCanceledException("Channel limit is exceeded for the server");
 
             if (requestMessage != null)
             {
@@ -218,8 +226,19 @@ public class ChannelRider
             }
 
             channel = new HorseChannel(Rider, channelName, options);
-            if (requestMessage != null)
-                channel.UpdateOptionsByMessage(requestMessage);
+
+            //invalid option headers fail before the channel is registered (timer and delivery loop stopped),
+            //nothing sees a channel that could not be created with the requested options
+            try
+            {
+                if (requestMessage != null)
+                    channel.UpdateOptionsByMessage(requestMessage);
+            }
+            catch
+            {
+                channel.Destroy();
+                throw;
+            }
 
             _channels.TryAdd(channel.Name, channel);
             foreach (IChannelEventHandler handler in EventHandlers.All())
@@ -227,11 +246,21 @@ public class ChannelRider
 
             CreateEvent.Trigger(channelName);
 
+            //saved after the handlers (as queues are), so the changes they make synchronously in OnCreated
+            //(topic, status, options) are saved too. If saving fails, the channel is removed from this node
+            //and other nodes are never told about it.
             if (!_initializing && OptionsConfigurator != null)
             {
-                ChannelConfiguration configuration = ChannelConfiguration.Create(channel);
-                OptionsConfigurator.Add(configuration);
-                OptionsConfigurator.Save();
+                try
+                {
+                    OptionsConfigurator.Add(ChannelConfiguration.Create(channel));
+                    OptionsConfigurator.Save();
+                }
+                catch
+                {
+                    Remove(channel, false);
+                    throw;
+                }
             }
 
             if (notifyCluster)
@@ -265,7 +294,10 @@ public class ChannelRider
     /// </summary>
     public HorseChannel Remove(string name)
     {
-        _channels.TryRemove(name, out HorseChannel channel);
+        HorseChannel channel = Find(name);
+        if (channel != null)
+            Remove(channel, true);
+
         return channel;
     }
 
@@ -281,7 +313,11 @@ public class ChannelRider
     {
         try
         {
-            _channels.TryRemove(channel.Name, out _);
+            //removes only this instance: a stale reference (or a late auto destroy tick) must not remove
+            //a newer channel with the same name. It also makes concurrent removes run the cleanup once.
+            if (!_channels.TryRemove(new KeyValuePair<string, HorseChannel>(channel.Name, channel)))
+                return;
+
             channel.Status = ChannelStatus.Destroyed;
 
             foreach (IChannelEventHandler handler in EventHandlers.All())

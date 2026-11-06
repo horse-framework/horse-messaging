@@ -51,8 +51,7 @@ public class EventSubscriberRegistrar
                     if (registration == null)
                         continue;
 
-                    lock (_operator.Registrations)
-                        _operator.Registrations.Add(registration);
+                    _operator.AddRegistration(registration);
                 }
 
                 if (types.Count > 0)
@@ -84,8 +83,7 @@ public class EventSubscriberRegistrar
             if (registration == null)
                 throw new TypeLoadException("Cant resolve handler type");
 
-            lock (_operator.Registrations)
-                _operator.Registrations.Add(registration);
+            _operator.AddRegistration(registration);
         }
     }
 

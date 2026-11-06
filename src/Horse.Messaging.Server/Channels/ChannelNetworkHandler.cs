@@ -277,7 +277,7 @@ internal class ChannelNetworkHandler : INetworkMessageHandler
                     });
 
                 HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
-                message.ContentType = KnownContentTypes.ChannelSubscribers;
+                response.ContentType = KnownContentTypes.ChannelSubscribers;
                 response.Serialize(list, _rider.MessageContentSerializer);
                 await client.SendAsync(response);
 
