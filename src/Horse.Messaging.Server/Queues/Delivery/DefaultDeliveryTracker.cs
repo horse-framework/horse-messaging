@@ -188,7 +188,8 @@ namespace Horse.Messaging.Server.Queues.Delivery
                     foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
                         _ = handler.OnAcknowledgeTimedOut(_queue, delivery);
 
-                    _queue.MessageUnackEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, delivery.Message.Message.MessageId));
+                    if (_queue.MessageUnackEvent.HasSubscribers)
+                        _queue.MessageUnackEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, delivery.Message.Message.MessageId));
                 }
                 finally
                 {

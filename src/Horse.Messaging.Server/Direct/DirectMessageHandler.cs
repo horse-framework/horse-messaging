@@ -135,7 +135,8 @@ internal class DirectMessageHandler : INetworkMessageHandler
             }
         }
 
-        _rider.Direct.DirectEvent.Trigger(sender, message.Target, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));
+        if (_rider.Direct.DirectEvent.HasSubscribers)
+            _rider.Direct.DirectEvent.Trigger(sender, message.Target, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));
     }
 
     /// <summary>
@@ -179,7 +180,8 @@ internal class DirectMessageHandler : INetworkMessageHandler
                 _ = handler.OnDirect(client, message, new List<MessagingClient> { other });
         }
 
-        _rider.Direct.DirectEvent.Trigger(client, message.Target,
-            new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));
+        if (_rider.Direct.DirectEvent.HasSubscribers)
+            _rider.Direct.DirectEvent.Trigger(client, message.Target,
+                new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));
     }
 }

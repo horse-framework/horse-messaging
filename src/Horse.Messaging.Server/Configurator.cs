@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Text.Json;
-using System.Threading.Tasks;
+using System.Diagnostics;
+using System.Threading;
 using Horse.Messaging.Server.Helpers;
 
 namespace Horse.Messaging.Server;
@@ -19,8 +20,11 @@ internal class Configurator
         {
             Directory.CreateDirectory(configurationFolder);
 
-            //wait for windows os (in next method we will read file from that directory and windows os sometimes throws directory does not exists exception)
-            Task.Delay(1000).GetAwaiter().GetResult();
+            //windows os sometimes reports a just created directory as missing (next methods read files from it).
+            //wait until it is visible, at most one second. It is visible immediately on most systems.
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            while (!Directory.Exists(configurationFolder) && stopwatch.ElapsedMilliseconds < 1000)
+                Thread.Sleep(10);
         }
 
         return configurationFolder;

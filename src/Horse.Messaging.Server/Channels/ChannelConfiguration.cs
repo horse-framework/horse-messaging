@@ -12,6 +12,11 @@ public class ChannelConfiguration
     public bool AutoDestroy { get; set; }
     public bool SendLastMessageAsInitial { get; set; }
 
+    /// <summary>
+    /// Nullable for files saved by older versions, which do not have this value. Null keeps the default option.
+    /// </summary>
+    public int? AutoDestroyIdleSeconds { get; set; }
+
     public static ChannelConfiguration Create(HorseChannel channel)
     {
         return new ChannelConfiguration
@@ -22,7 +27,8 @@ public class ChannelConfiguration
             AutoDestroy = channel.Options.AutoDestroy,
             ClientLimit = channel.Options.ClientLimit,
             MessageSizeLimit = channel.Options.MessageSizeLimit,
-            SendLastMessageAsInitial = channel.Options.SendLastMessageAsInitial
+            SendLastMessageAsInitial = channel.Options.SendLastMessageAsInitial,
+            AutoDestroyIdleSeconds = channel.Options.AutoDestroyIdleSeconds
         };
     }
 }

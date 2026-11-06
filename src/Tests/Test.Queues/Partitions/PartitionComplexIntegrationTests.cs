@@ -106,7 +106,11 @@ public class ConsumeTracker
 {
     private readonly ConcurrentDictionary<string, List<int>> _records = new();
 
-    public void Record(string queueName, string tenantId, int sequence)
+    // Same records, split by the queue that delivered them. FIFO is guaranteed per delivering queue
+    // (partition), not across separate queues consumed in parallel. Not counted by TotalCount.
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, List<int>>> _recordsBySource = new();
+
+    public void Record(string queueName, string tenantId, int sequence, string source = null)
     {
         string key = $"{queueName}:{tenantId}";
         List<int> list = _records.GetOrAdd(key, _ => new List<int>());
@@ -114,6 +118,35 @@ public class ConsumeTracker
         {
             list.Add(sequence);
         }
+
+        if (source == null)
+            return;
+
+        List<int> sourceList = _recordsBySource
+            .GetOrAdd(key, _ => new ConcurrentDictionary<string, List<int>>())
+            .GetOrAdd(source, _ => new List<int>());
+        lock (sourceList)
+        {
+            sourceList.Add(sequence);
+        }
+    }
+
+    /// <summary>
+    ///     Returns consumed sequences grouped by the delivering queue (Key = queue name).
+    /// </summary>
+    public Dictionary<string, List<int>> GetBySource(string queueName, string tenantId)
+    {
+        string key = $"{queueName}:{tenantId}";
+        if (!_recordsBySource.TryGetValue(key, out ConcurrentDictionary<string, List<int>> sources))
+            return new Dictionary<string, List<int>>();
+
+        Dictionary<string, List<int>> result = new();
+        foreach (KeyValuePair<string, List<int>> kv in sources)
+            lock (kv.Value)
+            {
+                result[kv.Key] = new List<int>(kv.Value);
+            }
+        return result;
     }
 
     public List<int> Get(string queueName, string tenantId)
@@ -183,7 +216,7 @@ public class QueueDConsumer(TrackerAccessor accessor) : IQueueConsumer<QueueDMod
 {
     public Task Consume(ConsumeContext<QueueDModel> context)
     {
-        accessor.Tracker.Record("QueueD", context.Model.TenantId, context.Model.Sequence);
+        accessor.Tracker.Record("QueueD", context.Model.TenantId, context.Model.Sequence, context.Message.Target);
         return Task.CompletedTask;
     }
 }
@@ -330,15 +363,8 @@ public class PartitionComplexIntegrationTests
 
         foreach (string tenantId in tenantIds)
         {
-            List<int> records = tracker.Get("QueueD", tenantId);
-            Assert.Equal(msgsPerTenant * tiers.Length, records.Count);
-            List<List<int>> chunks = SplitIntoOrderedChunks(records);
-            Assert.Equal(tiers.Length, chunks.Count);
-            foreach (List<int> chunk in chunks)
-            {
-                Assert.Equal(msgsPerTenant, chunk.Count);
-                for (int i = 0; i < chunk.Count; i++) Assert.Equal(i, chunk[i]);
-            }
+            Assert.Equal(msgsPerTenant * tiers.Length, tracker.Get("QueueD", tenantId).Count);
+            AssertFifoPerSource(tracker.GetBySource("QueueD", tenantId), tiers.Length, msgsPerTenant);
         }
 
         producer.Disconnect();
@@ -417,15 +443,8 @@ public class PartitionComplexIntegrationTests
 
         foreach (string tenantId in tenantIds)
         {
-            List<int> records = tracker.Get("QueueD", tenantId);
-            Assert.Equal(msgsPerTenant * labels.Length, records.Count);
-            List<List<int>> chunks = SplitIntoOrderedChunks(records);
-            Assert.Equal(labels.Length, chunks.Count);
-            foreach (List<int> chunk in chunks)
-            {
-                Assert.Equal(msgsPerTenant, chunk.Count);
-                for (int i = 0; i < chunk.Count; i++) Assert.Equal(i, chunk[i]);
-            }
+            Assert.Equal(msgsPerTenant * labels.Length, tracker.Get("QueueD", tenantId).Count);
+            AssertFifoPerSource(tracker.GetBySource("QueueD", tenantId), labels.Length, msgsPerTenant);
         }
 
         producer.Disconnect();
@@ -1606,21 +1625,16 @@ public class PartitionComplexIntegrationTests
         }
     }
 
-    private static List<List<int>> SplitIntoOrderedChunks(List<int> records)
+    /// <summary>
+    ///     Each delivering queue must have delivered exactly 0..count-1 in order.
+    ///     Separate tier queues are consumed in parallel, so their records may interleave.
+    /// </summary>
+    private static void AssertFifoPerSource(Dictionary<string, List<int>> bySource, int expectedSources, int expectedCount)
     {
-        List<List<int>> chunks = new();
-        List<int> current = new();
-        foreach (int seq in records)
-        {
-            if (seq == 0 && current.Count > 0)
-            {
-                chunks.Add(current);
-                current = new List<int>();
-            }
-            current.Add(seq);
-        }
-        if (current.Count > 0) chunks.Add(current);
-        return chunks;
+        Assert.Equal(expectedSources, bySource.Count);
+        foreach (KeyValuePair<string, List<int>> kv in bySource)
+            Assert.True(kv.Value.SequenceEqual(Enumerable.Range(0, expectedCount)),
+                $"{kv.Key} delivered out of order: [{string.Join(", ", kv.Value)}]");
     }
 
     #endregion

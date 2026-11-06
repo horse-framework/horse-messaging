@@ -52,10 +52,25 @@ public class ChannelClient
     internal async Task Run()
     {
         await foreach (byte[] data in _sendQueue.Reader.ReadAllAsync())
-            if (Client.SwitchingProtocol != null)
-                await Client.SwitchingProtocol.SendAsync(data);
-            else
-                await Client.SendAsync(data);
+        {
+            try
+            {
+                if (Client.SwitchingProtocol != null)
+                    await Client.SwitchingProtocol.SendAsync(data);
+                else
+                    await Client.SendAsync(data);
+            }
+            catch
+            {
+                //a failed send skips only that message. Without catching, the loop ended and the client
+                //silently stopped receiving while it was still listed as a subscriber.
+                //Not logged, a dropped connection would log once per message.
+            }
+
+            //disconnect is final for a messaging client, its subscriptions are removed by the client rider
+            if (!Client.IsConnected)
+                break;
+        }
     }
 
     internal void Dispose()

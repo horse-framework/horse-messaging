@@ -40,4 +40,16 @@ public class ClientStats
     /// The count of how many times client gets a cache value
     /// </summary>
     public long CacheGets { get; set; }
+
+    private long _droppedEvents;
+
+    /// <summary>
+    /// Event messages dropped because the client's event buffer was full
+    /// </summary>
+    public long DroppedEvents => System.Threading.Interlocked.Read(ref _droppedEvents);
+
+    internal void IncrementDroppedEvents()
+    {
+        System.Threading.Interlocked.Increment(ref _droppedEvents);
+    }
 }

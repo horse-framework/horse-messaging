@@ -95,7 +95,8 @@ public class DefaultMessageTimeoutTracker : IMessageTimeoutTracker
                         foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
                             _ = handler.MessageTimedOut(_queue, message);
 
-                        _queue.MessageTimeoutEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
+                        if (_queue.MessageTimeoutEvent.HasSubscribers)
+                            _queue.MessageTimeoutEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
                     }
 
                     message = Store.ReadFirst();

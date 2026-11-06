@@ -15,6 +15,8 @@ using Horse.Messaging.Server.Scheduling;
 using Horse.Messaging.Server.Transactions;
 using Horse.Server;
 
+using Horse.Messaging.Server.Events;
+
 namespace Horse.Messaging.Server;
 
 /// <summary>
@@ -103,6 +105,12 @@ public class HorseRider
     /// Message content serializer
     /// </summary>
     internal IMessageContentSerializer MessageContentSerializer { get; } = new SystemJsonContentSerializer();
+
+    /// <summary>
+    /// Subscriptions of queue and router events.
+    /// They are kept by target name and survive removing and re-creating the target.
+    /// </summary>
+    internal EventSubscriptionRegistry EventSubscriptions { get; } = new();
 
     private bool _initialized;
 

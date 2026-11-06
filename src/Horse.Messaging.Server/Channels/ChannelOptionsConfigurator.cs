@@ -12,6 +12,12 @@ public class ChannelOptionsConfigurator : IOptionsConfigurator<ChannelConfigurat
     private readonly HorseRider _rider;
     private readonly string _filename;
 
+    /// <summary>
+    /// Guards the configuration list and the file.
+    /// A dedicated object, the list instance is replaced by Load, locking on it would lock different objects.
+    /// </summary>
+    private readonly object _lock = new();
+
     private List<ChannelConfiguration> _configurations = new();
 
     public ChannelOptionsConfigurator(HorseRider rider, string filename)
@@ -20,54 +26,53 @@ public class ChannelOptionsConfigurator : IOptionsConfigurator<ChannelConfigurat
         _filename = filename;
     }
 
+    private string FullName => $"{_rider.Options.DataPath}/{_filename}";
+
     public ChannelConfiguration[] Load()
     {
-        string fullname = $"{_rider.Options.DataPath}/{_filename}";
-
-        if (!File.Exists(fullname))
+        lock (_lock)
         {
-            File.WriteAllText(fullname, "[]");
+            string fullname = FullName;
 
-            lock (_configurations)
+            if (!File.Exists(fullname))
             {
+                File.WriteAllText(fullname, "[]");
                 _configurations = new List<ChannelConfiguration>();
-                return _configurations.ToArray();
+                return [];
             }
-        }
 
-        string json = File.ReadAllText(fullname);
-
-        lock (_configurations)
-        {
-            _configurations = JsonSerializer.Deserialize<List<ChannelConfiguration>>(json, SerializerFactory.Default());
+            string json = File.ReadAllText(fullname);
+            _configurations = JsonSerializer.Deserialize<List<ChannelConfiguration>>(json, SerializerFactory.Default()) ?? new List<ChannelConfiguration>();
             return _configurations.ToArray();
         }
     }
 
     public void Save()
     {
-        string json = JsonSerializer.Serialize(_configurations, SerializerFactory.Default());
-        File.WriteAllText($"{_rider.Options.DataPath}/{_filename}", json);
+        //serializing and writing under the same lock: the list cannot change while it is serialized
+        //and concurrent saves cannot write the file at the same time
+        lock (_lock)
+        {
+            string json = JsonSerializer.Serialize(_configurations, SerializerFactory.Default());
+            File.WriteAllText(FullName, json);
+        }
     }
 
     public void Add(ChannelConfiguration item)
     {
-        lock (_configurations)
+        lock (_lock)
             _configurations.Add(item);
     }
 
     public ChannelConfiguration Find(Func<ChannelConfiguration, bool> predicate)
     {
-        lock (_configurations)
-        {
-            ChannelConfiguration configuration = _configurations.FirstOrDefault(predicate);
-            return configuration;
-        }
+        lock (_lock)
+            return _configurations.FirstOrDefault(predicate);
     }
 
     public void Remove(Func<ChannelConfiguration, bool> predicate)
     {
-        lock (_configurations)
+        lock (_lock)
         {
             ChannelConfiguration configuration = _configurations.FirstOrDefault(predicate);
             if (configuration != null)
@@ -77,13 +82,13 @@ public class ChannelOptionsConfigurator : IOptionsConfigurator<ChannelConfigurat
 
     public void Remove(ChannelConfiguration item)
     {
-        lock (_configurations)
+        lock (_lock)
             _configurations.Remove(item);
     }
 
     public void Clear()
     {
-        lock (_configurations)
+        lock (_lock)
             _configurations.Clear();
     }
 }

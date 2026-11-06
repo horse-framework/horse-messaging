@@ -48,4 +48,12 @@ public class HorseRiderOptions
     /// If true, console logs will be written to the Console in Elastic JSON format.
     /// </summary>
     public bool UseElasticConsoleLogs { get; set; } = true;
+
+    /// <summary>
+    /// Maximum count of event messages waiting to be sent to a client.
+    /// Events are sent to each client in order by a single sender, a slow client fills only its own buffer.
+    /// When the buffer is full, the oldest event is dropped.
+    /// Zero or negative is unlimited.
+    /// </summary>
+    public int EventBufferSize { get; set; } = 10000;
 }

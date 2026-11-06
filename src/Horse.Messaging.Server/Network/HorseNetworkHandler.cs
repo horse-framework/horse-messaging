@@ -319,7 +319,11 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
                 return OpenEnvelope(mc, message);
 
             case MessageType.Channel:
-                if (!mc.IsNodeClient && clusterMode == ClusterMode.Scaled)
+                //only publishes are relayed to other nodes, each node delivers them to its own subscribers.
+                //Relaying subscribe/unsubscribe made the node connection a subscriber on remote nodes,
+                //which was never cleaned up when the client disconnected and filled their subscriber slots.
+                //Create, update and remove are synced by ChannelClusterNotifier.
+                if (!mc.IsNodeClient && clusterMode == ClusterMode.Scaled && message.ContentType == KnownContentTypes.ChannelPush)
                     _rider.Cluster.ProcessMessageFromClient(mc, message);
 
                 return isReplica

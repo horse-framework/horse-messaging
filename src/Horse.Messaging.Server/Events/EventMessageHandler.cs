@@ -17,15 +17,6 @@ internal class EventMessageHandler : INetworkMessageHandler
 
     private readonly HorseRider _rider;
 
-    private readonly HorseEventType[] _queueEvents =
-    {
-        HorseEventType.QueueMessageAck,
-        HorseEventType.QueueMessageNack,
-        HorseEventType.QueueMessageUnack,
-        HorseEventType.QueueMessageTimeout,
-        HorseEventType.QueuePush
-    };
-
     public EventMessageHandler(HorseRider rider)
     {
         _rider = rider;
@@ -61,282 +52,156 @@ internal class EventMessageHandler : INetworkMessageHandler
             }
         }
 
-        HorseQueue queue = null;
-        if (_queueEvents.Contains(type))
+        // Queue and router events are kept by target name in the registry,
+        // the subscription stays valid when the target is removed and created again.
+        // Channel publish subscriptions belong to the channel and end when it is removed.
+        if (IsTargetEvent(type))
         {
-            queue = _rider.Queue.Find(message.Target);
-            if (queue == null)
-            {
-                if (_rider.Queue.Options.AutoQueueCreation)
-                    queue = await _rider.Queue.Create(message.Target);
-            }
-
-            if (queue == null)
+            if (string.IsNullOrEmpty(message.Target))
             {
                 await SendResponse(client, message, false);
                 return;
             }
-        }
 
-        switch (type)
-        {
-            case HorseEventType.CacheGet:
-                if (subscribe)
-                    _rider.Cache.GetEvent.Subscribers.Add(client, c => c == client);
+            // Unsubscribing needs no target, it may already be removed.
+            if (!subscribe)
+            {
+                if (type == HorseEventType.ChannelPublish)
+                    _rider.Channel.Find(message.Target)?.PublishEvent.Unsubscribe(client);
                 else
-                    _rider.Cache.GetEvent.Subscribers.Remove(client);
-                break;
+                    _rider.EventSubscriptions.Unsubscribe(type, message.Target, client);
 
-            case HorseEventType.CacheSet:
-                if (subscribe)
-                    _rider.Cache.SetEvent.Subscribers.Add(client, c => c == client);
-                else
-                    _rider.Cache.SetEvent.Subscribers.Remove(client);
-                break;
+                await SendResponse(client, message, true);
+                return;
+            }
 
-            case HorseEventType.CacheRemove:
-                if (subscribe)
-                    _rider.Cache.RemoveEvent.Subscribers.Add(client, c => c == client);
-                else
-                    _rider.Cache.RemoveEvent.Subscribers.Remove(client);
-                break;
+            // Only a subscription may create the target.
+            // A channel can be removed while the client subscribes, its subscriptions end with it.
+            // Then the current channel with that name is found (or created) once more.
+            for (int attempt = 0; attempt < 2 && client.IsConnected; attempt++)
+            {
+                EventManager targetEvent = await FindOrCreateTargetEvent(client, message, type);
+                if (targetEvent == null)
+                    break;
 
-            case HorseEventType.CachePurge:
-                if (subscribe)
-                    _rider.Cache.PurgeEvent.Subscribers.Add(client, c => c == client);
-                else
-                    _rider.Cache.PurgeEvent.Subscribers.Remove(client);
-                break;
-
-            case HorseEventType.ChannelCreate:
-                if (subscribe)
-                    _rider.Channel.CreateEvent.Subscribers.Add(client, c => c == client);
-                else
-                    _rider.Channel.CreateEvent.Subscribers.Remove(client);
-                break;
-
-            case HorseEventType.ChannelRemove:
-                if (subscribe)
-                    _rider.Channel.RemoveEvent.Subscribers.Add(client, c => c == client);
-                else
-                    _rider.Channel.RemoveEvent.Subscribers.Remove(client);
-                break;
-
-            case HorseEventType.ChannelSubscribe:
-                if (subscribe)
-                    _rider.Channel.SubscribeEvent.Subscribers.Add(client, c => c == client);
-                else
-                    _rider.Channel.SubscribeEvent.Subscribers.Remove(client);
-                break;
-
-            case HorseEventType.ChannelUnsubscribe:
-                if (subscribe)
-                    _rider.Channel.UnsubscribeEvent.Subscribers.Add(client, c => c == client);
-                else
-                    _rider.Channel.UnsubscribeEvent.Subscribers.Remove(client);
-                break;
-
-            case HorseEventType.ChannelPublish:
-                HorseChannel channel = _rider.Channel.Find(message.Target);
-                if (channel == null)
+                if (targetEvent.Subscribe(client))
                 {
-                    if (_rider.Channel.Options.AutoChannelCreation)
-                        channel = await _rider.Channel.Create(message.Target);
-
-                    if (channel == null)
-                    {
-                        await SendResponse(client, message, false);
-                        return;
-                    }
-                }
-
-                if (subscribe)
-                    channel.PublishEvent.Subscribers.Add(client, c => c == client);
-                else
-                    channel.PublishEvent.Subscribers.Remove(client);
-
-                break;
-
-            case HorseEventType.ClientConnect:
-                if (subscribe)
-                    _rider.Client.ConnectEvent.Subscribers.Add(client, c => c == client);
-                else
-                    _rider.Client.ConnectEvent.Subscribers.Remove(client);
-                break;
-
-            case HorseEventType.ClientDisconnect:
-                if (subscribe)
-                    _rider.Client.DisconnectEvent.Subscribers.Add(client, c => c == client);
-                else
-                    _rider.Client.DisconnectEvent.Subscribers.Remove(client);
-                break;
-
-            case HorseEventType.DirectMessage:
-                if (subscribe)
-                    _rider.Direct.DirectEvent.Subscribers.Add(client, c => c == client);
-                else
-                    _rider.Direct.DirectEvent.Subscribers.Remove(client);
-                break;
-
-            case HorseEventType.DirectMessageResponse:
-                if (subscribe)
-                    _rider.Direct.ResponseEvent.Subscribers.Add(client, c => c == client);
-                else
-                    _rider.Direct.ResponseEvent.Subscribers.Remove(client);
-                break;
-
-            case HorseEventType.ConnectedToRemoteNode:
-                if (subscribe)
-                    _rider.Cluster.ConnectedToRemoteNodeEvent.Subscribers.Add(client, c => c == client);
-                else
-                    _rider.Cluster.ConnectedToRemoteNodeEvent.Subscribers.Remove(client);
-                break;
-
-            case HorseEventType.DisconnectedFromRemoteNode:
-                if (subscribe)
-                    _rider.Cluster.DisconnectedFromRemoteNodeEvent.Subscribers.Add(client, c => c == client);
-                else
-                    _rider.Cluster.DisconnectedFromRemoteNodeEvent.Subscribers.Remove(client);
-                break;
-
-            case HorseEventType.RemoteNodeConnect:
-                if (subscribe)
-                    _rider.Cluster.RemoteNodeConnectEvent.Subscribers.Add(client, c => c == client);
-                else
-                    _rider.Cluster.RemoteNodeConnectEvent.Subscribers.Remove(client);
-                break;
-
-            case HorseEventType.RemoteNodeDisconnect:
-                if (subscribe)
-                    _rider.Cluster.RemoteNodeDisconnectEvent.Subscribers.Add(client, c => c == client);
-                else
-                    _rider.Cluster.RemoteNodeDisconnectEvent.Subscribers.Remove(client);
-                break;
-
-            case HorseEventType.QueueCreate:
-                if (subscribe)
-                    _rider.Queue.CreateEvent.Subscribers.Add(client, c => c == client);
-                else
-                    _rider.Queue.CreateEvent.Subscribers.Remove(client);
-                break;
-
-            case HorseEventType.QueueRemove:
-                if (subscribe)
-                    _rider.Queue.RemoveEvent.Subscribers.Add(client, c => c == client);
-                else
-                    _rider.Queue.RemoveEvent.Subscribers.Remove(client);
-                break;
-
-            case HorseEventType.QueueSubscription:
-                if (subscribe)
-                    _rider.Queue.SubscriptionEvent.Subscribers.Add(client, c => c == client);
-                else
-                    _rider.Queue.SubscriptionEvent.Subscribers.Remove(client);
-                break;
-
-            case HorseEventType.QueueUnsubscription:
-                if (subscribe)
-                    _rider.Queue.UnsubscriptionEvent.Subscribers.Add(client, c => c == client);
-                else
-                    _rider.Queue.UnsubscriptionEvent.Subscribers.Remove(client);
-                break;
-
-            case HorseEventType.QueueStatusChange:
-                if (subscribe)
-                    _rider.Queue.StatusChangeEvent.Subscribers.Add(client, c => c == client);
-                else
-                    _rider.Queue.StatusChangeEvent.Subscribers.Remove(client);
-                break;
-
-            case HorseEventType.QueuePartitionCreated:
-                if (subscribe)
-                    _rider.Queue.PartitionCreatedEvent.Subscribers.Add(client, c => c == client);
-                else
-                    _rider.Queue.PartitionCreatedEvent.Subscribers.Remove(client);
-                break;
-
-            case HorseEventType.QueueMessageAck:
-                if (subscribe)
-                    queue.MessageAckEvent.Subscribers.Add(client, c => c == client);
-                else
-                    queue.MessageAckEvent.Subscribers.Remove(client);
-                break;
-                
-            case HorseEventType.QueueMessageNack:
-                if (subscribe)
-                    queue.MessageNackEvent.Subscribers.Add(client, c => c == client);
-                else
-                    queue.MessageNackEvent.Subscribers.Remove(client);
-                break;
-                
-            case HorseEventType.QueueMessageUnack:
-                if (subscribe)
-                    queue.MessageUnackEvent.Subscribers.Add(client, c => c == client);
-                else
-                    queue.MessageUnackEvent.Subscribers.Remove(client);
-                break;
-                
-            case HorseEventType.QueueMessageTimeout:
-                if (subscribe)
-                    queue.MessageTimeoutEvent.Subscribers.Add(client, c => c == client);
-                else
-                    queue.MessageTimeoutEvent.Subscribers.Remove(client);
-                break;
-                
-            case HorseEventType.QueuePush:
-                if (subscribe)
-                    queue.PushEvent.Subscribers.Add(client, c => c == client);
-                else
-                    queue.PushEvent.Subscribers.Remove(client);
-                break;
-
-            case HorseEventType.RouterCreate:
-                if (subscribe)
-                    _rider.Router.CreateEvent.Subscribers.Add(client, c => c == client);
-                else
-                    _rider.Router.CreateEvent.Subscribers.Remove(client);
-                break;
-
-            case HorseEventType.RouterRemove:
-                if (subscribe)
-                    _rider.Router.RemoveEvent.Subscribers.Add(client, c => c == client);
-                else
-                    _rider.Router.RemoveEvent.Subscribers.Remove(client);
-                break;
-
-            case HorseEventType.RouterBindingAdd:
-                if (subscribe)
-                    _rider.Router.BindingAddEvent.Subscribers.Add(client, c => c == client);
-                else
-                    _rider.Router.BindingAddEvent.Subscribers.Remove(client);
-                break;
-
-            case HorseEventType.RouterBindingRemove:
-                if (subscribe)
-                    _rider.Router.BindingRemoveEvent.Subscribers.Add(client, c => c == client);
-                else
-                    _rider.Router.BindingRemoveEvent.Subscribers.Remove(client);
-                break;
-
-            case HorseEventType.RouterPublish:
-                Router router = _rider.Router.Find(message.Target) as Router;
-                if (router == null)
-                {
-                    await SendResponse(client, message, false);
+                    await SendResponse(client, message, true);
                     return;
                 }
+            }
 
-                if (subscribe)
-                    router.PublishEvent.Subscribers.Add(client, c => c == client);
-                else
-                    router.PublishEvent.Subscribers.Remove(client);
-
-                break;
-
-            default:
-                return;
+            await SendResponse(client, message, false);
+            return;
         }
 
-        await SendResponse(client, message, true);
+        EventManager manager = FindRiderEvent(type);
+        if (manager == null)
+        {
+            // unknown event type, the client waits for a response
+            await SendResponse(client, message, false);
+            return;
+        }
+
+        bool successful = true;
+        if (subscribe)
+            successful = manager.Subscribe(client);
+        else
+            manager.Unsubscribe(client);
+
+        await SendResponse(client, message, successful);
+    }
+
+    private static bool IsTargetEvent(HorseEventType type)
+    {
+        return type is HorseEventType.QueueMessageAck
+            or HorseEventType.QueueMessageNack
+            or HorseEventType.QueueMessageUnack
+            or HorseEventType.QueueMessageTimeout
+            or HorseEventType.QueuePush
+            or HorseEventType.ChannelPublish
+            or HorseEventType.RouterPublish;
+    }
+
+    private async Task<EventManager> FindOrCreateTargetEvent(MessagingClient client, HorseMessage message, HorseEventType type)
+    {
+        switch (type)
+        {
+            case HorseEventType.ChannelPublish:
+            {
+                HorseChannel channel = _rider.Channel.Find(message.Target);
+                if (channel == null && _rider.Channel.Options.AutoChannelCreation)
+                {
+                    // Same path as auto creation on push and subscribe: a concurrent create returns the existing channel,
+                    // an invalid name or the channel limit returns null (the client gets Failed) instead of throwing,
+                    // which made the network handler disconnect the client.
+                    HorseChannelOptions options = HorseChannelOptions.Clone(_rider.Channel.Options);
+                    channel = await _rider.Channel.Create(message.Target, options, null, true, true, true);
+                }
+
+                return channel?.PublishEvent;
+            }
+
+            case HorseEventType.RouterPublish:
+                return (_rider.Router.Find(message.Target) as Router)?.PublishEvent;
+
+            default:
+            {
+                HorseQueue queue = _rider.Queue.Find(message.Target);
+                if (queue == null && _rider.Queue.Options.AutoQueueCreation)
+                {
+                    // Same path as auto creation on push: no exception for a concurrent create of the same name.
+                    QueueOptions options = QueueOptions.CloneFrom(_rider.Queue.Options);
+                    queue = await _rider.Queue.Create(message.Target, options, message, true, true, client);
+                }
+
+                if (queue == null)
+                    return null;
+
+                return type switch
+                {
+                    HorseEventType.QueueMessageAck => queue.MessageAckEvent,
+                    HorseEventType.QueueMessageNack => queue.MessageNackEvent,
+                    HorseEventType.QueueMessageUnack => queue.MessageUnackEvent,
+                    HorseEventType.QueueMessageTimeout => queue.MessageTimeoutEvent,
+                    HorseEventType.QueuePush => queue.PushEvent,
+                    _ => null
+                };
+            }
+        }
+    }
+
+    private EventManager FindRiderEvent(HorseEventType type)
+    {
+        return type switch
+        {
+            HorseEventType.CacheGet => _rider.Cache.GetEvent,
+            HorseEventType.CacheSet => _rider.Cache.SetEvent,
+            HorseEventType.CacheRemove => _rider.Cache.RemoveEvent,
+            HorseEventType.CachePurge => _rider.Cache.PurgeEvent,
+            HorseEventType.ChannelCreate => _rider.Channel.CreateEvent,
+            HorseEventType.ChannelRemove => _rider.Channel.RemoveEvent,
+            HorseEventType.ChannelSubscribe => _rider.Channel.SubscribeEvent,
+            HorseEventType.ChannelUnsubscribe => _rider.Channel.UnsubscribeEvent,
+            HorseEventType.ClientConnect => _rider.Client.ConnectEvent,
+            HorseEventType.ClientDisconnect => _rider.Client.DisconnectEvent,
+            HorseEventType.DirectMessage => _rider.Direct.DirectEvent,
+            HorseEventType.DirectMessageResponse => _rider.Direct.ResponseEvent,
+            HorseEventType.ConnectedToRemoteNode => _rider.Cluster.ConnectedToRemoteNodeEvent,
+            HorseEventType.DisconnectedFromRemoteNode => _rider.Cluster.DisconnectedFromRemoteNodeEvent,
+            HorseEventType.RemoteNodeConnect => _rider.Cluster.RemoteNodeConnectEvent,
+            HorseEventType.RemoteNodeDisconnect => _rider.Cluster.RemoteNodeDisconnectEvent,
+            HorseEventType.QueueCreate => _rider.Queue.CreateEvent,
+            HorseEventType.QueueRemove => _rider.Queue.RemoveEvent,
+            HorseEventType.QueueSubscription => _rider.Queue.SubscriptionEvent,
+            HorseEventType.QueueUnsubscription => _rider.Queue.UnsubscriptionEvent,
+            HorseEventType.QueueStatusChange => _rider.Queue.StatusChangeEvent,
+            HorseEventType.QueuePartitionCreated => _rider.Queue.PartitionCreatedEvent,
+            HorseEventType.RouterCreate => _rider.Router.CreateEvent,
+            HorseEventType.RouterRemove => _rider.Router.RemoveEvent,
+            HorseEventType.RouterBindingAdd => _rider.Router.BindingAddEvent,
+            HorseEventType.RouterBindingRemove => _rider.Router.BindingRemoveEvent,
+            _ => null
+        };
     }
 }

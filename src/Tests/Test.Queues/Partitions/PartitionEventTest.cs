@@ -186,4 +186,46 @@ public class PartitionEventTest
             await Task.CompletedTask;
         });
     }
+    [Fact]
+    public async Task QueuePushEvent_OfPartition_IsPublishedOnParentQueue()
+    {
+        await RunWithQueue(async (server, port, _) =>
+        {
+            HorseClient consumer = new HorseClient();
+            await consumer.ConnectAsync("horse://localhost:" + port);
+            await consumer.Queue.Subscribe("ev-q", true,
+                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "h1") }, CancellationToken.None);
+
+            HorseClient listener = new HorseClient { CatchEventMessages = true };
+            TaskCompletionSource<HorseMessage> received = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            listener.MessageReceived += (_, message) =>
+            {
+                if (message.Type == MessageType.Event && message.ContentType == (ushort) HorseEventType.QueuePush)
+                    received.TrySetResult(message);
+            };
+            await listener.ConnectAsync("horse://localhost:" + port);
+
+            // Subscribed by the parent queue name, as clients know only the parent.
+            HorseResult subscribe = await listener.Event.Subscribe(HorseEventType.QueuePush, "ev-q", true, CancellationToken.None);
+            Assert.Equal(HorseResultCode.Ok, subscribe.Code);
+
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync("horse://localhost:" + port);
+            HorseResult push = await producer.Queue.Push("ev-q", new byte[] { 1, 2, 3 }, null, false, null, "h1", CancellationToken.None);
+            Assert.Equal(HorseResultCode.Ok, push.Code);
+
+            HorseMessage eventMessage = await received.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Equal("ev-q", eventMessage.Target);
+
+            HorseEvent horseEvent = (HorseEvent) listener.MessageSerializer.Deserialize(eventMessage, typeof(HorseEvent));
+            Assert.Equal("ev-q", horseEvent.Target);
+            Assert.Contains(horseEvent.Parameters, p => p.Key == HorseHeaders.PARTITION_LABEL && p.Value == "h1");
+            Assert.Contains(horseEvent.Parameters, p => p.Key == "Partition-Queue" && p.Value.StartsWith("ev-q-Partition-"));
+            Assert.Contains(horseEvent.Parameters, p => p.Key == HorseHeaders.MESSAGE_ID);
+
+            consumer.Disconnect();
+            listener.Disconnect();
+            producer.Disconnect();
+        });
+    }
 }
