@@ -51,6 +51,11 @@ public class Database
     private List<string> _deletedMessages = new();
 
     /// <summary>
+    /// Message ids deleted in this file without an insert in this file, found by Open
+    /// </summary>
+    private HashSet<string> _orphanDeletes;
+
+    /// <summary>
     /// Database file
     /// </summary>
     public DatabaseFile File { get; }
@@ -94,10 +99,21 @@ public class Database
         }
 
         await File.Open();
-        List<HorseMessage> messages = await Load();
+        HashSet<string> insertedIds = new HashSet<string>(StringComparer.Ordinal);
+        List<HorseMessage> messages = await Load(insertedIds);
 
         if (_deletedMessages.Count > 0)
+        {
+            // Captured before the shrink below drops them: a delete without an insert in the same
+            // file was meant for a record in another file (see TakeOrphanDeletes).
+            foreach (string id in _deletedMessages)
+            {
+                if (!insertedIds.Contains(id))
+                    (_orphanDeletes ??= new HashSet<string>(StringComparer.Ordinal)).Add(id);
+            }
+
             await _shrinkManager.FullShrink(messages, _deletedMessages);
+        }
 
         if (Options.AutoShrink)
             _shrinkManager.Start(Options.ShrinkInterval);
@@ -106,9 +122,22 @@ public class Database
     }
 
     /// <summary>
+    /// Returns, once, the ids that Open found deleted in this file but never inserted in it.
+    /// A persistent queue keeps priority and regular messages in two files. Older versions wrote the
+    /// delete of a message whose priority changed after it was saved into the other file, so the
+    /// record stayed alive. The queue applies these deletes to its other file while loading.
+    /// </summary>
+    internal HashSet<string> TakeOrphanDeletes()
+    {
+        HashSet<string> ids = _orphanDeletes;
+        _orphanDeletes = null;
+        return ids;
+    }
+
+    /// <summary>
     /// Loads all data into memory from disk
     /// </summary>
-    private async Task<List<HorseMessage>> Load()
+    private async Task<List<HorseMessage>> Load(HashSet<string> insertedIds)
     {
         List<HorseMessage> messages = new List<HorseMessage>();
 
@@ -131,6 +160,7 @@ public class Database
                             continue;
 
                         messages.Add(message.Message);
+                        insertedIds.Add(message.Id);
                         break;
 
                     case DataType.Delete:

@@ -83,6 +83,12 @@ public class PersistentQueueManager : IHorseQueueManager
         List<HorseMessage> prioMessages = await _priorityMessageStore.Initialize();
         List<HorseMessage> messages = await _messageStore.Initialize();
 
+        // Taken from both files before either is changed below.
+        HashSet<string> prioOrphanDeletes = _priorityMessageStore.Database.TakeOrphanDeletes();
+        HashSet<string> orphanDeletes = _messageStore.Database.TakeOrphanDeletes();
+        await ApplyOrphanDeletes(messages, _messageStore, prioOrphanDeletes);
+        await ApplyOrphanDeletes(prioMessages, _priorityMessageStore, orphanDeletes);
+
         Queue.OnDestroyed += DestoryAsync;
 
         string path = _messageStore.Database.File.Filename;
@@ -94,15 +100,43 @@ public class PersistentQueueManager : IHorseQueueManager
             deliveries = RedeliveryService.GetDeliveries();
         }
 
-        LoadMessages(prioMessages, deliveries);
-        LoadMessages(messages, deliveries);
+        LoadMessages(prioMessages, deliveries, true);
+        LoadMessages(messages, deliveries, false);
 
         DeliveryHandler.Tracker.Start();
         PriorityMessageStore.TimeoutTracker.Start();
         MessageStore.TimeoutTracker.Start();
     }
 
-    private void LoadMessages(List<HorseMessage> messages, List<KeyValuePair<string, int>> deliveries)
+    /// <summary>
+    /// Deletes the messages of one file that older versions deleted in the other file.
+    /// Their priority changed after they were saved, so the delete went to the wrong file and
+    /// the message came back after restart. Only deletes that have no insert in their own file
+    /// are taken, so a message deleted and saved again in the same file is not affected.
+    /// </summary>
+    private static async Task ApplyOrphanDeletes(List<HorseMessage> messages, PersistentMessageStore store, HashSet<string> deletedIds)
+    {
+        if (deletedIds == null || deletedIds.Count == 0 || messages.Count == 0)
+            return;
+
+        HashSet<string> deleted = null;
+        messages.RemoveAll(x =>
+        {
+            if (x.MessageId == null || !deletedIds.Contains(x.MessageId))
+                return false;
+
+            (deleted ??= new HashSet<string>(StringComparer.Ordinal)).Add(x.MessageId);
+            return true;
+        });
+
+        if (deleted == null)
+            return;
+
+        foreach (string id in deleted)
+            await store.Database.Delete(id);
+    }
+
+    private void LoadMessages(List<HorseMessage> messages, List<KeyValuePair<string, int>> deliveries, bool priorityFile)
     {
         if (messages.Count == 0)
             return;
@@ -118,6 +152,8 @@ public class PersistentQueueManager : IHorseQueueManager
             true,
             qm =>
             {
+                qm.SavedToPriorityStore = priorityFile;
+
                 if (resetDeadline)
                     qm.Deadline = DateTime.UtcNow.AddSeconds(timeout.MessageDuration);
 
@@ -196,6 +232,8 @@ public class PersistentQueueManager : IHorseQueueManager
         if (UseRedelivery)
             await RedeliveryService.Remove(message.Message.MessageId);
 
+        // The store is chosen by the current priority (where the message is in memory); the record
+        // is deleted from the file it was saved to (see PersistentMessageStore.RecordDatabase).
         bool deleted = message.Message.HighPriority
             ? await _priorityMessageStore.RemoveMessage(message)
             : await _messageStore.RemoveMessage(message);
@@ -209,23 +247,44 @@ public class PersistentQueueManager : IHorseQueueManager
         if (UseRedelivery)
             await RedeliveryService.Remove(messageId);
 
-        bool deleted = await _messageStore.RemoveMessage(messageId);
+        // The regular store's removal used to report success for any id, so a priority message
+        // was never tried and stayed in memory and on disk. Replicas remove messages this way.
+        PersistentMessageStore store = _priorityMessageStore;
+        QueueMessage message = store.Find(messageId);
+        if (message == null)
+        {
+            store = _messageStore;
+            message = store.Find(messageId);
+        }
 
-        if (!deleted)
-            deleted = await _priorityMessageStore.RemoveMessage(messageId);
+        if (message != null)
+            return await store.RemoveMessage(message);
 
-        return deleted;
+        // Not in memory (in flight, or already removed). Its record can be in either file.
+        await _messageStore.Database.Delete(messageId);
+        await _priorityMessageStore.Database.Delete(messageId);
+        return false;
+    }
+
+    /// <summary>
+    /// Returns the store whose database file holds the record of the message
+    /// </summary>
+    internal PersistentMessageStore GetRecordStore(QueueMessage message)
+    {
+        bool priorityFile = message.SavedToPriorityStore ?? message.Message.HighPriority;
+        return priorityFile ? _priorityMessageStore : _messageStore;
     }
 
     /// <inheritdoc />
     public Task<bool> SaveMessage(QueueMessage message)
     {
-        if (message.Message.HighPriority)
-        {
-            return _priorityMessageStore.Database.Insert(message.Message);
-        }
+        // Recorded before the write: the priority may change later, the file does not.
+        bool priority = message.Message.HighPriority;
+        message.SavedToPriorityStore = priority;
 
-        return _messageStore.Database.Insert(message.Message);
+        return priority
+            ? _priorityMessageStore.Database.Insert(message.Message)
+            : _messageStore.Database.Insert(message.Message);
     }
 
     /// <inheritdoc />

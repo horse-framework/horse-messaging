@@ -265,7 +265,8 @@ public class DefaultQueueSynchronizer : IQueueSynchronizer
             QueueMessage queueMessage = new QueueMessage(msg, true);
             try
             {
-                Manager.AddMessage(queueMessage);
+                if (Manager.AddMessage(queueMessage))
+                    Manager.Queue.RegisterUniqueMessageId(msg.MessageId);
             }
             catch
             {

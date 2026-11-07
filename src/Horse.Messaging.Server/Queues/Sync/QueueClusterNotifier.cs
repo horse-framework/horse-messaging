@@ -86,7 +86,21 @@ internal class QueueClusterNotifier
                     tasks.Add(task);
                 }
 
-                await Task.WhenAll(tasks);
+                // AllNodes promises the message is on every connected node. A replica that answered
+                // with a failure used to be ignored and the producer was told it succeeded.
+                // The successor and other replicas have stored it by now, but the Main will not, so the
+                // producer retries. The removal follows the push in each replica's queue order and
+                // keeps those copies from being delivered (twice, with the retry) after a failover.
+                bool[] acks = await Task.WhenAll(tasks);
+                foreach (bool replicaAck in acks)
+                {
+                    if (!replicaAck)
+                    {
+                        SendMessageRemoval(message);
+                        return false;
+                    }
+                }
+
                 return true;
             }
 
@@ -176,6 +190,8 @@ internal class QueueClusterNotifier
             Initialized = _queue.Status != QueueStatus.NotInitialized,
             PutBack = _queue.Options.PutBack.AsString(EnumFormat.Description),
             PutBackDelay = _queue.Options.PutBackDelay,
+            CommitWhen = _queue.Options.CommitWhen.AsString(EnumFormat.Description),
+            MessageIdUniqueCheck = _queue.Options.MessageIdUniqueCheck,
             MessageSizeLimit = _queue.Options.MessageSizeLimit,
             MessageLimit = _queue.Options.MessageLimit,
             LimitExceededStrategy = _queue.Options.LimitExceededStrategy.AsString(EnumFormat.Description),

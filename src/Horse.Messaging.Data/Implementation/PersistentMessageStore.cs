@@ -36,24 +36,40 @@ public class PersistentMessageStore : LinkedMessageStore
         return Database.CloseWithoutShrink();
     }
 
+    /// <summary>
+    /// Returns the database file that holds the record of the message.
+    /// It is the other store's file when the priority of the message changed after it was saved.
+    /// </summary>
+    private Database RecordDatabase(QueueMessage message)
+    {
+        if (message != null && Manager is PersistentQueueManager manager)
+            return manager.GetRecordStore(message).Database;
+
+        return Database;
+    }
+
     /// <inheritdoc />
     public override bool Remove(string messageId)
     {
-        Database.Delete(messageId).GetAwaiter().GetResult();
+        RecordDatabase(Find(messageId)).Delete(messageId).GetAwaiter().GetResult();
         return base.Remove(messageId);
     }
 
     /// <inheritdoc />
     public override void Remove(HorseMessage message)
     {
-        Database.Delete(message.MessageId).GetAwaiter().GetResult();
+        QueueMessage queueMessage = message.MessageId != null ? Find(message.MessageId) : null;
+        if (queueMessage != null && queueMessage.Message != message)
+            queueMessage = null;
+
+        RecordDatabase(queueMessage).Delete(message.MessageId).GetAwaiter().GetResult();
         base.Remove(message);
     }
 
     /// <inheritdoc />
     public override void Remove(QueueMessage message)
     {
-        Database.Delete(message.Message.MessageId).GetAwaiter().GetResult();
+        RecordDatabase(message).Delete(message.Message.MessageId).GetAwaiter().GetResult();
         base.Remove(message);
     }
 
@@ -62,8 +78,13 @@ public class PersistentMessageStore : LinkedMessageStore
     /// </summary>
     public async Task<bool> RemoveMessage(QueueMessage message)
     {
-        await Database.Delete(message.Message.MessageId);
-        base.Remove(message);
+        await RecordDatabase(message).Delete(message.Message.MessageId);
+
+        // A consumed message (deleted after its ACK) is not in the store. Checking first skips
+        // the linear list scan that LinkedMessageStore falls back to on an index miss.
+        if (message.IsInQueue)
+            base.Remove(message);
+
         return true;
     }
 
@@ -73,13 +94,14 @@ public class PersistentMessageStore : LinkedMessageStore
     }
 
     /// <summary>
-    /// Remoes the message from disk and queue
+    /// Removes the message from disk and queue.
+    /// Returns false if the message is not in this store. Its record in this file is deleted anyway.
     /// </summary>
     public async Task<bool> RemoveMessage(string messageId)
     {
-        await Database.Delete(messageId);
-        base.Remove(messageId);
-        return true;
+        QueueMessage message = Find(messageId);
+        await RecordDatabase(message).Delete(messageId);
+        return base.Remove(messageId);
     }
 
     /// <inheritdoc />

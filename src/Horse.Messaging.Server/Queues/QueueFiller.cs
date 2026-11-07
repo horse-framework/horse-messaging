@@ -61,6 +61,8 @@ public class QueueFiller
                     _queue.Manager.PriorityMessageStore.Put(qm);
                 else
                     _queue.Manager.MessageStore.Put(qm);
+
+                _queue.RegisterUniqueMessageId(qm.Message.MessageId);
             }
 
             _ = _queue.Trigger();
@@ -113,6 +115,8 @@ public class QueueFiller
                     _queue.Manager.PriorityMessageStore.Put(qm);
                 else
                     _queue.Manager.MessageStore.Put(qm);
+
+                _queue.RegisterUniqueMessageId(qm.Message.MessageId);
             }
 
             _ = _queue.Trigger();
@@ -166,6 +170,8 @@ public class QueueFiller
                     _queue.Manager.PriorityMessageStore.Put(qm);
                 else
                     _queue.Manager.MessageStore.Put(qm);
+
+                _queue.RegisterUniqueMessageId(qm.Message.MessageId);
             }
 
             _ = _queue.Trigger();
@@ -219,6 +225,8 @@ public class QueueFiller
                     _queue.Manager.PriorityMessageStore.Put(qm);
                 else
                     _queue.Manager.MessageStore.Put(qm);
+
+                _queue.RegisterUniqueMessageId(qm.Message.MessageId);
             }
 
             _ = _queue.Trigger();
@@ -270,6 +278,8 @@ public class QueueFiller
                     _queue.Manager.PriorityMessageStore.Put(qm);
                 else
                     _queue.Manager.MessageStore.Put(qm);
+
+                _queue.RegisterUniqueMessageId(qm.Message.MessageId);
 
                 if (actionPerMessage != null)
                     actionPerMessage(qm);
