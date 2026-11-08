@@ -30,6 +30,7 @@ internal static class HorseLogEvents
     internal const int RouterBindingRemove = 405;
     internal const int RouterPublish = 406;
     internal const int AutoQueueBindingSend = 407;
+    internal const int RouterSave = 408;
 
     internal const int PluginLoadAssembly = 501;
     internal const int PluginAddAssembly = 502;

@@ -698,8 +698,26 @@ internal class ServerMessageHandler : INetworkMessageHandler
             }
         }
 
-        _rider.Router.Add(message.Target, method);
-        await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
+        HorseResultCode code = HorseResultCode.Ok;
+        try
+        {
+            _rider.Router.Add(message.Target, method);
+        }
+        catch (DuplicateNameException)
+        {
+            // created by another request after the check above: the router exists, as the requester wants
+        }
+        catch (OperationCanceledException)
+        {
+            code = HorseResultCode.LimitExceeded;
+        }
+        catch (Exception)
+        {
+            // invalid name or another error, logged by the router rider
+            code = HorseResultCode.Failed;
+        }
+
+        await client.SendAsync(message.CreateResponse(code));
     }
 
     /// <summary>
@@ -767,6 +785,11 @@ internal class ServerMessageHandler : INetworkMessageHandler
         }
 
         BindingInformation info = message.Deserialize<BindingInformation>(_rider.MessageContentSerializer);
+        if (info == null || string.IsNullOrEmpty(info.BindingType))
+        {
+            await client.SendAsync(message.CreateResponse(HorseResultCode.BadRequest));
+            return;
+        }
 
         //check create queue access
         foreach (IClientAuthorization authorization in _rider.Client.Authorizations.All())
@@ -782,9 +805,11 @@ internal class ServerMessageHandler : INetworkMessageHandler
         if (info.BindingType.IndexOf('.') < 0)
             info.BindingType = "Horse.Messaging.Server.Routing." + info.BindingType;
 
-        Type bindingType = Type.GetType(info.BindingType);
+        // Only non abstract Binding types are found. The type name comes from the client, and any type
+        // with a parameterless constructor was created before the cast to Binding failed.
+        Type bindingType = RouterRider.ResolveBindingType(info.BindingType, null);
         if (bindingType == null && !info.BindingType.EndsWith("Binding"))
-            bindingType = Type.GetType($"{info.BindingType}Binding");
+            bindingType = RouterRider.ResolveBindingType($"{info.BindingType}Binding", null);
 
         if (bindingType == null)
         {
@@ -792,7 +817,18 @@ internal class ServerMessageHandler : INetworkMessageHandler
             return;
         }
 
-        Binding binding = (Binding)Activator.CreateInstance(bindingType);
+        Binding binding;
+        try
+        {
+            binding = (Binding)Activator.CreateInstance(bindingType);
+        }
+        catch
+        {
+            // no parameterless constructor, or the constructor failed
+            await client.SendAsync(message.CreateResponse(HorseResultCode.BadRequest));
+            return;
+        }
+
         binding.Name = info.Name;
         binding.Target = info.Target;
         binding.ContentType = info.ContentType;
@@ -800,8 +836,32 @@ internal class ServerMessageHandler : INetworkMessageHandler
         binding.Interaction = info.Interaction;
         binding.RouteMethod = info.Method;
 
-        router.AddBinding(binding);
-        await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
+        if (router.AddBinding(binding))
+        {
+            await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
+            return;
+        }
+
+        // A repeated request for the same binding (a service declaring its bindings at every start) is not an error.
+        // A different binding with the same name used to get Ok too, while it was not added.
+        Binding existing = router.Bindings.FirstOrDefault(x => x.Name == binding.Name);
+        bool same = existing != null &&
+                    existing.GetType() == binding.GetType() &&
+                    existing.Target == binding.Target &&
+                    existing.ContentType == binding.ContentType &&
+                    existing.Priority == binding.Priority &&
+                    existing.Interaction == binding.Interaction &&
+                    existing.RouteMethod == binding.RouteMethod;
+
+        bool nameTaken = existing != null || router.UnresolvedBindings.Any(x => x.Name == binding.Name);
+
+        HorseResultCode code = same
+            ? HorseResultCode.Ok
+            : nameTaken
+                ? HorseResultCode.Duplicate
+                : HorseResultCode.Failed;
+
+        await client.SendAsync(message.CreateResponse(code));
     }
 
     /// <summary>

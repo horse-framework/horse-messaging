@@ -17,7 +17,7 @@ namespace Horse.Messaging.Server.Routing;
 /// </summary>
 public class TopicBinding : Binding
 {
-    private HorseQueue[] _queues;
+    private HorseQueue[] _queues = Array.Empty<HorseQueue>();
     private DateTime _queueUpdateTime;
     private readonly TimeSpan _queueCacheDuration = TimeSpan.FromMilliseconds(250);
     private readonly IUniqueIdGenerator _idGenerator = new DefaultUniqueIdGenerator();
@@ -33,19 +33,21 @@ public class TopicBinding : Binding
             if (DateTime.UtcNow - _queueUpdateTime > _queueCacheDuration)
                 RefreshQueueCache();
 
-            message.Type = MessageType.QueueMessage;
-            message.WaitResponse = Interaction == BindingInteraction.Response;
+            HorseQueue[] queues = _queues;
+            if (queues.Length == 0)
+                return false;
 
             switch (RouteMethod)
             {
                 case RouteMethod.Distribute:
-                    return await SendDistribute(sender, message);
+                    return await SendDistribute(sender, message, queues);
 
                 case RouteMethod.OnlyFirst:
-                    return await SendOnlyFirst(sender, message);
+                    return await SendToOne(sender, message, queues, 0);
 
                 case RouteMethod.RoundRobin:
-                    return await SendRoundRobin(sender, message);
+                    uint next = unchecked((uint)Interlocked.Increment(ref _roundRobinIndex));
+                    return await SendToOne(sender, message, queues, (int)(next % (uint)queues.Length));
 
                 default:
                     return false;
@@ -58,89 +60,84 @@ public class TopicBinding : Binding
         }
     }
 
-    private Task<bool> SendDistribute(MessagingClient sender, HorseMessage message)
+    /// <summary>
+    /// Pushes a copy of the message to every queue of the topic.
+    /// A failing queue does not stop the others. Returns true if at least one queue accepted the message.
+    /// </summary>
+    private async Task<bool> SendDistribute(MessagingClient sender, HorseMessage message, HorseQueue[] queues)
     {
         bool sent = false;
-        foreach (HorseQueue queue in _queues)
+        foreach (HorseQueue queue in queues)
         {
-            string messageId = sent || Interaction == BindingInteraction.None
+            // When a response is expected, the producer waits for its own message id. That id goes to
+            // the first queue that accepts the message and the others get new ids, so only one consumer
+            // answers the pending request.
+            string messageId = Interaction == BindingInteraction.None || !sent
                 ? message.MessageId
                 : _idGenerator.Create();
 
-            if (!sent)
-                sent = true;
-
             HorseMessage msg = message.Clone(true, true, messageId);
+            if (await PushToQueue(sender, queue, msg))
+                sent = true;
+        }
+
+        return sent;
+    }
+
+    /// <summary>
+    /// Pushes the message to one queue of the topic, starting from the queue at the start index.
+    /// The next queue is tried when a queue does not accept the message.
+    /// </summary>
+    private async Task<bool> SendToOne(MessagingClient sender, HorseMessage message, HorseQueue[] queues, int start)
+    {
+        // The original message goes into the queue unless other bindings of the router use it after this one
+        HorseMessage msg = IsSharedWithOtherBindings()
+            ? message.Clone(true, true, message.MessageId)
+            : message;
+
+        for (int i = 0; i < queues.Length; i++)
+        {
+            // A rejected push may still have changed or kept the message, so the next queue gets a copy
+            if (i > 0)
+                msg = message.Clone(true, true, message.MessageId);
+
+            HorseQueue queue = queues[(start + i) % queues.Length];
+            if (await PushToQueue(sender, queue, msg))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Pushes the message through the queue's push pipeline
+    /// (status and limit checks, persistence, cluster replication, events)
+    /// </summary>
+    private async Task<bool> PushToQueue(MessagingClient sender, HorseQueue queue, HorseMessage msg)
+    {
+        try
+        {
+            msg.Type = MessageType.QueueMessage;
             msg.SetTarget(queue.Name);
-                
+            msg.WaitResponse = Interaction == BindingInteraction.Response;
+
             QueueMessage queueMessage = new QueueMessage(msg);
             queueMessage.Source = sender;
 
-            PushResult result = queue.AddMessage(queueMessage);
-
-            if (result != PushResult.Success)
-                return Task.FromResult(false);
+            PushResult result = await queue.Push(queueMessage, sender);
+            return result == PushResult.Success;
         }
-
-        return Task.FromResult(sent);
+        catch (Exception e)
+        {
+            Router.Rider.SendError(HorseLogLevel.Error, HorseLogEvents.RouterBindingSend, $"BindingSend Type:Topic, Binding:{Name}, Queue:{queue.Name}", e);
+            return false;
+        }
     }
 
-    private async Task<bool> SendRoundRobin(MessagingClient sender, HorseMessage message)
+    private bool IsSharedWithOtherBindings()
     {
-        Interlocked.Increment(ref _roundRobinIndex);
-        int i = _roundRobinIndex;
-
-        if (i >= _queues.Length)
-            _roundRobinIndex = 0;
-
-        if (_queues.Length == 0)
-            return false;
-
-        HorseQueue queue = Router.Rider.Queue.Find(message.Target);
-        if (queue == null)
-        {
-            if (!Router.Rider.Queue.Options.AutoQueueCreation)
-                return false;
-
-            queue = await Router.Rider.Queue.Create(message.Target,
-                Router.Rider.Queue.Options,
-                message,
-                true,
-                true);
-        }
-
-        message.SetTarget(queue.Name);
-        QueueMessage queueMessage = new QueueMessage(message);
-        queueMessage.Source = sender;
-            
-        PushResult result = queue.AddMessage(queueMessage);
-        return result == PushResult.Success;
-    }
-
-    private async Task<bool> SendOnlyFirst(MessagingClient sender, HorseMessage message)
-    {
-        if (_queues.Length < 1)
-            return false;
-
-        HorseQueue queue = Router.Rider.Queue.Find(message.Target);
-        if (queue == null)
-        {
-            if (!Router.Rider.Queue.Options.AutoQueueCreation)
-                return false;
-
-            queue = await Router.Rider.Queue.Create(message.Target,
-                Router.Rider.Queue.Options,
-                message,
-                true,
-                true);
-        }
-
-        message.SetTarget(queue.Name);
-        QueueMessage queueMessage = new QueueMessage(message);
-        queueMessage.Source = sender;
-            
-        queue.AddMessage(queueMessage);
-        return true;
+        Router router = Router;
+        return router.Method == RouteMethod.Distribute && router.Bindings.Length > 1;
     }
 
     private void RefreshQueueCache()

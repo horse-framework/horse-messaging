@@ -36,6 +36,16 @@ internal class RouterClusterNotifier
         _cluster.SendMessage(msg);
     }
 
+    internal void SendRouterUpdated(Router router)
+    {
+        if (_cluster.Options.Mode != ClusterMode.Reliable || _cluster.State != NodeState.Main)
+            return;
+
+        HorseMessage msg = new HorseMessage(MessageType.Cluster, router.Name, KnownContentTypes.UpdateRouter);
+        msg.SetStringContent(router.IsEnabled ? "true" : "false");
+        _cluster.SendMessage(msg);
+    }
+
     internal void SendRouterAddBinding(Router router, Binding binding)
     {
         if (_cluster.Options.Mode != ClusterMode.Reliable || _cluster.State != NodeState.Main)
@@ -47,13 +57,13 @@ internal class RouterClusterNotifier
         _cluster.SendMessage(msg);
     }
 
-    internal void SendRouterRemoveBinding(Router router, Binding binding)
+    internal void SendRouterRemoveBinding(Router router, string bindingName)
     {
         if (_cluster.Options.Mode != ClusterMode.Reliable || _cluster.State != NodeState.Main)
             return;
 
         HorseMessage msg = new HorseMessage(MessageType.Cluster, router.Name, KnownContentTypes.RemoveBinding);
-        msg.SetStringContent(binding.Name);
+        msg.SetStringContent(bindingName);
         _cluster.SendMessage(msg);
     }
 }

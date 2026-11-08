@@ -468,6 +468,14 @@ public class NodeClient
                 break;
             }
 
+            case KnownContentTypes.UpdateRouter:
+            {
+                Router router = Rider.Router.Find(message.Target);
+                if (router != null && bool.TryParse(message.GetStringContent(), out bool enabled))
+                    router.SetEnabled(enabled, false);
+                break;
+            }
+
             case KnownContentTypes.AddBinding:
             {
                 string content = message.GetStringContent();
@@ -477,7 +485,15 @@ public class NodeClient
                 if (router != null)
                 {
                     Binding binding = Rider.Router.CreateBinding(configuration);
-                    router.AddBinding(binding, false);
+                    if (binding != null)
+                        router.AddBinding(binding, false);
+                    else
+                    {
+                        // The binding type is not available on this node. Its configuration is kept and saved,
+                        // so this node does not lose the binding when it saves the router later.
+                        router.KeepUnresolvedBinding(configuration);
+                        Rider.Router.SaveRouterConfiguration(router);
+                    }
                 }
 
                 break;

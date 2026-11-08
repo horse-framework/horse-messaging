@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Plugins;
 using Horse.Messaging.Protocol;
@@ -32,11 +33,18 @@ public class Router
     /// </summary>
     public string Name { get; }
 
+    private bool _isEnabled = true;
+
     /// <summary>
     /// If true, messages are routed to bindings.
     /// If false, messages are not routed.
+    /// A change is saved and sent to the other nodes.
     /// </summary>
-    public bool IsEnabled { get; set; }
+    public bool IsEnabled
+    {
+        get => _isEnabled;
+        set => SetEnabled(value, true);
+    }
 
     /// <summary>
     /// Route method. Defines how messages will be routed.
@@ -59,7 +67,23 @@ public class Router
     /// </summary>
     public EventManager PublishEvent { get; }
 
-    private readonly object _rrlock = new();
+    /// <summary>
+    /// Saved bindings whose type could not be loaded. See KeepUnresolvedBinding.
+    /// </summary>
+    private BindingConfiguration[] _unresolvedBindings = Array.Empty<BindingConfiguration>();
+
+    /// <summary>
+    /// Saved bindings whose type could not be loaded. They are saved with the router.
+    /// </summary>
+    internal BindingConfiguration[] UnresolvedBindings => _unresolvedBindings;
+
+    /// <summary>
+    /// Serializes changes of the bindings and the enabled state (cold path).
+    /// Bindings are replaced as a new array; two changes at the same time read the same old array and
+    /// one of them was lost. Saving and cluster messages are in the lock too, so they keep the order of the changes.
+    /// Publishing reads the array without the lock.
+    /// </summary>
+    private readonly object _changeLock = new();
 
     #endregion
 
@@ -69,10 +93,32 @@ public class Router
     public Router(HorseRider rider, string name, RouteMethod method)
     {
         Rider = rider;
-        IsEnabled = true;
         Name = name;
         Method = method;
         PublishEvent = new EventManager(rider, HorseEventType.RouterPublish, name);
+    }
+
+    /// <summary>
+    /// Changes the enabled state. The change is saved and sent to the other nodes
+    /// when the router is added to the server.
+    /// </summary>
+    internal void SetEnabled(bool enabled, bool notifyCluster)
+    {
+        lock (_changeLock)
+        {
+            if (_isEnabled == enabled)
+                return;
+
+            _isEnabled = enabled;
+
+            if (!IsRegistered)
+                return;
+
+            Rider.Router.SaveRouterConfiguration(this);
+
+            if (notifyCluster)
+                Rider.Router.ClusterNotifier.SendRouterUpdated(this);
+        }
     }
 
     #region Add - Remove
@@ -91,7 +137,7 @@ public class Router
     public virtual Router AddBinding<T>(Action<Binding> options = null) where T : Binding, new()
     {
         T binding = new T();
-        options(binding);
+        options?.Invoke(binding);
         bool added = AddBinding(binding);
         if (!added)
             throw new InvalidOperationException("An error has occured while attempting to add Binding. Exception message is sent to rider error handler");
@@ -112,29 +158,7 @@ public class Router
     /// </summary>
     internal virtual bool AddBinding<TBinding>(TBinding binding, bool notifyCluster) where TBinding : Binding, new()
     {
-        try
-        {
-            if (Bindings.Any(x => x.Name.Equals(binding.Name)))
-                return false;
-
-            List<Binding> list = Bindings.ToList();
-            list.Add(binding);
-
-            binding.Router = this;
-            Bindings = list.OrderByDescending(x => x.Priority).ToArray();
-            Rider.Router.BindingAddEvent.Trigger(Name, new KeyValuePair<string, string>("Binding-Name", binding.Name));
-            UpdateRouterConfiguration();
-
-            if (notifyCluster)
-                Rider.Router.ClusterNotifier.SendRouterAddBinding(this, binding);
-
-            return true;
-        }
-        catch (Exception e)
-        {
-            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.RouterBindingAdd, $"RemoveBinding Router:{Name},  Binding:{binding?.Name}", e);
-            return false;
-        }
+        return AddBinding((Binding)binding, notifyCluster);
     }
 
     /// <summary>
@@ -164,28 +188,92 @@ public class Router
 
         try
         {
-            if (Bindings.Any(x => x.Name.Equals(binding.Name)))
-                return false;
+            lock (_changeLock)
+            {
+                if (Bindings.Any(x => x.Name == binding.Name) || _unresolvedBindings.Any(x => x.Name == binding.Name))
+                    return false;
 
-            List<Binding> list = Bindings.ToList();
-            list.Add(binding);
+                List<Binding> list = Bindings.ToList();
+                list.Add(binding);
 
-            binding.Router = this;
-            Bindings = list.OrderByDescending(x => x.Priority).ToArray();
-            Rider.Router.BindingAddEvent.Trigger(Name, new KeyValuePair<string, string>("Binding-Name", binding.Name));
-            UpdateRouterConfiguration();
+                binding.Router = this;
+                Bindings = list.OrderByDescending(x => x.Priority).ToArray();
+                Rider.Router.BindingAddEvent.Trigger(Name, new KeyValuePair<string, string>("Binding-Name", binding.Name));
 
-            if (notifyCluster)
-                Rider.Router.ClusterNotifier.SendRouterAddBinding(this, binding);
+                // A router that is not added to the server yet is saved and sent to the other nodes when it is added.
+                // Saving it here left an entry for a router that was never added, or replaced the saved
+                // configuration of another router with the same name.
+                if (IsRegistered)
+                {
+                    Rider.Router.SaveRouterConfiguration(this);
 
-            return true;
+                    if (notifyCluster)
+                        Rider.Router.ClusterNotifier.SendRouterAddBinding(this, binding);
+                }
+
+                return true;
+            }
         }
         catch (Exception e)
         {
-            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.RouterBindingAdd, $"RemoveBinding Router:{Name},  Binding:{binding?.Name}", e);
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.RouterBindingAdd, $"AddBinding Router:{Name},  Binding:{binding?.Name}", e);
             return false;
         }
     }
+
+    /// <summary>
+    /// Adds a binding created from a saved configuration (startup or a create message of another node).
+    /// No events, saves or cluster messages: the router is not added to the server yet.
+    /// </summary>
+    internal bool LoadBinding(Binding binding)
+    {
+        lock (_changeLock)
+        {
+            if (Bindings.Any(x => x.Name == binding.Name))
+                return false;
+
+            binding.Router = this;
+            Bindings = Bindings.Append(binding).OrderByDescending(x => x.Priority).ToArray();
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Keeps a saved binding whose type could not be loaded (a custom binding type that is not available).
+    /// It is not used for routing, but it is saved with the router, so a later save does not delete it.
+    /// </summary>
+    internal void KeepUnresolvedBinding(BindingConfiguration configuration)
+    {
+        if (configuration == null)
+            return;
+
+        lock (_changeLock)
+        {
+            if (configuration.Name != null && (Bindings.Any(x => x.Name == configuration.Name) || _unresolvedBindings.Any(x => x.Name == configuration.Name)))
+                return;
+
+            _unresolvedBindings = _unresolvedBindings.Append(configuration).ToArray();
+        }
+    }
+
+    /// <summary>
+    /// Removes a kept binding configuration. Called in the change lock.
+    /// </summary>
+    private bool RemoveUnresolvedBinding(string bindingName)
+    {
+        BindingConfiguration[] current = _unresolvedBindings;
+        BindingConfiguration[] remaining = current.Where(x => x.Name != bindingName).ToArray();
+        if (remaining.Length == current.Length)
+            return false;
+
+        _unresolvedBindings = remaining;
+        return true;
+    }
+
+    /// <summary>
+    /// True if this router object is the one added to the server with its name
+    /// </summary>
+    private bool IsRegistered => Name != null && ReferenceEquals(Rider.Router.Find(Name), this);
 
     /// <summary>
     /// Removes a binding from the route
@@ -202,24 +290,25 @@ public class Router
     {
         try
         {
-            if (!Bindings.Any(x => x.Name.Equals(bindingName)))
-                return;
+            lock (_changeLock)
+            {
+                Binding binding = Bindings.FirstOrDefault(x => x.Name == bindingName);
+                if (binding == null)
+                {
+                    // A saved binding whose type could not be loaded can be removed by its name too
+                    if (RemoveUnresolvedBinding(bindingName) && IsRegistered)
+                    {
+                        Rider.Router.SaveRouterConfiguration(this);
 
-            List<Binding> list = Bindings.ToList();
-            Binding binding = list.FirstOrDefault(x => x.Name == bindingName);
-            if (binding == null)
-                return;
+                        if (notifyCluster)
+                            Rider.Router.ClusterNotifier.SendRouterRemoveBinding(this, bindingName);
+                    }
 
-            list.Remove(binding);
+                    return;
+                }
 
-            binding.Router = null;
-            Bindings = list.OrderByDescending(x => x.Priority).ToArray();
-            Rider.Router.BindingRemoveEvent.Trigger(Name, new KeyValuePair<string, string>("Binding-Name", binding.Name));
-
-            if (notifyCluster)
-                Rider.Router.ClusterNotifier.SendRouterRemoveBinding(this, binding);
-
-            UpdateRouterConfiguration();
+                RemoveFromBindings(binding, notifyCluster);
+            }
         }
         catch (Exception e)
         {
@@ -242,19 +331,16 @@ public class Router
     {
         try
         {
-            if (!Bindings.Contains(binding))
-                return;
-
-            List<Binding> list = Bindings.ToList();
             if (binding == null)
                 return;
 
-            list.Remove(binding);
-            Bindings = list.OrderByDescending(x => x.Priority).ToArray();
-            Rider.Router.BindingRemoveEvent.Trigger(Name, new KeyValuePair<string, string>("Binding-Name", binding.Name));
+            lock (_changeLock)
+            {
+                if (!Bindings.Contains(binding))
+                    return;
 
-            if (notifyCluster)
-                Rider.Router.ClusterNotifier.SendRouterRemoveBinding(this, binding);
+                RemoveFromBindings(binding, notifyCluster);
+            }
         }
         catch (Exception e)
         {
@@ -262,9 +348,64 @@ public class Router
         }
     }
 
+    /// <summary>
+    /// Removes the binding, saves the router and notifies the other nodes. Called in the change lock.
+    /// The binding keeps its Router: a message that is being sent by the binding still uses it,
+    /// and setting it to null made that send fail with a NullReferenceException.
+    /// </summary>
+    private void RemoveFromBindings(Binding binding, bool notifyCluster)
+    {
+        Bindings = Bindings.Where(x => !ReferenceEquals(x, binding)).ToArray();
+        Rider.Router.BindingRemoveEvent.Trigger(Name, new KeyValuePair<string, string>("Binding-Name", binding.Name));
+
+        if (IsRegistered)
+        {
+            Rider.Router.SaveRouterConfiguration(this);
+
+            if (notifyCluster)
+                Rider.Router.ClusterNotifier.SendRouterRemoveBinding(this, binding.Name);
+        }
+    }
+
     #endregion
 
     #region Publish
+
+    /// <summary>
+    /// The values of the published message that bindings change (a direct binding changes the type,
+    /// target, content type and acknowledge flag of the message it sends).
+    /// Every binding after the first starts from the values the producer sent.
+    /// </summary>
+    private readonly struct MessageState
+    {
+        private readonly MessageType _type;
+        private readonly string _target;
+        private readonly ushort _contentType;
+        private readonly bool _waitResponse;
+
+        public MessageState(HorseMessage message)
+        {
+            _type = message.Type;
+            _target = message.Target;
+            _contentType = message.ContentType;
+            _waitResponse = message.WaitResponse;
+        }
+
+        /// <summary>
+        /// Writes the producer's values back before the next binding.
+        /// Never called after the binding that accepted the message: a binding that does not copy
+        /// the message hands this object to a queue, and the queue sets its own values.
+        /// </summary>
+        public void Restore(HorseMessage message)
+        {
+            message.Type = _type;
+            message.ContentType = _contentType;
+            message.WaitResponse = _waitResponse;
+
+            if (!ReferenceEquals(message.Target, _target))
+                message.SetTarget(_target);
+        }
+    }
 
     /// <summary>
     /// Pushes a message to router
@@ -276,22 +417,26 @@ public class Router
             if (!IsEnabled)
                 return RouterPublishResult.Disabled;
 
-            if (Bindings.Length == 0)
+            // A snapshot: bindings added or removed meanwhile do not change this publish
+            Binding[] bindings = Bindings;
+            if (bindings.Length == 0)
                 return RouterPublishResult.NoBindings;
+
+            MessageState state = new MessageState(message);
 
             RouterPublishResult result;
             switch (Method)
             {
                 case RouteMethod.Distribute:
-                    result = await Distribute(sender, message);
+                    result = await Distribute(sender, message, bindings, state);
                     break;
 
                 case RouteMethod.OnlyFirst:
-                    result = await OnlyFirst(sender, message);
+                    result = await OnlyFirst(sender, message, bindings, state);
                     break;
 
                 case RouteMethod.RoundRobin:
-                    result = await RoundRobin(sender, message);
+                    result = await RoundRobin(sender, message, bindings, state);
                     break;
 
                 default:
@@ -305,7 +450,7 @@ public class Router
         }
         catch (Exception e)
         {
-            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.RouterPublish, $"Publish Router:{Name}, Binding:{Name}", e);
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.RouterPublish, $"Publish Router:{Name}", e);
             return RouterPublishResult.NoBindings;
         }
     }
@@ -313,42 +458,36 @@ public class Router
     /// <summary>
     /// Sends the message to only first binding
     /// </summary>
-    private async Task<RouterPublishResult> OnlyFirst(MessagingClient sender, HorseMessage message)
+    private static async Task<RouterPublishResult> OnlyFirst(MessagingClient sender, HorseMessage message, Binding[] bindings, MessageState state)
     {
-        int index = 0;
-        bool sent;
-        RouterPublishResult result = RouterPublishResult.NoReceivers;
-
-        do
+        for (int i = 0; i < bindings.Length; i++)
         {
-            if (index >= Bindings.Length)
-                return RouterPublishResult.NoReceivers;
+            if (i > 0)
+                state.Restore(message);
 
-            Binding binding = Bindings[index];
-            sent = await binding.Send(sender, message);
-
-            if (sent)
-                result = binding.Interaction != BindingInteraction.None
+            Binding binding = bindings[i];
+            if (await binding.Send(sender, message))
+                return binding.Interaction != BindingInteraction.None
                     ? RouterPublishResult.OkAndWillBeRespond
                     : RouterPublishResult.OkWillNotRespond;
+        }
 
-            index++;
-        } while (!sent);
-
-        return result;
+        return RouterPublishResult.NoReceivers;
     }
 
     /// <summary>
     /// Distributes the message to all bindings
     /// </summary>
-    private async Task<RouterPublishResult> Distribute(MessagingClient sender, HorseMessage message)
+    private static async Task<RouterPublishResult> Distribute(MessagingClient sender, HorseMessage message, Binding[] bindings, MessageState state)
     {
         RouterPublishResult result = RouterPublishResult.NoReceivers;
-        foreach (Binding binding in Bindings)
+        for (int i = 0; i < bindings.Length; i++)
         {
-            bool oldWaitResponse = message.WaitResponse;
+            if (i > 0)
+                state.Restore(message);
+
+            Binding binding = bindings[i];
             bool sent = await binding.Send(sender, message);
-            message.WaitResponse = oldWaitResponse;
             if (sent)
             {
                 if (binding.Interaction != BindingInteraction.None)
@@ -365,26 +504,19 @@ public class Router
     /// <summary>
     /// Sends the message to only one binding within round robin algorithm
     /// </summary>
-    private async Task<RouterPublishResult> RoundRobin(MessagingClient sender, HorseMessage message)
+    private async Task<RouterPublishResult> RoundRobin(MessagingClient sender, HorseMessage message, Binding[] bindings, MessageState state)
     {
-        int len = Bindings.Length;
+        uint len = (uint)bindings.Length;
         for (int i = 0; i < len; i++)
         {
-            int index;
-            lock (_rrlock)
-            {
-                _lastRoutedIndex++;
-                if (_lastRoutedIndex >= Bindings.Length)
-                    _lastRoutedIndex = 0;
+            if (i > 0)
+                state.Restore(message);
 
-                index = _lastRoutedIndex;
-            }
+            // Lock free: the counter only grows (wrapping), the binding is chosen by its remainder
+            uint next = unchecked((uint)Interlocked.Increment(ref _lastRoutedIndex));
+            Binding binding = bindings[next % len];
 
-            Binding binding = Bindings[index];
-
-            bool waitResponse = message.WaitResponse;
             bool sent = await binding.Send(sender, message);
-            message.WaitResponse = waitResponse;
             if (sent)
                 return binding.Interaction != BindingInteraction.None
                     ? RouterPublishResult.OkAndWillBeRespond
@@ -395,18 +527,4 @@ public class Router
     }
 
     #endregion
-
-    private void UpdateRouterConfiguration()
-    {
-        IOptionsConfigurator<RouterConfiguration> options = Rider.Router.OptionsConfigurator;
-
-        if (options == null)
-            return;
-
-        RouterConfiguration configuration = RouterConfiguration.Create(this);
-
-        options.Remove(x => x.Name == Name);
-        options.Add(configuration);
-        options.Save();
-    }
 }

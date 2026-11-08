@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
@@ -17,7 +18,6 @@ public class DirectBinding : Binding
     private DateTime _clientListUpdateTime;
     private MessagingClient[] _clients;
     private int _roundRobinIndex = -1;
-    private readonly object _lock = new();
     private Func<MessagingClient, bool> _clientFilter;
 
     /// <summary>
@@ -37,7 +37,10 @@ public class DirectBinding : Binding
         try
         {
             MessagingClient[] clients = GetClients();
-            if (_clientFilter is not null) clients = clients.Where(_clientFilter).ToArray();
+            Func<MessagingClient, bool> filter = _clientFilter;
+            if (filter is not null)
+                clients = ApplyFilter(clients, filter);
+
             if (clients.Length == 0)
                 return false;
 
@@ -51,11 +54,7 @@ public class DirectBinding : Binding
             switch (RouteMethod)
             {
                 case RouteMethod.OnlyFirst:
-                    var first = clients.FirstOrDefault();
-                    if (first == null)
-                        return false;
-
-                    return await first.SendAsync(message);
+                    return await clients[0].SendAsync(message);
 
                 case RouteMethod.Distribute:
                     bool atLeastOneSent = false;
@@ -84,19 +83,51 @@ public class DirectBinding : Binding
 
     private Task<bool> SendRoundRobin(MessagingClient[] clients, HorseMessage message)
     {
-        MessagingClient client;
+        // Lock free: the counter only grows (wrapping), the client is chosen by its remainder
+        uint next = unchecked((uint)Interlocked.Increment(ref _roundRobinIndex));
+        return clients[next % (uint)clients.Length].SendAsync(message);
+    }
 
-        lock (_lock)
+    /// <summary>
+    /// Returns the clients the filter accepts.
+    /// The filter is applied for each message, since a binding may set a filter that depends on the message.
+    /// Allocates nothing when every client is accepted, and at most two arrays otherwise.
+    /// </summary>
+    private static MessagingClient[] ApplyFilter(MessagingClient[] clients, Func<MessagingClient, bool> filter)
+    {
+        MessagingClient[] accepted = null;
+        int count = 0;
+
+        for (int i = 0; i < clients.Length; i++)
         {
-            _roundRobinIndex++;
+            bool accept = filter(clients[i]);
 
-            if (_roundRobinIndex >= clients.Length)
-                _roundRobinIndex = 0;
+            if (accepted == null)
+            {
+                if (accept)
+                    continue;
 
-            client = clients[_roundRobinIndex];
+                // first rejected client: the clients before it are all accepted
+                accepted = new MessagingClient[clients.Length - 1];
+                Array.Copy(clients, accepted, i);
+                count = i;
+                continue;
+            }
+
+            if (accept)
+                accepted[count++] = clients[i];
         }
 
-        return client.SendAsync(message);
+        if (accepted == null)
+            return clients;
+
+        if (count == 0)
+            return Array.Empty<MessagingClient>();
+
+        if (count < accepted.Length)
+            Array.Resize(ref accepted, count);
+
+        return accepted;
     }
 
     /// <summary>
