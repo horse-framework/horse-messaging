@@ -36,7 +36,7 @@ public class AutoQueueBinding : Binding
             HorseMessage msg = message.Clone(true, true, messageId);
 
             msg.Type = MessageType.QueueMessage;
-            msg.SetTarget(Target);
+            msg.SetTarget(queue.Name);
             msg.WaitResponse = Interaction == BindingInteraction.Response;
 
             QueueMessage queueMessage = new QueueMessage(msg);
@@ -59,8 +59,10 @@ public class AutoQueueBinding : Binding
     /// <returns></returns>
     private async Task<HorseQueue> GetQueue(HorseMessage message)
     {
-        if (_targetQueue != null)
-            return _targetQueue;
+        // A removed queue is resolved again from the message, otherwise every later push would be refused
+        HorseQueue cached = _targetQueue;
+        if (cached != null && !cached.IsDestroyed && !cached.IsClosingForDestroy)
+            return cached;
 
         string queueName = message.FindHeader(HorseHeaders.QUEUE_NAME);
         if (queueName == null)
@@ -73,7 +75,7 @@ public class AutoQueueBinding : Binding
             return _targetQueue;
         }
 
-        _targetQueue = await Router.Rider.Queue.Create(queueName, Router.Rider.Queue.Options, message, true, true);
+        _targetQueue = await Router.Rider.Queue.Create(queueName, QueueOptions.CloneFrom(Router.Rider.Queue.Options), message, true, true);
         return _targetQueue;
     }
 }

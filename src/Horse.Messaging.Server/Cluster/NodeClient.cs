@@ -108,6 +108,28 @@ public class NodeClient
         _ = _outgoingClient.ConnectAsync();
     }
 
+    /// <summary>
+    /// Closes both links to the remote node. The outgoing client stops reconnecting until Start is called again.
+    /// </summary>
+    internal void Stop()
+    {
+        try
+        {
+            _outgoingClient.Disconnect();
+        }
+        catch
+        {
+        }
+
+        try
+        {
+            _incomingClient?.Disconnect();
+        }
+        catch
+        {
+        }
+    }
+
     private void OutgoingClientOnConnected(HorseClient client)
     {
         if (_incomingClient == null || !_incomingClient.IsConnected)
@@ -190,7 +212,8 @@ public class NodeClient
 
         OnDisconnected?.Invoke(this);
 
-        if (cluster.Options.Mode == ClusterMode.Scaled)
+        // This node is shutting down and closed the link itself. Failover is for the peers to run.
+        if (cluster.Options.Mode == ClusterMode.Scaled || cluster.IsStopped)
             return;
 
         if (cluster.MainNode != null && cluster.MainNode.Id == Info?.Id)
@@ -468,6 +491,14 @@ public class NodeClient
                 break;
             }
 
+            case KnownContentTypes.UpdateRouter:
+            {
+                Router router = Rider.Router.Find(message.Target);
+                if (router != null && bool.TryParse(message.GetStringContent(), out bool enabled))
+                    router.SetEnabled(enabled, false);
+                break;
+            }
+
             case KnownContentTypes.AddBinding:
             {
                 string content = message.GetStringContent();
@@ -477,7 +508,15 @@ public class NodeClient
                 if (router != null)
                 {
                     Binding binding = Rider.Router.CreateBinding(configuration);
-                    router.AddBinding(binding, false);
+                    if (binding != null)
+                        router.AddBinding(binding, false);
+                    else
+                    {
+                        // The binding type is not available on this node. Its configuration is kept and saved,
+                        // so this node does not lose the binding when it saves the router later.
+                        router.KeepUnresolvedBinding(configuration);
+                        Rider.Router.SaveRouterConfiguration(router);
+                    }
                 }
 
                 break;

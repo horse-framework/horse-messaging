@@ -139,7 +139,16 @@ public class PartitionAckRoutingTest : IDisposable
         if (!File.Exists(hdbPath))
             return 0;
 
-        byte[] data = File.ReadAllBytes(hdbPath);
+        // The running server keeps the file open for writing. File.ReadAllBytes shares only reads,
+        // which Windows refuses while a writer holds the file, so share read/write explicitly.
+        byte[] data;
+        using (FileStream stream = new FileStream(hdbPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+        using (MemoryStream ms = new MemoryStream())
+        {
+            stream.CopyTo(ms);
+            data = ms.ToArray();
+        }
+
         if (data.Length == 0)
             return 0;
 

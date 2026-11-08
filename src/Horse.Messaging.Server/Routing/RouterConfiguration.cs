@@ -23,6 +23,9 @@ public class RouterConfiguration
         foreach (Binding binding in router.GetBindings())
             configuration.Bindings.Add(BindingConfiguration.Create(binding));
 
+        // Saved bindings whose type could not be loaded are saved again, not deleted
+        configuration.Bindings.AddRange(router.UnresolvedBindings);
+
         return configuration;
     }
 }

@@ -27,7 +27,7 @@ internal class RouterMessageHandler : INetworkMessageHandler
         Router router = _rider.Router.Find(message.Target);
         if (router == null)
         {
-            await SendResponse(RouterPublishResult.Disabled, client, message);
+            await SendResponse(RouterPublishResult.Disabled, client, message, message.WaitResponse);
 
             foreach (IRouterMessageHandler handler in _rider.Router.MessageHandlers.All())
                 _ = handler.OnRouterNotFound(client, message);
@@ -35,8 +35,10 @@ internal class RouterMessageHandler : INetworkMessageHandler
             return;
         }
 
+        // Read before publishing: bindings change WaitResponse, and the message may be in a queue afterwards
+        bool producerWaitResponse = message.WaitResponse;
         RouterPublishResult result = await router.Publish(client, message);
-            
+
         if (result == RouterPublishResult.OkWillNotRespond || result == RouterPublishResult.OkAndWillBeRespond)
             client.Stats.RouterPublishes++;
 
@@ -48,7 +50,7 @@ internal class RouterMessageHandler : INetworkMessageHandler
                 _ = handler.OnNotRouted(client, router, message);
         }
 
-        await SendResponse(result, client, message);
+        await SendResponse(result, client, message, producerWaitResponse);
         if (router is Router r && r.PublishEvent.HasSubscribers)
         {
             if (!string.IsNullOrEmpty(message.MessageId))
@@ -61,13 +63,13 @@ internal class RouterMessageHandler : INetworkMessageHandler
     /// <summary>
     /// Sends negative ack or failed response if client is pending ack or response
     /// </summary>
-    private static Task<bool> SendResponse(RouterPublishResult result, MessagingClient client, HorseMessage message)
+    private static Task<bool> SendResponse(RouterPublishResult result, MessagingClient client, HorseMessage message, bool producerWaitResponse)
     {
         if (result == RouterPublishResult.OkAndWillBeRespond)
             return Task.FromResult(false);
 
         bool positive = result == RouterPublishResult.OkWillNotRespond;
-        if (message.WaitResponse)
+        if (producerWaitResponse)
         {
             HorseMessage response = positive
                 ? message.CreateAcknowledge()

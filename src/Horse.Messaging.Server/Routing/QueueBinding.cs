@@ -29,19 +29,19 @@ public class QueueBinding : Binding
             if (queue == null)
                 return false;
 
-            bool doNotClone = Router.Bindings.Length == 1 || Router.Method != RouteMethod.Distribute || Interaction == BindingInteraction.Response;
-            if (Router.Bindings.Length > 1 && Router.Method == RouteMethod.Distribute)
+            // The original message goes into the queue unless other bindings of the router use it after this one.
+            // The id of a copy is created only when a copy is made.
+            HorseMessage msg;
+            if (Router.Method == RouteMethod.Distribute && Router.Bindings.Length > 1)
             {
-                doNotClone = false;
-            }
-            
-            string cloneId = Interaction == BindingInteraction.Response
-                ? message.MessageId
-                : Router.Rider.MessageIdGenerator.Create();
+                string cloneId = Interaction == BindingInteraction.Response
+                    ? message.MessageId
+                    : Router.Rider.MessageIdGenerator.Create();
 
-            HorseMessage msg = doNotClone
-                ? message
-                : message.Clone(true, true, cloneId);
+                msg = message.Clone(true, true, cloneId);
+            }
+            else
+                msg = message;
 
             msg.Type = MessageType.QueueMessage;
             msg.SetTarget(Target);
@@ -67,8 +67,11 @@ public class QueueBinding : Binding
     /// <returns></returns>
     private async Task<HorseQueue> GetQueue(HorseMessage requestMessage)
     {
-        if (_targetQueue != null && DateTime.UtcNow - _queueUpdateTime < TimeSpan.FromMinutes(1))
-            return _targetQueue;
+        // A removed queue is not used from the cache: it refuses every push, and a queue
+        // created again with the same name would not receive messages until the cache expires
+        HorseQueue cached = _targetQueue;
+        if (cached != null && !cached.IsDestroyed && !cached.IsClosingForDestroy && DateTime.UtcNow - _queueUpdateTime < TimeSpan.FromMinutes(1))
+            return cached;
 
         HorseQueue queue = Router.Rider.Queue.Find(Target);
 
@@ -76,16 +79,14 @@ public class QueueBinding : Binding
         {
             if (Router.Rider.Queue.Options.AutoQueueCreation)
             {
-                queue = await Router.Rider.Queue.Create(Target, Router.Rider.Queue.Options, requestMessage, true, true);
+                queue = await Router.Rider.Queue.Create(Target, QueueOptions.CloneFrom(Router.Rider.Queue.Options), requestMessage, true, true);
             }
         }
 
         if (queue != null)
-        {
             _queueUpdateTime = DateTime.UtcNow;
-            _targetQueue = queue;
-        }
 
-        return _targetQueue;
+        _targetQueue = queue;
+        return queue;
     }
 }

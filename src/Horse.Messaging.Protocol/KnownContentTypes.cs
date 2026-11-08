@@ -141,6 +141,11 @@ public class KnownContentTypes
     public const ushort RemoveRouter = 653;
 
     /// <summary>
+    /// "654" Updates the options of a router (enabled state) on the other nodes of a cluster
+    /// </summary>
+    public const ushort UpdateRouter = 654;
+
+    /// <summary>
     /// "661" List all bindings of a router
     /// </summary>
     public const ushort ListBindings = 661;

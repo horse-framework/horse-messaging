@@ -34,7 +34,7 @@ public class DynamicQueueBinding : Binding
             HorseMessage msg = message.Clone(true, true, messageId);
 
             msg.Type = MessageType.QueueMessage;
-            msg.SetTarget(Target);
+            msg.SetTarget(queue.Name);
             msg.WaitResponse = Interaction == BindingInteraction.Response;
 
             QueueMessage queueMessage = new QueueMessage(msg);
@@ -61,7 +61,11 @@ public class DynamicQueueBinding : Binding
         if (queueName == null)
             return null;
 
-        HorseQueue queue = await Router.Rider.Queue.Create(queueName, Router.Rider.Queue.Options, message, true, true);
-        return queue;
+        // Create takes the server wide create lock, so it is called only when the queue does not exist
+        HorseQueue queue = Router.Rider.Queue.Find(queueName);
+        if (queue != null)
+            return queue;
+
+        return await Router.Rider.Queue.Create(queueName, QueueOptions.CloneFrom(Router.Rider.Queue.Options), message, true, true);
     }
 }
