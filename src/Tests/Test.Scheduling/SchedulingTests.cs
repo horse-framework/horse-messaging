@@ -180,8 +180,10 @@ public class SchedulingTests
         var scheduleRider = rider.Schedule;
 
         string errorQueueName = "error-queue";
-        var task = scheduleRider.AddTask("RetryTask", "Test", "*/1 * * * *", ScheduleType.HttpRequest, 
-            "GET http://invalid-url-that-fails-surely.com", "Params", errorQueueName, 1);
+        // Port 1 on loopback refuses the connection. An unresolvable host name is not reliable:
+        // some DNS resolvers answer unknown names with a landing page that returns 200.
+        var task = scheduleRider.AddTask("RetryTask", "Test", "*/1 * * * *", ScheduleType.HttpRequest,
+            "GET http://127.0.0.1:1/", "Params", errorQueueName, 1);
         
         // We can't easily trigger private RunTask, but we can verify CalculateNextExecutionTime
         // was called and it's scheduled.
