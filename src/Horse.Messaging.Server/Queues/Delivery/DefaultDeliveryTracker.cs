@@ -129,7 +129,7 @@ namespace Horse.Messaging.Server.Queues.Delivery
         /// </summary>
         private async Task ProcessDeliveries()
         {
-            List<string> removingDeliveries = new List<string>();
+            List<MessageDelivery> removingDeliveries = new List<MessageDelivery>();
             var ackTimeoutList = new List<MessageDelivery>(16);
             bool atLeastOneRemoved = false;
 
@@ -139,8 +139,7 @@ namespace Horse.Messaging.Server.Queues.Delivery
 
                 if (remove)
                 {
-                    removingDeliveries.Add(delivery.Message.Message.MessageId);
-                    atLeastOneRemoved = true;
+                    removingDeliveries.Add(delivery);
                     continue;
                 }
 
@@ -159,19 +158,24 @@ namespace Horse.Messaging.Server.Queues.Delivery
 
                 if (remove)
                 {
-                    atLeastOneRemoved = true;
                     ackTimeoutList.Add(delivery);
                 }
             }
 
-            foreach (string deliveryId in removingDeliveries)
-                _deliveries.TryRemove(deliveryId, out _);
+            foreach (MessageDelivery delivery in removingDeliveries)
+                atLeastOneRemoved |= TryRemoveDelivery(delivery);
 
             foreach (MessageDelivery delivery in ackTimeoutList)
             {
                 _queue.BeginAcknowledgeProcessing();
                 try
                 {
+                    // Claim this delivery before putback can re-deliver the same message id.
+                    // An ACK that already claimed it must be allowed to finish its own decision.
+                    if (!TryRemoveDelivery(delivery))
+                        continue;
+
+                    atLeastOneRemoved = true;
                     bool marked = delivery.MarkAsAcknowledgeTimeout();
                     if (!marked)
                         continue;
@@ -234,8 +238,8 @@ namespace Horse.Messaging.Server.Queues.Delivery
             if (!IsDeliveryOwnerValid(client, delivery))
                 return null;
 
-            if (remove)
-                _deliveries.TryRemove(messageId, out _);
+            if (remove && !TryRemoveDelivery(delivery))
+                return null;
 
             return delivery;
         }
@@ -245,7 +249,12 @@ namespace Horse.Messaging.Server.Queues.Delivery
         /// </summary>
         public void RemoveDelivery(MessageDelivery delivery)
         {
-            _deliveries.TryRemove(delivery.Message.Message.MessageId, out _);
+            TryRemoveDelivery(delivery);
+        }
+
+        private bool TryRemoveDelivery(MessageDelivery delivery)
+        {
+            return _deliveries.TryRemove(new KeyValuePair<string, MessageDelivery>(delivery.Message.Message.MessageId, delivery));
         }
 
         /// <summary>

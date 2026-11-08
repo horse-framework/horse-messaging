@@ -37,6 +37,15 @@ public class QueueMessage
     public bool IsSaved { get; internal set; }
 
     /// <summary>
+    /// For persistent queues, true if the record is in the priority database file, false if it is in the regular one.
+    /// Null when it is not known; the current priority is used then.
+    /// The priority can change after the record is written (priority putback, cluster priority change),
+    /// but the record stays where it was written. Deleting by the current priority left the record alive
+    /// and the message came back after restart.
+    /// </summary>
+    internal bool? SavedToPriorityStore { get; set; }
+
+    /// <summary>
     /// True, if the message is accepted while queues are shutting down.
     /// Used for transaction messages, so open transactions can be rolled back during shutdown.
     /// </summary>
@@ -66,6 +75,12 @@ public class QueueMessage
     /// If true, message is in queue
     /// </summary>
     internal bool IsInQueue { get; set; }
+
+    /// <summary>
+    /// Set by a push queue when consumers were available but every one of them refused the message
+    /// (CanConsumerReceive). The message is back in its store; the drain loop goes on with other messages.
+    /// </summary>
+    internal bool RefusedByConsumers { get; set; }
 
     /// <summary>
     /// If true, message is timed out

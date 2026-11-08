@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -16,6 +17,7 @@ using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Messaging.Server.Queues.Managers;
 using Horse.Messaging.Server.Queues.Partitions;
 using Horse.Messaging.Server.Queues.States;
+using Horse.Messaging.Server.Queues.Store;
 using Horse.Messaging.Server.Queues.Sync;
 using Horse.Messaging.Server.Security;
 
@@ -175,6 +177,17 @@ public class HorseQueue
 
     private int _pushingCount;
     private int _closingForDestroy;
+
+    /// <summary>
+    /// Pushes that passed the message limit check and are not in a store yet (RejectNewMessage strategy).
+    /// Counted with the stores, so concurrent producers cannot all see room for one more message.
+    /// </summary>
+    private int _limitReservations;
+
+    /// <summary>
+    /// Taken only when the queue is over its limit, so that two pushes do not both delete for the same excess
+    /// </summary>
+    private readonly object _limitTrimSync = new();
     private readonly TaskCompletionSource _destroyed = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private int _acknowledgingCount;
     private long _acknowledgeVersion;
@@ -323,7 +336,11 @@ public class HorseQueue
 
     private readonly SemaphoreSlim _triggerLock = new(1, 1);
     private readonly List<PutBackQueueMessage> _putBackWaitList = new(8);
-    private readonly HashSet<string> _messageIdList = new(StringComparer.Ordinal);
+    /// <summary>
+    /// Ids of the messages the queue owns (stored, in flight or waiting for putback) when MessageIdUniqueCheck is on.
+    /// Lock free: it is checked by every push.
+    /// </summary>
+    private readonly ConcurrentDictionary<string, byte> _messageIdList = new(StringComparer.Ordinal);
     private readonly object _queueClientLock = new();
     private QueueClient[] _queueClients = new QueueClient[32];
 
@@ -984,36 +1001,20 @@ public class HorseQueue
 
     internal void UpdateOptionsByNodeInfo(NodeQueueInfo info)
     {
-        if (!string.IsNullOrEmpty(info.Acknowledge))
-            Options.Acknowledge = Enums.Parse<QueueAckDecision>(info.Acknowledge, true, EnumFormat.Description);
+        info.ApplyTo(Options);
+        EnsureClientCapacity();
 
         if (!string.IsNullOrEmpty(info.Topic))
             Topic = info.Topic;
 
-        if (!string.IsNullOrEmpty(info.AutoDestroy))
-            Options.AutoDestroy = Enums.Parse<QueueDestroy>(info.AutoDestroy, true, EnumFormat.Description);
-
-        Options.AcknowledgeTimeout = TimeSpan.FromMilliseconds(info.AcknowledgeTimeout);
-        if (!string.IsNullOrEmpty(info.PutBack))
-            Options.PutBack = Enums.Parse<PutBackDecision>(info.PutBack, true, EnumFormat.Description);
-        Options.MessageTimeout = new MessageTimeoutStrategy
+        // PushByNode can build the copy from server defaults before the create message arrives, and
+        // the type of a queue is fixed when it initializes, so the copy kept the default type's
+        // state after the Main's options arrived. Rebuilt only on a replica, which does not deliver.
+        if (State != null && Type != Options.Type && Rider.Cluster.State > NodeState.Main)
         {
-            MessageDuration = info.MessageTimeout.MessageDuration,
-            Policy = Enums.Parse<MessageTimeoutPolicy>(info.MessageTimeout.Policy, true, EnumFormat.Description),
-            TargetName = info.MessageTimeout.TargetName
-        };
-
-        Options.ClientLimit = info.ClientLimit;
-        EnsureClientCapacity();
-        Options.MessageLimit = info.MessageLimit;
-        Options.MessageSizeLimit = info.MessageSizeLimit;
-        Options.MessageIdUniqueCheck = info.MessageIdUniqueCheck;
-
-        if (!string.IsNullOrEmpty(info.LimitExceededStrategy))
-            Options.LimitExceededStrategy = Enums.Parse<MessageLimitExceededStrategy>(info.LimitExceededStrategy, true, EnumFormat.Description);
-
-        Options.DelayBetweenMessages = info.DelayBetweenMessages;
-        Options.PutBackDelay = info.PutBackDelay;
+            State = QueueStateFactory.Create(this, Options.Type);
+            Type = Options.Type;
+        }
 
         // Repairs a copy that PushByNode built from server defaults before the create message
         // (or this update) told the replica it is a partition sub-queue.
@@ -1138,128 +1139,204 @@ public class HorseQueue
             return partitionResult;
         }
 
-        if (Options.MessageLimit > 0)
-        {
-            int count = Manager.PriorityMessageStore.Count() + Manager.MessageStore.Count();
-            if (count >= Options.MessageLimit)
-            {
-                if (Options.LimitExceededStrategy == MessageLimitExceededStrategy.DeleteOldestMessage)
-                {
-                    QueueMessage firstMessage = Manager.MessageStore.ConsumeFirst();
-                    if (firstMessage != null)
-                        await RemoveMessage(firstMessage);
-                }
-                else
-                    return PushResult.LimitExceeded;
-            }
-        }
-
+        // Every rejection is decided before anything is deleted. The oldest message used to be deleted
+        // for room first, so a push rejected for its size (or as a duplicate) still cost an accepted message.
         if (Options.MessageSizeLimit > 0 && message.Message.Length > Options.MessageSizeLimit)
             return PushResult.LimitExceeded;
 
-        if (Options.MessageIdUniqueCheck && !string.IsNullOrEmpty(message.Message.MessageId))
-        {
-            lock (_messageIdList)
-            {
-                bool added = _messageIdList.Add(message.Message.MessageId);
-                if (!added)
-                    return PushResult.DuplicateUniqueId;
-            }
-        }
-
-        //remove operational headers that are should not be sent to consumers or saved to disk
-        message.Message.RemoveHeaders(OperationalHeadersToRemove);
-
-        //prepare properties
-        message.Message.WaitResponse = Options.Acknowledge != QueueAckDecision.None;
-
-        //if message doesn't have message id, create new message id for the message
-        if (string.IsNullOrEmpty(message.Message.MessageId))
-            message.Message.SetMessageId(Rider.MessageIdGenerator.Create());
-
-        //if we have an option maximum wait duration for message, set it after message joined to the queue.
-        //time keeper will check this value and if message time is up, it will remove message from the queue.
-        if (Options.MessageTimeout.Policy != MessageTimeoutPolicy.NoTimeout && Options.MessageTimeout.MessageDuration > 0)
-            message.Deadline = DateTime.UtcNow.AddSeconds(Options.MessageTimeout.MessageDuration);
+        bool limitReserved = false;
+        string uniqueId = null;
+        bool stored = false;
 
         try
         {
-            if (Rider.Cluster.Options.Mode == ClusterMode.Reliable)
+            if (Options.MessageLimit > 0 && Options.LimitExceededStrategy != MessageLimitExceededStrategy.DeleteOldestMessage)
             {
-                if (Rider.Cluster.State > NodeState.Main)
-                    return PushResult.StatusNotSupported;
-
-                if (Rider.Cluster.Clients.Length > 0)
-                {
-                    try
-                    {
-                        await QueueLock.WaitAsync();
-
-                        if (Rider.Cluster.State > NodeState.Main)
-                            return PushResult.StatusNotSupported;
-                    }
-                    finally
-                    {
-                        QueueLock.Release();
-                    }
-
-                    bool ack = await ClusterNotifier.SendMessagePush(message.Message);
-                    if (!ack)
-                        return PushResult.Error;
-                }
+                // A message is not in a store until AddMessage below, several awaits later. Without the
+                // reservation, concurrent producers all saw room for one more and overfilled the queue.
+                limitReserved = true;
+                int reserved = Interlocked.Increment(ref _limitReservations);
+                if (Manager.PriorityMessageStore.Count() + Manager.MessageStore.Count() + reserved > Options.MessageLimit)
+                    return PushResult.LimitExceeded;
             }
 
-            //fire message receive event
-            Info.AddMessageReceive();
-            Decision decision = await Manager.DeliveryHandler.ReceivedFromProducer(this, message, sender);
-            message.Decision = decision;
-            Rider.Cluster.QueueUpdate = DateTime.UtcNow;
-
-            if (decision.Transmission != DecisionTransmission.Failed)
+            if (Options.MessageIdUniqueCheck && !string.IsNullOrEmpty(message.Message.MessageId))
             {
-                PushResult pushResult = AddMessage(message);
-                if (pushResult != PushResult.Success)
-                    return pushResult;
+                if (!_messageIdList.TryAdd(message.Message.MessageId, 0))
+                    return PushResult.DuplicateUniqueId;
+
+                uniqueId = message.Message.MessageId;
             }
 
-            bool allow = await ApplyDecision(decision, message);
+            //remove operational headers that are should not be sent to consumers or saved to disk
+            message.Message.RemoveHeaders(OperationalHeadersToRemove);
 
-            if (!allow)
-                return PushResult.StatusNotSupported;
+            //prepare properties
+            message.Message.WaitResponse = Options.Acknowledge != QueueAckDecision.None;
 
-            foreach (IQueueMessageEventHandler handler in Rider.Queue.MessageHandlers.All())
-                _ = handler.OnProduced(this, message, sender);
+            //if message doesn't have message id, create new message id for the message
+            if (string.IsNullOrEmpty(message.Message.MessageId))
+                message.Message.SetMessageId(Rider.MessageIdGenerator.Create());
 
-            Rider.Plugin.TriggerPluginHandlers(HorsePluginEvent.QueuePush, Name, message.Message);
-            if (PushEvent.HasSubscribers)
-                PushEvent.Trigger(sender, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
+            //if we have an option maximum wait duration for message, set it after message joined to the queue.
+            //time keeper will check this value and if message time is up, it will remove message from the queue.
+            if (Options.MessageTimeout.Policy != MessageTimeoutPolicy.NoTimeout && Options.MessageTimeout.MessageDuration > 0)
+                message.Deadline = DateTime.UtcNow.AddSeconds(Options.MessageTimeout.MessageDuration);
 
-            if (sender != null)
-                sender.Stats.QueuePushes++;
-
-            return PushResult.Success;
-        }
-        catch (DuplicateNameException)
-        {
-            return PushResult.DuplicateUniqueId;
-        }
-        catch (Exception ex)
-        {
-            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueuePush, $"Push Queue: {Name}", ex);
-            Info.AddError();
             try
             {
-                //the message is removed from the queue and it's not sent to consumers
-                //we should put the message back into the queue
-                if (!message.IsInQueue && !message.IsSent)
-                    ApplyPutBack(Decision.PutBackMessage(true), message, 1000);
-            }
-            catch //if developer does wrong operation, we should not stop
-            {
-            }
+                if (Rider.Cluster.Options.Mode == ClusterMode.Reliable)
+                {
+                    if (Rider.Cluster.State > NodeState.Main)
+                        return PushResult.StatusNotSupported;
 
-            return PushResult.Error;
+                    if (Rider.Cluster.Clients.Length > 0)
+                    {
+                        try
+                        {
+                            await QueueLock.WaitAsync();
+
+                            if (Rider.Cluster.State > NodeState.Main)
+                                return PushResult.StatusNotSupported;
+                        }
+                        finally
+                        {
+                            QueueLock.Release();
+                        }
+
+                        bool ack = await ClusterNotifier.SendMessagePush(message.Message);
+                        if (!ack)
+                            return PushResult.Error;
+                    }
+                }
+
+                //fire message receive event
+                Info.AddMessageReceive();
+                Decision decision = await Manager.DeliveryHandler.ReceivedFromProducer(this, message, sender);
+                message.Decision = decision;
+                Rider.Cluster.QueueUpdate = DateTime.UtcNow;
+
+                if (decision.Transmission != DecisionTransmission.Failed)
+                {
+                    PushResult pushResult = AddMessage(message);
+                    if (pushResult != PushResult.Success)
+                        return pushResult;
+
+                    stored = true;
+                    if (limitReserved)
+                    {
+                        limitReserved = false;
+                        Interlocked.Decrement(ref _limitReservations);
+                    }
+
+                    if (Options.MessageLimit > 0 && Options.LimitExceededStrategy == MessageLimitExceededStrategy.DeleteOldestMessage)
+                        await TrimToMessageLimit();
+                }
+
+                bool allow = await ApplyDecision(decision, message);
+
+                if (!allow)
+                    return PushResult.StatusNotSupported;
+
+                foreach (IQueueMessageEventHandler handler in Rider.Queue.MessageHandlers.All())
+                    _ = handler.OnProduced(this, message, sender);
+
+                Rider.Plugin.TriggerPluginHandlers(HorsePluginEvent.QueuePush, Name, message.Message);
+                if (PushEvent.HasSubscribers)
+                    PushEvent.Trigger(sender, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
+
+                if (sender != null)
+                    sender.Stats.QueuePushes++;
+
+                return PushResult.Success;
+            }
+            catch (DuplicateNameException)
+            {
+                return PushResult.DuplicateUniqueId;
+            }
+            catch (Exception ex)
+            {
+                Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueuePush, $"Push Queue: {Name}", ex);
+                Info.AddError();
+                try
+                {
+                    //the message is removed from the queue and it's not sent to consumers
+                    //we should put the message back into the queue
+                    if (!message.IsInQueue && !message.IsSent)
+                        ApplyPutBack(Decision.PutBackMessage(true), message, 1000);
+
+                    // stored, or will be by the delayed putback: the message keeps its unique id
+                    stored = true;
+                }
+                catch //if developer does wrong operation, we should not stop
+                {
+                }
+
+                return PushResult.Error;
+            }
         }
+        finally
+        {
+            if (limitReserved)
+                Interlocked.Decrement(ref _limitReservations);
+
+            // A message that never reached the queue must not keep its id, or the producer's retry
+            // with the same id is refused as a duplicate forever.
+            if (uniqueId != null && !stored)
+                ReleaseUniqueMessageId(uniqueId);
+        }
+    }
+
+    /// <summary>
+    /// DeleteOldestMessage strategy: deletes the oldest messages, priority or not, until the queue
+    /// is within its limit. Runs after the new message is stored, so a rejected push deletes nothing
+    /// and pushes in flight are counted. The lock is taken only when the queue is over its limit.
+    /// </summary>
+    private async Task TrimToMessageLimit()
+    {
+        int limit = Options.MessageLimit;
+        if (Manager.PriorityMessageStore.Count() + Manager.MessageStore.Count() <= limit)
+            return;
+
+        List<QueueMessage> removing = null;
+        lock (_limitTrimSync)
+        {
+            while (Manager.PriorityMessageStore.Count() + Manager.MessageStore.Count() > limit)
+            {
+                QueueMessage oldest = ConsumeOldestMessage();
+                if (oldest == null)
+                    break;
+
+                (removing ??= new List<QueueMessage>(1)).Add(oldest);
+            }
+        }
+
+        if (removing == null)
+            return;
+
+        foreach (QueueMessage oldest in removing)
+        {
+            Info.AddMessageRemove();
+            await RemoveMessage(oldest);
+            oldest.MarkAsRemoved();
+        }
+    }
+
+    /// <summary>
+    /// Consumes the older of the first priority and the first regular message
+    /// </summary>
+    private QueueMessage ConsumeOldestMessage()
+    {
+        QueueMessage regular = Manager.MessageStore.ReadFirst();
+        QueueMessage priority = Manager.PriorityMessageStore.ReadFirst();
+
+        if (regular == null && priority == null)
+            return null;
+
+        bool fromPriority = regular == null || (priority != null && priority.CreatedDate < regular.CreatedDate);
+        return fromPriority
+            ? Manager.PriorityMessageStore.ConsumeFirst()
+            : Manager.MessageStore.ConsumeFirst();
     }
 
     /// <summary>
@@ -1302,6 +1379,15 @@ public class HorseQueue
     /// </summary>
     private async Task ProcessPendingMessages()
     {
+        // Messages that every consumer refused in this pass. They are back in their store and are not
+        // offered again in this pass, so a refused message no longer stops the pass: the messages
+        // behind it, and the regular store behind a refused priority message, are still delivered.
+        // A store is tried only while it holds more messages than were refused from it, so the pass
+        // ends once everything left was refused. The next trigger offers them again.
+        HashSet<QueueMessage> refused = null;
+        int refusedPriority = 0;
+        int refusedRegular = 0;
+
         while (State.TriggerSupported)
         {
             if (_queueClients[0] == null)
@@ -1318,10 +1404,10 @@ public class HorseQueue
 
             try
             {
-                if (Manager.PriorityMessageStore.Count() > 0)
+                if (Manager.PriorityMessageStore.Count() > refusedPriority)
                     message = Manager.PriorityMessageStore.ConsumeFirst();
 
-                if (message == null && Manager.MessageStore.Count() > 0)
+                if (message == null && Manager.MessageStore.Count() > refusedRegular)
                     message = Manager.MessageStore.ConsumeFirst();
 
                 if (message == null)
@@ -1332,10 +1418,37 @@ public class HorseQueue
                     return;
                 }
 
+                if (refused != null && refused.Contains(message))
+                {
+                    // Refused earlier in this pass: moved behind the messages not offered yet
+                    AddMessage(message, false);
+
+                    if (waitForAck)
+                        ReleaseAcknowledgeLock(false);
+
+                    continue;
+                }
+
                 if (Options.Acknowledge == QueueAckDecision.WaitForAcknowledge && !message.Message.WaitResponse)
                     message.Message.WaitResponse = true;
 
+                message.RefusedByConsumers = false;
                 PushResult pr = await State.Push(message);
+
+                if (pr == PushResult.NoConsumers && message.RefusedByConsumers && message.IsInQueue)
+                {
+                    (refused ??= new HashSet<QueueMessage>()).Add(message);
+                    if (message.Message.HighPriority)
+                        refusedPriority++;
+                    else
+                        refusedRegular++;
+
+                    if (waitForAck)
+                        ReleaseAcknowledgeLock(false);
+
+                    continue;
+                }
+
                 if (pr != PushResult.Success)
                 {
                     if (!message.IsInQueue)
@@ -1454,7 +1567,9 @@ public class HorseQueue
             if (!allow)
                 return PushResult.Success;
 
-            AddMessage(message, false);
+            // The replica keeps the unique id index too, or it accepts duplicates once it is promoted.
+            if (AddMessage(message, false) == PushResult.Success)
+                RegisterUniqueMessageId(message.Message.MessageId);
 
             return PushResult.Success;
         }
@@ -1662,8 +1777,38 @@ public class HorseQueue
         if (!Options.MessageIdUniqueCheck || string.IsNullOrEmpty(messageId))
             return;
 
-        lock (_messageIdList)
-            _messageIdList.Remove(messageId);
+        _messageIdList.TryRemove(messageId, out _);
+    }
+
+    /// <summary>
+    /// Records the id of a message that joined the queue without Push (loaded from disk, replicated,
+    /// filled), so a later push with the same id is refused as it would be before a restart or failover.
+    /// </summary>
+    internal void RegisterUniqueMessageId(string messageId)
+    {
+        if (!Options.MessageIdUniqueCheck || string.IsNullOrEmpty(messageId))
+            return;
+
+        _messageIdList.TryAdd(messageId, 0);
+    }
+
+    /// <summary>
+    /// Clears the store and frees the unique ids of the messages it held.
+    /// Ids of messages in flight are kept: they still belong to the queue.
+    /// </summary>
+    internal void ClearStore(IQueueMessageStore store)
+    {
+        if (Options.MessageIdUniqueCheck)
+        {
+            int count = store.Count();
+            if (count > 0)
+            {
+                foreach (QueueMessage message in store.ConsumeMultiple(count))
+                    ReleaseUniqueMessageId(message.Message.MessageId);
+            }
+        }
+
+        store.Clear();
     }
 
     /// <summary>
@@ -1679,9 +1824,11 @@ public class HorseQueue
     /// </summary>
     internal void ClearMessages(bool notifyCluster)
     {
-        ClearPuttingBackMessages();
-        _manager.PriorityMessageStore.Clear();
-        _manager.MessageStore.Clear();
+        foreach (QueueMessage message in ClearPuttingBackMessages())
+            ReleaseUniqueMessageId(message.Message.MessageId);
+
+        ClearStore(_manager.PriorityMessageStore);
+        ClearStore(_manager.MessageStore);
 
         if (notifyCluster)
             ClusterNotifier.SendMessagesClear();

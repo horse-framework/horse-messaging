@@ -21,10 +21,11 @@ internal class RoundRobinQueueState : IQueueState
     private int _roundRobinIndex = -1;
 
     /// <summary>
-    /// Signal used to wake up GetNextAvailableRRClient when a consumer finishes processing (ACK received).
-    /// Replaces the old tight-loop polling with an event-driven wait.
+    /// Coalesced wake-up for the single drain loop. Consumer availability is checked by scanning,
+    /// so multiple ACKs need only one pending signal rather than one permit per historical ACK.
     /// </summary>
-    private readonly SemaphoreSlim _clientAvailableSignal = new(0, int.MaxValue);
+    private readonly SemaphoreSlim _clientAvailableSignal = new(0, 1);
+    private int _clientAvailableSignalPending;
 
     public RoundRobinQueueState(HorseQueue queue)
     {
@@ -37,14 +38,8 @@ internal class RoundRobinQueueState : IQueueState
     /// </summary>
     internal void SignalClientAvailable()
     {
-        try
-        {
+        if (Interlocked.CompareExchange(ref _clientAvailableSignalPending, 1, 0) == 0)
             _clientAvailableSignal.Release();
-        }
-        catch (SemaphoreFullException)
-        {
-            // Already at max, ignore
-        }
     }
 
     public Task<PullResult> Pull(QueueClient client, HorseMessage request)
@@ -125,6 +120,8 @@ internal class RoundRobinQueueState : IQueueState
         if (!await _queue.ApplyDecision(message.Decision, message))
             return PushResult.Success;
 
+        PutBackDecision beginPutBack = message.Decision.PutBack;
+
         //create delivery object
         MessageDelivery delivery = new MessageDelivery(message, receiver, deadline);
 
@@ -169,8 +166,23 @@ internal class RoundRobinQueueState : IQueueState
                 }
             }
 
-            message.Decision = await deliveryHandler.ConsumerReceiveFailed(_queue, delivery, receiver.Client);
             deliveryHandler.Tracker.RemoveDelivery(delivery);
+            Decision failed = await deliveryHandler.ConsumerReceiveFailed(_queue, delivery, receiver.Client);
+            message.Decision = failed;
+            bool allowed = await _queue.ApplyDecision(failed, message);
+
+            // A handler that stopped the flow, deleted the message or put it back owns it; the drain goes on.
+            // EndSend is not called for a message that was not sent: it committed an unsent message to its
+            // producer (CommitWhen.AfterSent), deleted it (memory, no acknowledge) or put a persistent
+            // message back a second time.
+            if (!allowed || message.IsRemoved || beginPutBack != PutBackDecision.No || failed.PutBack != PutBackDecision.No)
+                return PushResult.Success;
+
+            // Otherwise it was lost. It goes back into the queue and the pass ends: the next pass
+            // (next push, acknowledge or the trigger timer) picks the next consumer, and a consumer that
+            // looks connected but cannot be written to cannot spin the drain loop.
+            PushResult restored = _queue.AddMessage(message, false);
+            return restored == PushResult.Success ? PushResult.NoConsumers : restored;
         }
 
         if (!await _queue.ApplyDecision(message.Decision, message))
@@ -256,8 +268,14 @@ internal class RoundRobinQueueState : IQueueState
                 // Do NOT drain stale signals before waiting — draining introduces a race where
                 // a signal released between the scan and the drain is lost, causing a full
                 // timeout delay (up to 1 000 ms) even though the consumer is already free.
-                // SemaphoreSlim handles this correctly: if count > 0, WaitAsync returns immediately.
-                await _clientAvailableSignal.WaitAsync(1000);
+                // A pending signal is consumed once; historical ACKs cannot cause repeated scans.
+                if (await _clientAvailableSignal.WaitAsync(1000))
+                {
+                    // Reset only after consuming a signal. A timeout can race with an ACK
+                    // between its CAS and Release; resetting then would permit an overflow.
+                    // ACKs coalesced before this reset are visible to the next client scan.
+                    Interlocked.Exchange(ref _clientAvailableSignalPending, 0);
+                }
             }
 
             if (!_queue.HasAnyClient())

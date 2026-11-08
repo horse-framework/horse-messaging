@@ -77,13 +77,20 @@ internal class PushQueueState : IQueueState
 
         message.Decision = await deliveryHandler.BeginSend(_queue, message);
         if (!await _queue.ApplyDecision(message.Decision, message))
+        {
+            _queue.ReleaseAcknowledgeLock(false);
             return PushResult.Success;
+        }
+        PutBackDecision initialPutBack = message.Decision.PutBack;
 
         //create prepared message data
         byte[] data = HorseProtocolWriter.Create(message.Message);
 
         Decision final = Decision.NoveNext();
         bool messageIsSent = false;
+        bool refused = false;
+        bool sendFailed = false;
+        message.RefusedByConsumers = false;
 
         //to all receivers
         foreach (QueueClient client in _queue.ClientsArray)
@@ -101,7 +108,10 @@ internal class PushQueueState : IQueueState
             //call before send and check decision
             bool canConsumerReceive = await deliveryHandler.CanConsumerReceive(_queue, message, client.Client);
             if (!canConsumerReceive)
+            {
+                refused = true;
                 continue;
+            }
 
             //create delivery object
             MessageDelivery delivery = new MessageDelivery(message, client, ackDeadline);
@@ -142,6 +152,7 @@ internal class PushQueueState : IQueueState
             }
             else
             {
+                sendFailed = true;
                 if (_queue.Options.Acknowledge != QueueAckDecision.None)
                 {
                     if (client.CurrentlyProcessing == message)
@@ -160,7 +171,30 @@ internal class PushQueueState : IQueueState
 
         message.Decision = final;
         if (!await _queue.ApplyDecision(final, message))
+        {
+            if (!messageIsSent)
+                _queue.ReleaseAcknowledgeLock(false);
             return PushResult.Success;
+        }
+
+        if (!messageIsSent)
+        {
+            // A handler may already own this message through deletion or immediate/delayed
+            // putback. Do not run EndSend or enqueue a second copy of its retry.
+            if (message.IsRemoved || initialPutBack != PutBackDecision.No || final.PutBack != PutBackDecision.No)
+            {
+                _queue.ReleaseAcknowledgeLock(false);
+                return PushResult.Success;
+            }
+
+            // No subscriber could receive it, or every actual send failed. Keep its original
+            // priority and let the drain caller release its ACK wait on NoConsumers.
+            // Refused by every available consumer is about this message, not the consumers:
+            // the drain loop goes on with the next message instead of stopping the queue.
+            message.RefusedByConsumers = refused && !sendFailed;
+            PushResult result = _queue.AddMessage(message, false);
+            return result == PushResult.Success ? PushResult.NoConsumers : result;
+        }
 
         //after all sending operations completed, calls implementation send completed method and complete the operation
         if (messageIsSent)

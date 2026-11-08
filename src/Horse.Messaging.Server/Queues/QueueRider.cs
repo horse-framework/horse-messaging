@@ -653,42 +653,7 @@ public class QueueRider
 
     internal void FillQueueOptions(QueueOptions options, NodeQueueInfo info)
     {
-        options.Acknowledge = Enums.Parse<QueueAckDecision>(info.Acknowledge, true, EnumFormat.Description);
-        options.Type = Enums.Parse<QueueType>(info.QueueType, true, EnumFormat.Description);
-        options.PutBackDelay = info.PutBackDelay;
-        options.MessageTimeout = new MessageTimeoutStrategy
-        {
-            MessageDuration = info.MessageTimeout.MessageDuration,
-            Policy = Enums.Parse<MessageTimeoutPolicy>(info.MessageTimeout.Policy, true, EnumFormat.Description),
-            TargetName = info.MessageTimeout.TargetName
-        };
-        options.AcknowledgeTimeout = TimeSpan.FromMilliseconds(info.AcknowledgeTimeout);
-        options.DelayBetweenMessages = info.DelayBetweenMessages;
-        options.AutoDestroy = Enums.Parse<QueueDestroy>(info.AutoDestroy, true, EnumFormat.Description);
-
-        options.ClientLimit = info.ClientLimit;
-        options.MessageLimit = info.MessageLimit;
-        options.MessageSizeLimit = info.MessageSizeLimit;
-        options.MessageIdUniqueCheck = info.MessageIdUniqueCheck;
-
-        if (!string.IsNullOrEmpty(info.LimitExceededStrategy))
-            options.LimitExceededStrategy = Enums.Parse<MessageLimitExceededStrategy>(info.LimitExceededStrategy, true, EnumFormat.Description);
-
-        // Without this the copy kept the server default partition options: a sub-queue copy got a
-        // PartitionManager of its own and a parent copy lost the Main's partition settings.
-        if (info.IsPartitionQueue)
-            options.Partition = null;
-        else if (info.Partition != null)
-            options.Partition = new PartitionOptions
-            {
-                Enabled = info.Partition.Enabled,
-                MaxPartitionCount = info.Partition.MaxPartitionCount,
-                SubscribersPerPartition = info.Partition.SubscribersPerPartition,
-                AutoDestroy = info.Partition.AutoDestroy,
-                AutoDestroyIdleSeconds = info.Partition.AutoDestroyIdleSeconds,
-                AutoAssignWorkers = info.Partition.AutoAssignWorkers,
-                MaxPartitionsPerWorker = info.Partition.MaxPartitionsPerWorker
-            };
+        info.ApplyTo(options);
     }
 
     internal async Task<HorseQueue> CreateReplica(NodeQueueInfo info)
@@ -824,7 +789,11 @@ public class QueueRider
     {
         try
         {
-            _queues.TryRemove(queue.Name, out _);
+            // Remove only the instance the caller owns. A repeated removal of an old
+            // queue must not evict a newer queue registered under the same name.
+            if (!_queues.TryRemove(new KeyValuePair<string, HorseQueue>(queue.Name, queue)))
+                return;
+            
             queue.SetStatus(QueueStatus.Paused);
 
             foreach (IQueueEventHandler handler in EventHandlers.All())

@@ -90,6 +90,12 @@ internal class PullQueueState : IQueueState
         if (_queue.Rider.Queue.IsShuttingDown)
             return PullResult.StatusNotSupported;
 
+        if (client.Blocked)
+        {
+            await client.Client.SendAsync(MessageBuilder.CreateNoContentPullResponse(request, HorseHeaders.UNACCEPTABLE));
+            return PullResult.Unacceptable;
+        }
+
         int index = 1;
         int count = FindCount(request);
         if (count < 1)
@@ -222,10 +228,10 @@ internal class PullQueueState : IQueueState
         }
 
         if (clear == ClearDecision.All || clear == ClearDecision.Priority)
-            _queue.Manager.PriorityMessageStore.Clear();
+            _queue.ClearStore(_queue.Manager.PriorityMessageStore);
 
         if (clear == ClearDecision.All || clear == ClearDecision.Regular)
-            _queue.Manager.MessageStore.Clear();
+            _queue.ClearStore(_queue.Manager.MessageStore);
 
         if (message != null)
             ProcessingMessage = message;
@@ -239,7 +245,10 @@ internal class PullQueueState : IQueueState
     private async Task<bool> ProcessPull(QueueClient requester, HorseMessage request, QueueMessage message, IList<KeyValuePair<string, string>> headers)
     {
         if (requester.Blocked)
+        {
+            RestoreUndeliveredMessage(message);
             return false;
+        }
 
         //if we need acknowledge, we are sending this information to receivers that we require response
         message.Message.WaitResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
@@ -256,12 +265,28 @@ internal class PullQueueState : IQueueState
 
         message.Decision = await deliveryHandler.BeginSend(_queue, message);
         if (!await _queue.ApplyDecision(message.Decision, message))
+        {
+            // The handler stopped the flow before anything was tracked: no ACK or timeout will release
+            // the lock, and every later pull of the queue waited for it forever.
+            _queue.ReleaseAcknowledgeLock(false);
             return false;
+        }
+
+        PutBackDecision beginPutBack = message.Decision.PutBack;
 
         //call before send and check decision
         bool canReceive = await deliveryHandler.CanConsumerReceive(_queue, message, requester.Client);
         if (!canReceive)
+        {
+            // The message has already been dequeued. Eligibility may also change between
+            // messages of the same pull request, so retain it without changing its priority.
+            if (!message.IsRemoved && message.Decision.PutBack == PutBackDecision.No)
+                RestoreUndeliveredMessage(message);
+            else
+                _queue.ReleaseAcknowledgeLock(false);
+
             return false;
+        }
 
         //create delivery object
         MessageDelivery delivery = new MessageDelivery(message, requester, deadline);
@@ -294,15 +319,45 @@ internal class PullQueueState : IQueueState
         else
         {
             deliveryHandler.Tracker.RemoveDelivery(delivery);
-            message.Decision = await deliveryHandler.ConsumerReceiveFailed(_queue, delivery, requester.Client);
-            if (!await _queue.ApplyDecision(message.Decision, message))
-                return false;
+            Decision failed = await deliveryHandler.ConsumerReceiveFailed(_queue, delivery, requester.Client);
+            message.Decision = failed;
+            bool allowed = await _queue.ApplyDecision(failed, message);
+
+            // Nothing reached the requester, and the delivery is no longer tracked, so no ACK or timeout
+            // will release the lock: it used to stay held and every later pull of the queue waited forever.
+            // A handler that stopped the flow, deleted the message or put it back owns it. Otherwise it
+            // went back nowhere and was lost, so it is restored. EndSend is not called for a message
+            // that was not sent (a persistent handler put it back a second time there).
+            if (allowed && !message.IsRemoved && beginPutBack == PutBackDecision.No && failed.PutBack == PutBackDecision.No)
+                RestoreUndeliveredMessage(message);
+            else
+                _queue.ReleaseAcknowledgeLock(false);
+
+            // The requester is most likely gone: the rest of the batch is not sent
+            return false;
         }
 
         message.Decision = await deliveryHandler.EndSend(_queue, message);
         await _queue.ApplyDecision(message.Decision, message);
 
         return true;
+    }
+
+    private void RestoreUndeliveredMessage(QueueMessage message)
+    {
+        try
+        {
+            if (!message.IsRemoved && !message.IsInQueue)
+            {
+                PushResult result = _queue.AddMessage(message, false);
+                if (result != PushResult.Success)
+                    throw new InvalidOperationException($"Cannot restore undelivered message in queue {_queue.Name}: {result}");
+            }
+        }
+        finally
+        {
+            _queue.ReleaseAcknowledgeLock(false);
+        }
     }
 
     public Task<PushResult> Push(QueueMessage message)
