@@ -108,6 +108,28 @@ public class NodeClient
         _ = _outgoingClient.ConnectAsync();
     }
 
+    /// <summary>
+    /// Closes both links to the remote node. The outgoing client stops reconnecting until Start is called again.
+    /// </summary>
+    internal void Stop()
+    {
+        try
+        {
+            _outgoingClient.Disconnect();
+        }
+        catch
+        {
+        }
+
+        try
+        {
+            _incomingClient?.Disconnect();
+        }
+        catch
+        {
+        }
+    }
+
     private void OutgoingClientOnConnected(HorseClient client)
     {
         if (_incomingClient == null || !_incomingClient.IsConnected)
@@ -190,7 +212,8 @@ public class NodeClient
 
         OnDisconnected?.Invoke(this);
 
-        if (cluster.Options.Mode == ClusterMode.Scaled)
+        // This node is shutting down and closed the link itself. Failover is for the peers to run.
+        if (cluster.Options.Mode == ClusterMode.Scaled || cluster.IsStopped)
             return;
 
         if (cluster.MainNode != null && cluster.MainNode.Id == Info?.Id)

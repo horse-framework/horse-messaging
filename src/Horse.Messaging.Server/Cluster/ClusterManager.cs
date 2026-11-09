@@ -9,6 +9,7 @@ using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
 using Horse.Messaging.Server.Queues;
+using Horse.Server;
 
 namespace Horse.Messaging.Server.Cluster;
 
@@ -104,7 +105,12 @@ public class ClusterManager
 
     internal void Initialize()
     {
-        _stateThread = new Thread(() =>
+        _stateThread = CreateStateThread();
+    }
+
+    private Thread CreateStateThread()
+    {
+        Thread thread = new Thread(() =>
         {
             Random rnd = new Random();
 
@@ -131,7 +137,8 @@ public class ClusterManager
                 }
             }
         });
-        _stateThread.IsBackground = true;
+        thread.IsBackground = true;
+        return thread;
     }
 
     internal void Start()
@@ -155,6 +162,58 @@ public class ClusterManager
             client.Start();
 
         _stateThread.Start();
+
+        HorseServer server = Rider.Server;
+        if (server != null)
+        {
+            server.OnStopped += OnServerStopped;
+            server.OnStarted += OnServerStarted;
+        }
+    }
+
+    /// <summary>
+    /// True after the server stopped, until it starts again.
+    /// Node links are closed while stopped, and their disconnects do not start a failover.
+    /// </summary>
+    internal bool IsStopped => _stopped;
+
+    private volatile bool _stopped;
+
+    private void OnServerStopped(HorseServer server)
+    {
+        if (!ReferenceEquals(server, Rider.Server))
+            return;
+
+        // The node clients are outbound HorseClients and do not close with the server. Peers would
+        // keep seeing this node connected and never fail over, so close every link and stop reconnecting.
+        // Leave the roles first: a restarted node must negotiate again, not claim main from old state.
+        _stopped = true;
+        MainNode = null;
+        SuccessorNode = null;
+
+        foreach (NodeClient client in Clients)
+            client.Stop();
+
+        // Set directly: UpdateState would react to the change (adopting partitions) on a stopped server.
+        State = NodeState.Single;
+    }
+
+    private void OnServerStarted(HorseServer server)
+    {
+        if (!_stopped || !ReferenceEquals(server, Rider.Server))
+            return;
+
+        _stopped = false;
+
+        foreach (NodeClient client in Clients)
+            client.Start();
+
+        // The previous state thread ends when the server stops.
+        if (!_stateThread.IsAlive)
+        {
+            _stateThread = CreateStateThread();
+            _stateThread.Start();
+        }
     }
 
     /// <summary>
