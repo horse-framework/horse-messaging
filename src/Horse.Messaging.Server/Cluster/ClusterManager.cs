@@ -532,11 +532,37 @@ public class ClusterManager
 
     #region Messaging Operations
 
+    /// <summary>
+    /// Relays a client message to the other nodes in Scaled mode.
+    /// The message is serialized once and sent as raw bytes. Sending the message object through the node connection
+    /// would set its source to the node id, before this node delivers the same object to its own receivers.
+    /// </summary>
     internal void ProcessMessageFromClient(MessagingClient client, HorseMessage message)
     {
-        if (Options.Mode == ClusterMode.Scaled)
-            foreach (NodeClient node in Clients)
-                _ = node.SendMessage(message);
+        if (Options.Mode != ClusterMode.Scaled)
+            return;
+
+        byte[] data = null;
+        foreach (NodeClient node in Clients)
+        {
+            if (!node.IsConnected)
+                continue;
+
+            data ??= HorseProtocolWriter.Create(message);
+            _ = node.SendRawMessage(data);
+        }
+    }
+
+    /// <summary>
+    /// Returns true if there is an active connection to at least one other node
+    /// </summary>
+    internal bool HasConnectedNode()
+    {
+        foreach (NodeClient node in Clients)
+            if (node.IsConnected)
+                return true;
+
+        return false;
     }
 
     internal void SendMessage(HorseMessage message)

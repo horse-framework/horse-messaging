@@ -674,7 +674,7 @@ public class PluginRider : IPluginRider
 
                 if (message.Target.StartsWith("@type:", StringComparison.OrdinalIgnoreCase))
                 {
-                    MessagingClient[] receivers = _rider.Client.FindByType(message.Target.Substring(6));
+                    MessagingClient[] receivers = _rider.Client.FindByType(message.Target.AsSpan(6));
                     if (receivers.Length == 0)
                         return false;
 
@@ -692,7 +692,7 @@ public class PluginRider : IPluginRider
 
                 if (message.Target.StartsWith("@name:", StringComparison.OrdinalIgnoreCase))
                 {
-                    MessagingClient[] receivers = _rider.Client.FindClientByName(message.Target.Substring(6));
+                    MessagingClient[] receivers = _rider.Client.FindClientByName(message.Target.AsSpan(6));
                     if (receivers.Length == 0)
                         return false;
 

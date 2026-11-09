@@ -69,9 +69,10 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
     /// </summary>
     public async Task<HorseServerSocket> Connected(IHorseServer server, IConnectionInfo connection, ConnectionData data)
     {
-        string clientId;
-        bool found = data.Properties.TryGetValue(HorseHeaders.CLIENT_ID, out clientId);
-        if (!found || string.IsNullOrEmpty(clientId))
+        //unique id, name and type are stored trimmed, "victim " must not register next to "victim"
+        data.Properties.TryGetValue(HorseHeaders.CLIENT_ID, out string clientId);
+        clientId = clientId?.Trim();
+        if (string.IsNullOrEmpty(clientId))
             clientId = _rider.Client.ClientIdGenerator.Create();
 
         //if another client with same unique id is online, do not accept new client
@@ -92,7 +93,7 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
         //creates new mq client object 
         MessagingClient client = new MessagingClient(_rider, connection, _rider.MessageIdGenerator);
         client.Data = data;
-        client.UniqueId = clientId.Trim();
+        client.UniqueId = clientId;
         client.Token = data.Properties.GetStringValue(HorseHeaders.CLIENT_TOKEN);
         client.Name = data.Properties.GetStringValue(HorseHeaders.CLIENT_NAME);
         client.Type = data.Properties.GetStringValue(HorseHeaders.CLIENT_TYPE);
@@ -140,14 +141,17 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
 
         if (_rider.Cluster.Options.Mode == ClusterMode.Reliable && _rider.Cluster.State > NodeState.Main)
         {
-            foreach (IClientHandler handler in _rider.Client.Handlers.All())
-                _ = handler.Connected(_rider, client);
-
+            RunClientHandlers(client, true);
             return client;
         }
 
-        //client authenticated, add it into the connected clients list
-        _rider.Client.Add(client);
+        //client authenticated, add it into the connected clients list.
+        //another connection with the same unique id may have been added while this one was authenticated
+        if (!_rider.Client.Add(client))
+        {
+            await client.SendAsync(MessageBuilder.Busy());
+            return null;
+        }
 
         //send response message to the client, client should check unique id,
         //if client's unique id isn't permitted, server will create new id for client and send it as response
@@ -172,10 +176,31 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
         else
             await client.SendAsync(accepted);
 
-        foreach (IClientHandler handler in _rider.Client.Handlers.All())
-            _ = handler.Connected(_rider, client);
-
+        RunClientHandlers(client, true);
         return client;
+    }
+
+    /// <summary>
+    /// Triggers client handlers without waiting.
+    /// A failing handler is reported and does not affect the connection or the other handlers.
+    /// </summary>
+    private void RunClientHandlers(MessagingClient client, bool connected)
+    {
+        foreach (IClientHandler handler in _rider.Client.Handlers.All())
+        {
+            try
+            {
+                HandlerFailureObserver.Observe(_rider,
+                    connected ? handler.Connected(_rider, client) : handler.Disconnected(_rider, client),
+                    HorseLogEvents.ClientHandler,
+                    connected ? "IClientHandler.Connected" : "IClientHandler.Disconnected");
+            }
+            catch (Exception e)
+            {
+                HandlerFailureObserver.Report(_rider, e, HorseLogEvents.ClientHandler,
+                    connected ? "IClientHandler.Connected" : "IClientHandler.Disconnected");
+            }
+        }
     }
 
     /// <summary>
@@ -225,8 +250,7 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
         _rider.Client.Remove(messagingClient);
         _rider.Transaction.ClientDisconnected(messagingClient);
 
-        foreach (IClientHandler handler in _rider.Client.Handlers.All())
-            _ = handler.Disconnected(_rider, messagingClient);
+        RunClientHandlers(messagingClient, false);
 
         return Task.CompletedTask;
     }
@@ -243,30 +267,38 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
         try
         {
             MessagingClient mc = (MessagingClient)client;
-
-            //if client sends anonymous messages and server needs message id, generate new
-            if (string.IsNullOrEmpty(message.MessageId))
-            {
-                //anonymous messages can't be responsed, do not wait response
-                if (message.WaitResponse)
-                    message.WaitResponse = false;
-
-                message.SetMessageId(_rider.MessageIdGenerator.Create());
-            }
-
-            //if message does not have a source information, source will be set to sender's unique id
-            if (string.IsNullOrEmpty(message.Source))
-                message.SetSource(mc.UniqueId);
-
-            else if (message.Source != mc.UniqueId)
-                message.SetSource(mc.UniqueId);
-
+            PrepareReceivedMessage(mc, message);
             await RouteToHandler(mc, message).ConfigureAwait(false);
         }
         catch
         {
             client.Disconnect();
         }
+    }
+
+    /// <summary>
+    /// Sets message id if it's missing and sets the source to the sender.
+    /// Called for each received message and for each message in an envelope.
+    /// </summary>
+    private void PrepareReceivedMessage(MessagingClient mc, HorseMessage message)
+    {
+        //if client sends anonymous messages and server needs message id, generate new
+        if (string.IsNullOrEmpty(message.MessageId))
+        {
+            //anonymous messages can't be responsed, do not wait response
+            message.WaitResponse = false;
+            message.SetMessageId(_rider.MessageIdGenerator.Create());
+        }
+
+        //node connections relay the messages of clients connected to other nodes, their source is kept.
+        //a client can send messages only in its own name.
+        if (mc.IsNodeClient)
+        {
+            if (string.IsNullOrEmpty(message.Source))
+                message.SetSource(mc.UniqueId);
+        }
+        else if (message.Source != mc.UniqueId)
+            message.SetSource(mc.UniqueId);
     }
 
     /// <summary>
@@ -426,6 +458,9 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
 
             if (item == null)
                 break;
+
+            //messages in the envelope are read from the client's bytes, the source is checked like the envelope's
+            PrepareReceivedMessage(mc, item);
 
             Task task = RouteToHandler(mc, item);
             if (operationWaitMsgCount > 0)

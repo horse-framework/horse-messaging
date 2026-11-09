@@ -635,6 +635,29 @@ public class NodeClient
         return false;
     }
 
+    /// <summary>
+    /// Sends a serialized message to the node without changing it
+    /// </summary>
+    internal Task<bool> SendRawMessage(byte[] data)
+    {
+        try
+        {
+            if (_outgoingClient != null && _outgoingClient.IsConnected)
+                return _outgoingClient.SendRawAsync(data);
+
+            MessagingClient incoming = _incomingClient;
+            if (incoming != null && incoming.IsConnected)
+                return incoming.SendRawAsync(data);
+        }
+        catch
+        {
+            //connection is closed between the check and the send.
+            //the caller does not wait, an exception here would disconnect the client whose message is relayed
+        }
+
+        return Task.FromResult(false);
+    }
+
     internal async Task<bool> SendMessageAndWaitAck(HorseMessage message)
     {
         TaskCompletionSource<NodeMessageDelivery> source = _deliveryTracker.Track(message);

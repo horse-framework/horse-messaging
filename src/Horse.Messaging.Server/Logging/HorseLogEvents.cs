@@ -62,4 +62,14 @@ internal static class HorseLogEvents
     /// Processing a node to node cluster message failed
     /// </summary>
     internal const int ClusterMessageProcess = 1002;
+
+    /// <summary>
+    /// An IClientHandler (client connected or disconnected) failed
+    /// </summary>
+    internal const int ClientHandler = 1101;
+
+    /// <summary>
+    /// An IDirectMessageHandler (direct message, response or not found) failed
+    /// </summary>
+    internal const int DirectMessageHandler = 1102;
 }

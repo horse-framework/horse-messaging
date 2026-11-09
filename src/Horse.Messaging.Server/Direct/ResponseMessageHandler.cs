@@ -1,7 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Helpers;
+using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Network;
 using Horse.Messaging.Server.Queues;
 
@@ -33,8 +36,8 @@ internal class ResponseMessageHandler : INetworkMessageHandler
             MessagingClient target = _rider.Client.Find(message.Target);
             if (target != null)
             {
-                await target.SendAsync(message);
-                    
+                await SendToClient(sender, target, message);
+
                 if (_rider.Direct.ResponseEvent.HasSubscribers)
                     _rider.Direct.ResponseEvent.Trigger(sender, message.Target,
                         new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));
@@ -56,11 +59,35 @@ internal class ResponseMessageHandler : INetworkMessageHandler
             //target should be client
             MessagingClient target = _rider.Client.Find(message.Target);
             if (target != null)
-                await target.SendAsync(message);
+                await SendToClient(sender, target, message);
 
             if (_rider.Direct.ResponseEvent.HasSubscribers)
                 _rider.Direct.ResponseEvent.Trigger(sender, message.Target,
                     new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));
+        }
+    }
+
+    /// <summary>
+    /// Sends the response to the client and triggers direct message handlers
+    /// </summary>
+    private async Task SendToClient(MessagingClient sender, MessagingClient target, HorseMessage message)
+    {
+        target.Stats.IncrementReceivedDirectMessages();
+        await target.SendAsync(message);
+
+        if (sender != null)
+            sender.Stats.SentDirectMessages++;
+
+        foreach (IDirectMessageHandler handler in _rider.Direct.MessageHandlers.All())
+        {
+            try
+            {
+                HandlerFailureObserver.Observe(_rider, handler.OnResponse(sender, message, target), HorseLogEvents.DirectMessageHandler, "IDirectMessageHandler.OnResponse");
+            }
+            catch (Exception e)
+            {
+                HandlerFailureObserver.Report(_rider, e, HorseLogEvents.DirectMessageHandler, "IDirectMessageHandler.OnResponse");
+            }
         }
     }
 }
