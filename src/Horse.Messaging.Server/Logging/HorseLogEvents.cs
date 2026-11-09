@@ -72,4 +72,9 @@ internal static class HorseLogEvents
     /// An IDirectMessageHandler (direct message, response or not found) failed
     /// </summary>
     internal const int DirectMessageHandler = 1102;
+
+    /// <summary>
+    /// Processing a message received from a client or a node failed, the connection is closed
+    /// </summary>
+    internal const int MessageProcess = 1103;
 }

@@ -264,14 +264,19 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
     /// </summary>
     public async Task Received(IHorseServer server, IConnectionInfo info, HorseServerSocket client, HorseMessage message)
     {
+        MessagingClient mc = (MessagingClient)client;
         try
         {
-            MessagingClient mc = (MessagingClient)client;
             PrepareReceivedMessage(mc, message);
             await RouteToHandler(mc, message).ConfigureAwait(false);
         }
-        catch
+        catch (Exception e)
         {
+            //runs only when a handler fails, the message path pays nothing for it
+            _rider.SendError(HorseLogLevel.Error, HorseLogEvents.MessageProcess,
+                $"Processing {message?.Type} message (content type {message?.ContentType}) for {message?.Target} from {mc?.UniqueId} failed, the connection is closed",
+                e);
+
             client.Disconnect();
         }
     }
@@ -373,9 +378,9 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
                     : _routerMessageHandler.Handle(mc, message, mc.IsNodeClient);
 
             case MessageType.Cache:
-                if (!mc.IsNodeClient)
-                    _rider.Cluster.ProcessMessageFromClient(mc, message);
-
+                //cache changes reach the other nodes through CacheClusterNotifier (set, increment, remove, purge).
+                //Relaying the client message too applied every set twice on each node, re-broadcast removes
+                //and purges from every node, made remote nodes count increments again and ran each read on all nodes.
                 return _cacheHandler.Handle(mc, message, mc.IsNodeClient);
 
             case MessageType.Transaction:
@@ -437,36 +442,30 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Processes the messages in the envelope one by one, in order, like messages sent one by one on the connection.
+    /// They used to run concurrently unless the Wait-Messages header said otherwise (the client never sends it):
+    /// they interleaved with each other and with the next messages of the connection, and their exceptions were lost.
+    /// The acknowledge is sent after all messages are processed.
+    /// </summary>
     private async Task OpenEnvelope(MessagingClient mc, HorseMessage message)
     {
-        HorseProtocolReader reader = new HorseProtocolReader();
-        message.Content.Position = 0;
-
-        string wmstr = message.FindHeader(HorseHeaders.WAIT_MESSAGES);
-        int operationWaitMsgCount = 0;
-
-        if (!string.IsNullOrEmpty(wmstr))
+        if (message.Content != null)
         {
-            bool parsed = int.TryParse(wmstr, out int value);
-            if (parsed)
-                operationWaitMsgCount = value;
-        }
+            HorseProtocolReader reader = new HorseProtocolReader();
+            message.Content.Position = 0;
 
-        while (message.Content.Position < message.Content.Length)
-        {
-            HorseMessage item = await reader.Read(message.Content);
-
-            if (item == null)
-                break;
-
-            //messages in the envelope are read from the client's bytes, the source is checked like the envelope's
-            PrepareReceivedMessage(mc, item);
-
-            Task task = RouteToHandler(mc, item);
-            if (operationWaitMsgCount > 0)
+            while (message.Content.Position < message.Content.Length)
             {
-                operationWaitMsgCount--;
-                await task;
+                HorseMessage item = await reader.Read(message.Content);
+
+                if (item == null)
+                    break;
+
+                //messages in the envelope are read from the client's bytes, the source is checked like the envelope's
+                PrepareReceivedMessage(mc, item);
+
+                await RouteToHandler(mc, item).ConfigureAwait(false);
             }
         }
 

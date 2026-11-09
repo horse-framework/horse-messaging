@@ -376,7 +376,8 @@ public class HorseHeaders
     public const string VALUE = "Value";
     
     /// <summary>
-    /// "Wait-Messages"
+    /// "Wait-Messages".
+    /// Not used by the server anymore: messages in an envelope are always processed one by one, in order.
     /// </summary>
     public const string WAIT_MESSAGES = "Wait-Messages";
 
