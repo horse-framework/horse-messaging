@@ -64,22 +64,41 @@ public class MessagingClient : HorseServerSocket, ISwitchingProtocolClient
     /// </summary>
     public bool IsAuthenticated { get; internal set; }
 
-    /// <summary>
-    /// Client's unique id.
-    /// If it's null or empty, server will create new unique id for the client
-    /// </summary>
-    public string UniqueId { get; internal set; }
+    private string _uniqueId;
+    private string _name;
+    private string _type;
 
     /// <summary>
-    /// Client name
+    /// Client's unique id.
+    /// If it's null or empty, server will create new unique id for the client.
+    /// Leading and trailing white spaces are removed.
     /// </summary>
-    public string Name { get; internal set; }
+    public string UniqueId
+    {
+        get => _uniqueId;
+        internal set => _uniqueId = value?.Trim();
+    }
+
+    /// <summary>
+    /// Client name.
+    /// Leading and trailing white spaces are removed.
+    /// </summary>
+    public string Name
+    {
+        get => _name;
+        internal set => _name = value?.Trim();
+    }
 
     /// <summary>
     /// Client type.
     /// If different type of clients join your server, you can categorize them with this type value.
+    /// Leading and trailing white spaces are removed.
     /// </summary>
-    public string Type { get; internal set; }
+    public string Type
+    {
+        get => _type;
+        internal set => _type = value?.Trim();
+    }
 
     /// <summary>
     /// Client auhentication token.

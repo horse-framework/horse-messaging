@@ -153,6 +153,7 @@ public class HorseRider
         {
             // A pre-built rider can receive its server after cache initialization.
             Cache.Initialize();
+            Schedule.AttachServer();
             return;
         }
 

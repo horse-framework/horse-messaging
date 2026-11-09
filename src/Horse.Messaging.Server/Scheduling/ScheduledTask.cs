@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Plugins;
 using Horse.Messaging.Protocol;
@@ -15,7 +16,18 @@ namespace Horse.Messaging.Server.Scheduling;
 /// </summary>
 public class ScheduledTask
 {
-    private static readonly HttpClient HttpClient = new();
+    /// <summary>
+    /// Shared by all HTTP tasks. Pooled connections are renewed, a long running server sees DNS changes of the targets.
+    /// </summary>
+    private static readonly HttpClient HttpClient = new(new SocketsHttpHandler
+    {
+        PooledConnectionLifetime = TimeSpan.FromMinutes(2)
+    });
+
+    /// <summary>
+    /// 1 while the scheduler runs the task
+    /// </summary>
+    private int _running;
 
     /// <summary>
     /// Unique name of the task.
@@ -88,14 +100,33 @@ public class ScheduledTask
     public string SkipQueue { get; set; }
 
     /// <summary>
+    /// Marks the task as running. Returns false if it's already running.
+    /// </summary>
+    internal bool TryBeginRun() => Interlocked.CompareExchange(ref _running, 1, 0) == 0;
+
+    /// <summary>
+    /// Marks the task as not running
+    /// </summary>
+    internal void EndRun() => Volatile.Write(ref _running, 0);
+
+    /// <summary>
     /// Executes the task.
     /// </summary>
     public Task Execute(HorseRider rider)
     {
+        return Execute(rider, CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Executes the task.
+    /// The cancellation token cancels HTTP requests. Plugin, queue and router operations are not cancelled.
+    /// </summary>
+    public Task Execute(HorseRider rider, CancellationToken cancellationToken)
+    {
         switch (Type)
         {
             case ScheduleType.HttpRequest:
-                return ExecuteHttpRequest(rider);
+                return ExecuteHttpRequest(cancellationToken);
 
             case ScheduleType.PluginExecute:
                 return ExecutePlugin(rider);
@@ -111,7 +142,7 @@ public class ScheduledTask
         }
     }
 
-    private async Task ExecuteHttpRequest(HorseRider rider)
+    private async Task ExecuteHttpRequest(CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(Target))
             return;
@@ -122,7 +153,8 @@ public class ScheduledTask
         int firstSpace = Target.IndexOf(' ');
         if (firstSpace > 0)
         {
-            methodStr = Target[..firstSpace].ToUpper();
+            //invariant: with the Turkish culture "options" became "OPTİONS", an invalid method
+            methodStr = Target[..firstSpace].ToUpperInvariant();
             url = Target[(firstSpace + 1)..].Trim();
         }
         else
@@ -153,7 +185,8 @@ public class ScheduledTask
             request.Content = new StringContent(Parameters, Encoding.UTF8, contentType);
         }
 
-        HttpResponseMessage response = await HttpClient.SendAsync(request);
+        //only the status is used: the body is not buffered into memory and the response is released
+        using HttpResponseMessage response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         response.EnsureSuccessStatusCode();
     }
 

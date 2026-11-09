@@ -1022,9 +1022,6 @@ public class HorseClient : IDisposable
         if (string.IsNullOrEmpty(message.MessageId))
             message.SetMessageId(UniqueIdGenerator.Create());
 
-        if (message.Type == MessageType.DirectMessage)
-            message.HighPriority = true;
-
         if (string.IsNullOrEmpty(message.MessageId))
             throw new ArgumentNullException("Messages without unique id cannot be acknowledged");
 
@@ -1048,9 +1045,6 @@ public class HorseClient : IDisposable
 
         if (string.IsNullOrEmpty(message.MessageId))
             message.SetMessageId(UniqueIdGenerator.Create());
-
-        if (message.Type == MessageType.DirectMessage)
-            message.HighPriority = true;
 
         if (string.IsNullOrEmpty(message.MessageId))
             throw new ArgumentNullException("Messages without unique id cannot be acknowledged");
@@ -1222,9 +1216,6 @@ public class HorseClient : IDisposable
 
             if (string.IsNullOrEmpty(message.MessageId))
                 message.SetMessageId(UniqueIdGenerator.Create());
-
-            if (message.Type == MessageType.DirectMessage)
-                message.HighPriority = true;
 
             if (additionalHeaders != null)
                 foreach (KeyValuePair<string, string> pair in additionalHeaders)

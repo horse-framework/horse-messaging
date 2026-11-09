@@ -5,16 +5,31 @@
 /// </summary>
 public class ClientStats
 {
+    private long _receivedDirectMessages;
+
     /// <summary>
     /// Total received messages.
     /// It includes only direct messages or responses of direct messages
     /// </summary>
-    public long ReceivedDirectMessages { get; set; }
+    public long ReceivedDirectMessages
+    {
+        get => System.Threading.Interlocked.Read(ref _receivedDirectMessages);
+        set => System.Threading.Interlocked.Exchange(ref _receivedDirectMessages, value);
+    }
 
     /// <summary>
-    /// Sent direct messages or responses count
+    /// Sent direct messages or responses count.
+    /// Increased by the sender's own receive loop, which processes one message at a time.
     /// </summary>
     public long SentDirectMessages { get; set; }
+
+    /// <summary>
+    /// Many senders can send to the same client at the same time, so the received count is increased atomically
+    /// </summary>
+    internal void IncrementReceivedDirectMessages()
+    {
+        System.Threading.Interlocked.Increment(ref _receivedDirectMessages);
+    }
 
     /// <summary>
     /// Message push count to all queues of the client

@@ -9,6 +9,7 @@ using Cronos;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Queues;
+using Horse.Server;
 
 namespace Horse.Messaging.Server.Scheduling;
 
@@ -19,7 +20,38 @@ public class ScheduleRider
 {
     #region Definitions
 
-    private ScheduledTask[] _tasks = [];
+    private const string TasksFilename = "tasks.json";
+
+    private static readonly JsonSerializerOptions SaveOptions = new() { WriteIndented = true };
+
+    /// <summary>
+    /// Task list. It's replaced as a whole on changes, readers take it without a lock.
+    /// </summary>
+    private volatile ScheduledTask[] _tasks = [];
+
+    /// <summary>
+    /// Guards changes of the task list and the task definitions.
+    /// The list can't be the lock object: it is replaced inside the lock, so callers coming later locked another object.
+    /// </summary>
+    private readonly object _tasksLock = new();
+
+    /// <summary>
+    /// Serializes writes of the tasks file. Concurrent writes could interleave and corrupt the file.
+    /// </summary>
+    private readonly object _saveLock = new();
+
+    /// <summary>
+    /// Guards attaching to the server and starting or stopping the runner
+    /// </summary>
+    private readonly object _lifecycleLock = new();
+
+    private HorseServer _attachedServer;
+    private CancellationTokenSource _runnerCts;
+
+    /// <summary>
+    /// 1 when a task execution changed the task state after the last save
+    /// </summary>
+    private int _dirty;
 
     /// <summary>
     /// Horse rider object for server functions.
@@ -40,85 +72,175 @@ public class ScheduleRider
 
     /// <summary>
     /// Initializes the schedule rider.
-    /// Loads tasks and starts the runner loop.
+    /// Loads tasks and runs them while the server is running.
     /// </summary>
     public void Initialize()
     {
         try
         {
             Load();
-            _ = Run();
         }
         catch (Exception e)
         {
+            //Load handles a damaged file itself. The runner starts in any case, it used to never start after a load error.
             Rider.SendError(HorseLogLevel.Critical, HorseLogEvents.ScheduleLoad, "ScheduleRider.Initialize", e);
         }
+
+        AttachServer();
     }
 
-    private async Task Run()
+    /// <summary>
+    /// Follows the start and stop of the rider's server.
+    /// Tasks run while the server is running, a stopped server can be started again.
+    /// Called again when a pre-built rider receives its server.
+    /// </summary>
+    internal void AttachServer()
     {
-        bool saveRequired = false;
-        DateTime lastSave = DateTime.UtcNow;
-        CancellationTokenSource cts = new CancellationTokenSource();
-
-        //wait for start
-        while (Rider.Server == null || Rider.Server is { IsRunning: false })
-            await Task.Delay(100, cts.Token);
-
-        Rider.Server?.OnStopped += s => cts.Cancel();
-
-        while (Rider.Server.IsRunning && !cts.IsCancellationRequested)
+        lock (_lifecycleLock)
         {
-            try
+            HorseServer server = Rider.Server;
+            if (!ReferenceEquals(_attachedServer, server))
             {
-                int waitDelay = 2000;
-                DateTime now = DateTime.UtcNow;
-                ScheduledTask[] tasks = _tasks;
-
-                foreach (ScheduledTask task in tasks)
+                if (_attachedServer != null)
                 {
-                    if (!task.IsEnabled)
-                        continue;
-
-                    if (task.NextExecution <= now)
-                    {
-                        _ = RunTask(task);
-                    }
-
-                    TimeSpan leftDuration = task.NextExecution - now;
-                    if (leftDuration.TotalMilliseconds > 0 && leftDuration.TotalMilliseconds < waitDelay)
-                        waitDelay = Convert.ToInt32(leftDuration.TotalMilliseconds);
-
-                    saveRequired = true;
+                    _attachedServer.OnStarted -= OnServerStarted;
+                    _attachedServer.OnStopped -= OnServerStopped;
+                    StopRunner();
                 }
 
-                if (waitDelay < 100)
-                    waitDelay = 100;
+                _attachedServer = server;
 
-                await Task.Delay(Math.Clamp(waitDelay, 100, 2000), cts.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
-            catch (Exception e)
-            {
-                Rider.SendError(HorseLogLevel.Critical, HorseLogEvents.ScheduleSystemRun, "ScheduleRider.Run", e);
-                await Task.Delay(1000, cts.Token);
+                if (server != null)
+                {
+                    server.OnStarted += OnServerStarted;
+                    server.OnStopped += OnServerStopped;
+                }
             }
 
-            if (saveRequired && DateTime.UtcNow - lastSave > TimeSpan.FromSeconds(60))
-            {
-                Save();
-                saveRequired = false;
-                lastSave = DateTime.UtcNow;
-            }
+            if (server is { IsRunning: true })
+                StartRunner();
         }
-
-        Save();
     }
 
-    private async Task RunTask(ScheduledTask task)
+    private void OnServerStarted(HorseServer server)
+    {
+        lock (_lifecycleLock)
+        {
+            if (ReferenceEquals(server, _attachedServer))
+                StartRunner();
+        }
+    }
+
+    private void OnServerStopped(HorseServer server)
+    {
+        lock (_lifecycleLock)
+        {
+            if (!ReferenceEquals(server, _attachedServer))
+                return;
+
+            StopRunner();
+        }
+
+        //the runner saves when it ends too, the state is kept here before the host process may exit
+        SaveIfDirty();
+    }
+
+    /// <summary>
+    /// Starts the runner if it's not running. Called in the lifecycle lock.
+    /// </summary>
+    private void StartRunner()
+    {
+        if (_runnerCts != null)
+            return;
+
+        CancellationTokenSource cts = new CancellationTokenSource();
+        _runnerCts = cts;
+        _ = Run(cts);
+    }
+
+    /// <summary>
+    /// Stops the runner. Running HTTP requests and retry delays are cancelled. Called in the lifecycle lock.
+    /// </summary>
+    private void StopRunner()
+    {
+        CancellationTokenSource cts = _runnerCts;
+        if (cts == null)
+            return;
+
+        _runnerCts = null;
+        cts.Cancel();
+    }
+
+    private async Task Run(CancellationTokenSource cts)
+    {
+        CancellationToken cancellationToken = cts.Token;
+        DateTime lastSave = DateTime.UtcNow;
+
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                int waitDelay = 2000;
+
+                try
+                {
+                    DateTime now = DateTime.UtcNow;
+
+                    foreach (ScheduledTask task in _tasks)
+                    {
+                        if (!task.IsEnabled)
+                            continue;
+
+                        //a task that is still running (long execution, retries, or re-enabled meanwhile) is not started again
+                        if (task.NextExecution <= now && task.TryBeginRun())
+                            _ = RunTask(task, cancellationToken);
+
+                        TimeSpan leftDuration = task.NextExecution - now;
+                        if (leftDuration.TotalMilliseconds > 0 && leftDuration.TotalMilliseconds < waitDelay)
+                            waitDelay = Convert.ToInt32(leftDuration.TotalMilliseconds);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Rider.SendError(HorseLogLevel.Critical, HorseLogEvents.ScheduleSystemRun, "ScheduleRider.Run", e);
+                    waitDelay = 1000;
+                }
+
+                //only executions change the state here, definition changes are saved by the CRUD methods
+                if (DateTime.UtcNow - lastSave > TimeSpan.FromSeconds(60))
+                {
+                    SaveIfDirty();
+                    lastSave = DateTime.UtcNow;
+                }
+
+                await Task.Delay(Math.Clamp(waitDelay, 100, 2000), cancellationToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            cts.Dispose();
+            SaveIfDirty();
+        }
+    }
+
+    private async Task RunTask(ScheduledTask task, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await ExecuteTask(task, cancellationToken);
+        }
+        finally
+        {
+            task.NextExecution = CalculateNextExecutionTime(task);
+            task.EndRun();
+            Volatile.Write(ref _dirty, 1);
+        }
+    }
+
+    private async Task ExecuteTask(ScheduledTask task, CancellationToken cancellationToken)
     {
         try
         {
@@ -128,20 +250,25 @@ public class ScheduleRider
             {
                 try
                 {
-                    await task.Execute(Rider);
+                    await task.Execute(Rider, cancellationToken);
                     task.LastExecutionResult = true;
                     task.ExecutionCount++;
                     break;
                 }
-                catch
+                catch when (!cancellationToken.IsCancellationRequested)
                 {
                     retryCount--;
                     if (retryCount < 0)
                         throw;
 
-                    await Task.Delay(Math.Max(250, (task.RetryCount - retryCount) * 250));
+                    await Task.Delay(Math.Max(250, (task.RetryCount - retryCount) * 250), cancellationToken);
                 }
             } while (true);
+        }
+        catch (Exception) when (cancellationToken.IsCancellationRequested)
+        {
+            //the server is stopped during the execution, it's not a failure of the task
+            return;
         }
         catch (Exception e)
         {
@@ -181,21 +308,52 @@ public class ScheduleRider
         }
 
         task.LastExecution = DateTime.UtcNow;
-        task.NextExecution = CalculateNextExecutionTime(task);
+    }
+
+    /// <summary>
+    /// Returns the next execution time of the schedule.
+    /// Returns null if the schedule has no next execution, throws if the schedule is not valid.
+    /// </summary>
+    private static DateTime? GetNextExecution(string schedule, DateTime? lastExecution)
+    {
+        if (schedule.Length >= 3 && schedule.StartsWith("s/"))
+        {
+            int everySecondsValue = Convert.ToInt32(schedule[2..].Split(' ')[0].Trim());
+
+            //s/0 ran the task on every runner turn (100 ms), a negative interval was always due
+            if (everySecondsValue <= 0)
+                throw new FormatException($"Interval of schedule \"{schedule}\" must be greater than zero seconds");
+
+            return DateTime.UtcNow.AddSeconds(everySecondsValue);
+        }
+
+        CronExpression expression = CronExpression.Parse(schedule, CronFormat.Standard);
+        return expression.GetNextOccurrence(lastExecution ?? DateTime.UtcNow);
+    }
+
+    /// <summary>
+    /// Returns true if the schedule can be parsed and has a next execution
+    /// </summary>
+    private static bool IsValidSchedule(string schedule)
+    {
+        if (string.IsNullOrWhiteSpace(schedule))
+            return false;
+
+        try
+        {
+            return GetNextExecution(schedule, null).HasValue;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private DateTime CalculateNextExecutionTime(ScheduledTask task)
     {
         try
         {
-            if (task.Schedule.Length >= 3 && task.Schedule.StartsWith("s/"))
-            {
-                int everySecondsValue = Convert.ToInt32(task.Schedule[2..].Split(' ')[0].Trim());
-                return DateTime.UtcNow.AddSeconds(everySecondsValue);
-            }
-
-            CronExpression expression = CronExpression.Parse(task.Schedule, CronFormat.Standard);
-            DateTime? next = expression.GetNextOccurrence(task.LastExecution ?? DateTime.UtcNow);
+            DateTime? next = GetNextExecution(task.Schedule, task.LastExecution);
             if (next.HasValue)
                 return next.Value;
 
@@ -214,48 +372,142 @@ public class ScheduleRider
 
     #region Load - Save
 
+    private string GetFilename() => Path.Combine(Rider.Options.DataPath, TasksFilename);
+
+    /// <summary>
+    /// Loads the tasks one by one. A task that can't be read is skipped and reported,
+    /// a damaged file is copied aside before the next save rewrites it without the skipped tasks.
+    /// </summary>
     private void Load()
     {
-        string filename = Path.Combine(Rider.Options.DataPath, "tasks.json");
+        string filename = GetFilename();
 
         if (!File.Exists(filename))
         {
-            _tasks = [];
+            lock (_tasksLock)
+                _tasks = [];
+
             return;
         }
 
-        string json = File.ReadAllText(filename);
-        ScheduleTaskDataItem[] items = JsonSerializer.Deserialize<ScheduleTaskDataItem[]>(json);
-        _tasks = items.Select(x => x.GetTask()).ToArray();
-        foreach (ScheduledTask scheduledTask in _tasks)
-            scheduledTask.NextExecution = CalculateNextExecutionTime(scheduledTask);
-    }
+        List<ScheduledTask> tasks = new List<ScheduledTask>();
+        bool damaged = false;
 
-    private void Save()
-    {
         try
         {
-            ScheduledTask[] tasks = _tasks;
+            //read as text, a hand edited file may start with a byte order mark
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(filename));
 
-            if (tasks == null)
-                return;
+            if (document.RootElement.ValueKind != JsonValueKind.Array)
+                throw new JsonException($"Root of {filename} is not an array");
 
-            var items = tasks
-                .Where(x => x != null)
-                .Select(ScheduleTaskDataItem.Create)
-                .ToList();
-
-            string json = JsonSerializer.Serialize(items, new JsonSerializerOptions
+            int index = 0;
+            foreach (JsonElement element in document.RootElement.EnumerateArray())
             {
-                WriteIndented = true
-            });
+                try
+                {
+                    ScheduleTaskDataItem item = element.Deserialize<ScheduleTaskDataItem>();
+                    if (item == null)
+                        throw new JsonException("Task item is null");
 
-            string filename = Path.Combine(Rider.Options.DataPath, "tasks.json");
-            File.WriteAllText(filename, json);
+                    tasks.Add(item.GetTask());
+                }
+                catch (Exception e)
+                {
+                    damaged = true;
+
+                    string name = element.ValueKind == JsonValueKind.Object &&
+                                  element.TryGetProperty("name", out JsonElement nameElement) &&
+                                  nameElement.ValueKind == JsonValueKind.String
+                        ? nameElement.GetString()
+                        : null;
+
+                    Rider.SendError(HorseLogLevel.Error, HorseLogEvents.ScheduleLoad,
+                        $"Scheduled task #{index} ({name ?? "no name"}) in {filename} can't be loaded and is skipped", e);
+                }
+
+                index++;
+            }
         }
         catch (Exception e)
         {
-            Rider.SendError(HorseLogLevel.Critical, HorseLogEvents.ScheduleSave, "ScheduleRider.Save", e);
+            damaged = true;
+            Rider.SendError(HorseLogLevel.Critical, HorseLogEvents.ScheduleLoad, $"Scheduled tasks file {filename} can't be read", e);
+        }
+
+        if (damaged)
+            BackupDamagedFile(filename);
+
+        foreach (ScheduledTask task in tasks)
+            task.NextExecution = CalculateNextExecutionTime(task);
+
+        lock (_tasksLock)
+            _tasks = tasks.ToArray();
+    }
+
+    private void BackupDamagedFile(string filename)
+    {
+        try
+        {
+            string backup = $"{filename}.{DateTime.UtcNow:yyyyMMddHHmmssfff}.corrupt";
+            File.Copy(filename, backup, false);
+
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.ScheduleLoad,
+                $"Damaged scheduled tasks file is copied to {backup}. The tasks that can't be loaded are removed from {filename} on the next save.", null);
+        }
+        catch (Exception e)
+        {
+            Rider.SendError(HorseLogLevel.Critical, HorseLogEvents.ScheduleLoad, $"Damaged scheduled tasks file {filename} can't be copied aside", e);
+        }
+    }
+
+    private void SaveIfDirty()
+    {
+        if (Volatile.Read(ref _dirty) == 1)
+            Save();
+    }
+
+    /// <summary>
+    /// Writes all tasks to the tasks file.
+    /// Saves are serialized and the file is replaced by a fully written temporary file,
+    /// a crash or a concurrent save can't leave a partial file.
+    /// If the save fails, the runner tries again later.
+    /// </summary>
+    private void Save()
+    {
+        lock (_saveLock)
+        {
+            //cleared before the tasks are read: an execution finishing during the save marks it again
+            Volatile.Write(ref _dirty, 0);
+
+            try
+            {
+                //read in the lock, a save that waited for another one writes the latest state
+                ScheduledTask[] tasks = _tasks;
+
+                List<ScheduleTaskDataItem> items = new List<ScheduleTaskDataItem>(tasks.Length);
+                foreach (ScheduledTask task in tasks)
+                    if (task != null)
+                        items.Add(ScheduleTaskDataItem.Create(task));
+
+                byte[] json = JsonSerializer.SerializeToUtf8Bytes(items, SaveOptions);
+
+                string filename = GetFilename();
+                string tempFilename = filename + ".tmp";
+
+                using (FileStream stream = new FileStream(tempFilename, FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    stream.Write(json);
+                    stream.Flush(true);
+                }
+
+                File.Move(tempFilename, filename, true);
+            }
+            catch (Exception e)
+            {
+                Volatile.Write(ref _dirty, 1);
+                Rider.SendError(HorseLogLevel.Critical, HorseLogEvents.ScheduleSave, "ScheduleRider.Save", e);
+            }
         }
     }
 
@@ -268,20 +520,20 @@ public class ScheduleRider
     /// </summary>
     public List<ScheduledTask> GetTasks()
     {
-        ScheduledTask[] array = _tasks;
-        return array == null ? [] : array.ToList();
+        return _tasks.ToList();
     }
 
     /// <summary>
     /// Adds a new scheduled task.
-    /// Returns null if a task with the same name already exists.
+    /// Returns null if a task with the same name already exists or the schedule is not valid
+    /// (it can't be parsed or it has no next execution).
     /// </summary>
     public ScheduledTask AddTask(string name, string category, string schedule, ScheduleType type,
         string target, string parameters, string errorQueue = null,
         int retryCount = 0)
     {
-        ScheduledTask previous = _tasks.FirstOrDefault(x => x.Name == name);
-        if (previous != null)
+        //an invalid schedule used to be added and saved as a disabled task while the caller got it as added
+        if (!IsValidSchedule(schedule))
             return null;
 
         ScheduledTask task = new ScheduledTask
@@ -297,20 +549,19 @@ public class ScheduleRider
             IsEnabled = true
         };
 
-        lock (_tasks)
+        //calculated before the task is visible to the runner, it used to see the default (past) time and run the task at once
+        task.NextExecution = CalculateNextExecutionTime(task);
+
+        lock (_tasksLock)
         {
-            previous = _tasks.FirstOrDefault(x => x.Name == name);
-            if (previous != null)
+            ScheduledTask[] tasks = _tasks;
+            if (tasks.Any(x => x.Name == name))
                 return null;
 
-            var list = _tasks.ToList();
-            list.Add(task);
-            _tasks = list.ToArray();
+            _tasks = [..tasks, task];
         }
 
-        task.NextExecution = CalculateNextExecutionTime(task);
         Save();
-
         return task;
     }
 
@@ -319,15 +570,17 @@ public class ScheduleRider
     /// </summary>
     public void RemoveTask(string name)
     {
-        ScheduledTask task = _tasks.FirstOrDefault(x => x.Name == name);
-        if (task == null)
-            return;
-
-        lock (_tasks)
+        lock (_tasksLock)
         {
-            var list = _tasks.ToList();
-            list.Remove(task);
-            _tasks = list.ToArray();
+            ScheduledTask[] tasks = _tasks;
+            int index = Array.FindIndex(tasks, x => x.Name == name);
+            if (index < 0)
+                return;
+
+            ScheduledTask[] list = new ScheduledTask[tasks.Length - 1];
+            Array.Copy(tasks, 0, list, 0, index);
+            Array.Copy(tasks, index + 1, list, index, tasks.Length - index - 1);
+            _tasks = list;
         }
 
         Save();
@@ -335,25 +588,32 @@ public class ScheduleRider
 
     /// <summary>
     /// Updates an existing scheduled task.
-    /// Returns false if the task is not found.
+    /// Returns false if the task is not found or the schedule is not valid
+    /// (it can't be parsed or it has no next execution).
+    /// The enabled status is not changed, use SetStatus for it.
     /// </summary>
     public bool UpdateTask(string name, string category, string schedule, ScheduleType type,
         string target, string parameters, string errorQueue = null,
         int retryCount = 0)
     {
-        ScheduledTask task = _tasks.FirstOrDefault(x => x.Name == name);
-        if (task == null)
+        if (!IsValidSchedule(schedule))
             return false;
 
-        task.Name = name;
-        task.Category = category;
-        task.Schedule = schedule;
-        task.Type = type;
-        task.Target = target;
-        task.Parameters = parameters;
-        task.RetryCount = retryCount;
-        task.SkipQueue = errorQueue;
-        task.NextExecution = CalculateNextExecutionTime(task);
+        lock (_tasksLock)
+        {
+            ScheduledTask task = _tasks.FirstOrDefault(x => x.Name == name);
+            if (task == null)
+                return false;
+
+            task.Category = category;
+            task.Schedule = schedule;
+            task.Type = type;
+            task.Target = target;
+            task.Parameters = parameters;
+            task.RetryCount = retryCount;
+            task.SkipQueue = errorQueue;
+            task.NextExecution = CalculateNextExecutionTime(task);
+        }
 
         Save();
         return true;
@@ -365,12 +625,15 @@ public class ScheduleRider
     /// </summary>
     public bool SetStatus(string name, bool isEnabled)
     {
-        ScheduledTask task = _tasks.FirstOrDefault(x => x.Name == name);
-        if (task == null)
-            return false;
+        lock (_tasksLock)
+        {
+            ScheduledTask task = _tasks.FirstOrDefault(x => x.Name == name);
+            if (task == null)
+                return false;
 
-        task.IsEnabled = isEnabled;
-        task.NextExecution = isEnabled ? CalculateNextExecutionTime(task) : DateTime.MaxValue;
+            task.IsEnabled = isEnabled;
+            task.NextExecution = isEnabled ? CalculateNextExecutionTime(task) : DateTime.MaxValue;
+        }
 
         Save();
         return true;
@@ -381,7 +644,9 @@ public class ScheduleRider
     /// </summary>
     public void ClearTasks()
     {
-        _tasks = [];
+        lock (_tasksLock)
+            _tasks = [];
+
         Save();
     }
 
