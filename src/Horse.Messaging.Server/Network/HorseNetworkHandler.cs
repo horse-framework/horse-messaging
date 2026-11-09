@@ -447,6 +447,7 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
     /// They used to run concurrently unless the Wait-Messages header said otherwise (the client never sends it):
     /// they interleaved with each other and with the next messages of the connection, and their exceptions were lost.
     /// The acknowledge is sent after all messages are processed.
+    /// An envelope in an envelope is rejected and the connection is closed, see the check below.
     /// </summary>
     private async Task OpenEnvelope(MessagingClient mc, HorseMessage message)
     {
@@ -461,6 +462,12 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
 
                 if (item == null)
                     break;
+
+                //inner messages are read from memory and complete synchronously, a nested envelope recursed on the same stack:
+                //a client could crash the server process with a stack overflow (about 5000 levels, a 60 KB message).
+                //The client never nests envelopes. Throwing here closes the connection like any failed message.
+                if (item.Type == MessageType.Envelope)
+                    throw new InvalidOperationException("Nested envelopes are not supported");
 
                 //messages in the envelope are read from the client's bytes, the source is checked like the envelope's
                 PrepareReceivedMessage(mc, item);

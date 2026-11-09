@@ -319,6 +319,11 @@ public class ScheduleRider
         if (schedule.Length >= 3 && schedule.StartsWith("s/"))
         {
             int everySecondsValue = Convert.ToInt32(schedule[2..].Split(' ')[0].Trim());
+
+            //s/0 ran the task on every runner turn (100 ms), a negative interval was always due
+            if (everySecondsValue <= 0)
+                throw new FormatException($"Interval of schedule \"{schedule}\" must be greater than zero seconds");
+
             return DateTime.UtcNow.AddSeconds(everySecondsValue);
         }
 

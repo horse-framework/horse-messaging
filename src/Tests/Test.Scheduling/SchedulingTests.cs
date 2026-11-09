@@ -292,7 +292,14 @@ public class SchedulingTests
             Assert.Null(schedule.AddTask("Invalid", "Tests", "not a cron", ScheduleType.QueuePush, "q", "p"));
             Assert.Null(schedule.AddTask("Null", "Tests", null, ScheduleType.QueuePush, "q", "p"));
             Assert.Null(schedule.AddTask("Never", "Tests", "0 0 30 2 *", ScheduleType.QueuePush, "q", "p"));
+            Assert.Null(schedule.AddTask("Zero", "Tests", "s/0", ScheduleType.QueuePush, "q", "p"));
+            Assert.Null(schedule.AddTask("Negative", "Tests", "s/-5", ScheduleType.QueuePush, "q", "p"));
             Assert.Empty(schedule.GetTasks());
+
+            Assert.NotNull(schedule.AddTask("EverySecond", "Tests", "s/1", ScheduleType.QueuePush, "q", "p"));
+            Assert.False(schedule.UpdateTask("EverySecond", "Tests", "s/0", ScheduleType.QueuePush, "q", "p"));
+            Assert.Equal("s/1", Assert.Single(schedule.GetTasks()).Schedule);
+            schedule.RemoveTask("EverySecond");
 
             ScheduledTask task = schedule.AddTask("Valid", "Tests", "*/5 * * * *", ScheduleType.QueuePush, "q", "p");
             Assert.NotNull(task);
