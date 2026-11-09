@@ -5,6 +5,19 @@
 [![NuGet](https://img.shields.io/nuget/v/Horse.Messaging.Plugins?label=Plugins%20NuGet)](https://www.nuget.org/packages/Horse.Messaging.Plugins)
 [![NuGet](https://img.shields.io/nuget/v/Horse.Jockey?label=Jockey%20Panel%20NuGet)](https://www.nuget.org/packages/Horse.Jockey)
 
+## Kubernetes / Helm
+
+Horse Messaging Server can be deployed to Kubernetes with the official Helm chart:
+
+```sh
+helm install horse oci://ghcr.io/horse-framework/charts/horse \
+  --namespace messaging --create-namespace
+```
+
+For more information visit the
+[Horse Helm Chart repository](https://github.com/horse-framework/helm-chart)
+and follow the installation instructions there.
+
 ## What's Horse Messaging
 
 Horse Messaging is a communcation framework. It provides many features.
