@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Cluster;
+using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Queues.Managers;
 
 namespace Horse.Messaging.Server.Queues.Sync;
@@ -29,6 +30,26 @@ public class DefaultQueueSynchronizer : IQueueSynchronizer
     private bool _reverseMessagesReceived;
 
     /// <summary>
+    /// Guards the sync state transitions. The end of a sync can be requested by the remote node,
+    /// by the timeout watcher and by the disconnect handler at the same time; only one of them may
+    /// release the queue lock.
+    /// </summary>
+    private readonly object _stateLock = new();
+
+    /// <summary>
+    /// Incremented for each sync. A watcher of an ended sync must not end the next one.
+    /// </summary>
+    private int _session;
+
+    /// <summary>
+    /// Maximum duration a sync may hold the queue lock.
+    /// While the lock is held, every push to the queue waits (in Reliable mode each push waits for it).
+    /// When the remote node does not complete the sync in this duration, the sync is ended and the lock is released.
+    /// Default is 3 minutes.
+    /// </summary>
+    public TimeSpan Timeout { get; set; } = TimeSpan.FromMinutes(3);
+
+    /// <summary>
     /// Creates new default queue synchronizer
     /// </summary>
     public DefaultQueueSynchronizer(IHorseQueueManager manager)
@@ -39,49 +60,34 @@ public class DefaultQueueSynchronizer : IQueueSynchronizer
     /// <inheritdoc />
     public virtual async Task<bool> BeginSharing(NodeClient replica)
     {
-        _reverseMessagesReceived = false;
-        _additionalMessages = new List<QueueMessage>();
         try
         {
             await Manager.Queue.QueueLock.WaitAsync();
         }
         catch
         {
-            try
-            {
-                Manager.Queue.QueueLock.Release();
-            }
-            catch
-            {
-            }
-
             return false;
         }
 
-        RemoteNode = replica;
-        replica.OnDisconnected += OnNodeDisconnected;
-        Status = QueueSyncStatus.Sharing;
-        _syncStartDate = DateTime.UtcNow;
+        int session;
+        lock (_stateLock)
+        {
+            //state is reset after the lock is taken, another sync may be running until then
+            _reverseMessagesReceived = false;
+            _additionalMessages = new List<QueueMessage>();
+            RemoteNode = replica;
+            replica.OnDisconnected += OnNodeDisconnected;
+            Status = QueueSyncStatus.Sharing;
+            _syncStartDate = DateTime.UtcNow;
+            session = ++_session;
+        }
+
         Manager.Queue.SetStatus(QueueStatus.Syncing);
 
-        _ = Task.Factory.StartNew(async () =>
-        {
-            while (Status == QueueSyncStatus.Sharing || DateTime.UtcNow - _syncStartDate > TimeSpan.FromMinutes(3))
-            {
-                try
-                {
-                    await Task.Delay(1000);
-                    if (!replica.IsConnected)
-                    {
-                        await EndSharing();
-                        break;
-                    }
-                }
-                catch
-                {
-                }
-            }
-        });
+        //the lock is held until the replica sends the completion.
+        //A replica that never completes (it lost the message, failed while processing it, or has no such queue)
+        //used to keep the queue in Syncing, and every push to it waiting, until the replica disconnected.
+        _ = WatchSync(replica, session, QueueSyncStatus.Sharing);
 
         List<string> priorityIds = Manager.PriorityMessageStore.GetUnsafe().Select(x => x.Message.MessageId).ToList();
         List<string> msgIds = Manager.MessageStore.GetUnsafe().Select(x => x.Message.MessageId).ToList();
@@ -117,61 +123,105 @@ public class DefaultQueueSynchronizer : IQueueSynchronizer
         HorseMessage message = new HorseMessage(MessageType.Cluster, Manager.Queue.Name, KnownContentTypes.NodeQueueMessageIdList);
         message.SetStringContent(builder.ToString());
 
-        bool result = await replica.SendMessage(message);
+        bool result;
+        try
+        {
+            result = await replica.SendMessage(message);
+        }
+        catch
+        {
+            result = false;
+        }
+
+        //the replica did not get the list and will never complete the sync
+        if (!result)
+            EndSharing(session);
+
         return result;
     }
 
     /// <inheritdoc />
     public virtual async Task<bool> BeginReceiving(NodeClient main)
     {
-        _reverseMessagesReceived = false;
-        _additionalMessages = new List<QueueMessage>();
         try
         {
             await Manager.Queue.QueueLock.WaitAsync();
         }
         catch
         {
+            return false;
+        }
+
+        int session;
+        lock (_stateLock)
+        {
+            //the state is set before the watcher starts.
+            //The watcher used to start first, it could see the previous status and exit without watching.
+            _reverseMessagesReceived = false;
+            _additionalMessages = new List<QueueMessage>();
+            RemoteNode = main;
+            main.OnDisconnected += OnNodeDisconnected;
+            Status = QueueSyncStatus.Receiving;
+            _syncStartDate = DateTime.UtcNow;
+            session = ++_session;
+        }
+
+        _ = WatchSync(main, session, QueueSyncStatus.Receiving);
+        return true;
+    }
+
+    /// <summary>
+    /// Ends the sync when the remote node disconnects or the sync takes longer than <see cref="Timeout"/>.
+    /// Exits when the sync is ended by another way.
+    /// </summary>
+    private async Task WatchSync(NodeClient remote, int session, QueueSyncStatus status)
+    {
+        while (true)
+        {
             try
             {
-                Manager.Queue.QueueLock.Release();
+                await Task.Delay(1000);
+
+                DateTime startDate;
+                lock (_stateLock)
+                {
+                    if (_session != session || Status != status)
+                        return;
+
+                    startDate = _syncStartDate;
+                }
+
+                if (remote.IsConnected && DateTime.UtcNow - startDate <= Timeout)
+                    continue;
+
+                if (!remote.IsConnected)
+                    Manager.Queue.Rider.SendError(HorseLogLevel.Error, HorseLogEvents.ClusterMessageProcess,
+                        $"Queue sync for {Manager.Queue.Name} is ended, node {remote.Info?.Name} is disconnected", null);
+                else
+                    Manager.Queue.Rider.SendError(HorseLogLevel.Error, HorseLogEvents.ClusterMessageProcess,
+                        $"Queue sync for {Manager.Queue.Name} with node {remote.Info?.Name} is not completed in {Timeout}, the sync is ended", null);
+
+                if (status == QueueSyncStatus.Sharing)
+                    EndSharing(session);
+                else
+                    await EndReceiving(false, session);
+
+                return;
             }
             catch
             {
             }
-
-            return false;
         }
-
-        _ = Task.Factory.StartNew(async () =>
-        {
-            while (Status == QueueSyncStatus.Receiving)
-            {
-                try
-                {
-                    await Task.Delay(1000);
-                    if (!main.IsConnected || DateTime.UtcNow - _syncStartDate > TimeSpan.FromMinutes(3))
-                    {
-                        await EndReceiving(false);
-                        break;
-                    }
-                }
-                catch
-                {
-                }
-            }
-        });
-
-        RemoteNode = main;
-        main.OnDisconnected += OnNodeDisconnected;
-        Status = QueueSyncStatus.Receiving;
-        _syncStartDate = DateTime.UtcNow;
-        return true;
     }
 
     /// <inheritdoc />
     public virtual async Task ProcessMessageList(HorseMessage message)
     {
+        //a list for a sync this node is not receiving (it timed out or was never started).
+        //Answering it would use a cleared RemoteNode and throw.
+        if (Status != QueueSyncStatus.Receiving || RemoteNode == null)
+            return;
+
         string[] lines = message.GetStringContent().Split(Environment.NewLine);
 
         bool priority = true;
@@ -278,15 +328,36 @@ public class DefaultQueueSynchronizer : IQueueSynchronizer
     /// <inheritdoc />
     public virtual Task EndSharing()
     {
-        // A completion can reach a queue this node is not sharing (roles flip at startup, or the
-        // timeout already ended it). Ending again would release a QueueLock this sync no longer
-        // holds, and with RemoteNode cleared it threw a NullReferenceException.
-        if (Status != QueueSyncStatus.Sharing || RemoteNode == null)
-            return Task.CompletedTask;
+        EndSharing(null);
+        return Task.CompletedTask;
+    }
 
-        Status = QueueSyncStatus.None;
-        _syncStartDate = DateTime.UtcNow;
-        RemoteNode.OnDisconnected -= OnNodeDisconnected;
+    /// <summary>
+    /// Ends sharing. When session is not null, ends only if that sync is still running.
+    /// </summary>
+    private void EndSharing(int? session)
+    {
+        NodeClient remote;
+        bool reverseMessagesReceived;
+
+        lock (_stateLock)
+        {
+            // A completion can reach a queue this node is not sharing (roles flip at startup, or the
+            // timeout already ended it). Ending again would release a QueueLock this sync no longer
+            // holds, and with RemoteNode cleared it threw a NullReferenceException.
+            if (Status != QueueSyncStatus.Sharing || RemoteNode == null)
+                return;
+
+            if (session.HasValue && session.Value != _session)
+                return;
+
+            Status = QueueSyncStatus.None;
+            _syncStartDate = DateTime.UtcNow;
+            remote = RemoteNode;
+            remote.OnDisconnected -= OnNodeDisconnected;
+            reverseMessagesReceived = _reverseMessagesReceived;
+            _reverseMessagesReceived = false;
+        }
 
         Manager.Queue.SetStatus(QueueStatus.Running);
 
@@ -298,22 +369,18 @@ public class DefaultQueueSynchronizer : IQueueSynchronizer
         {
         }
 
-        if (_reverseMessagesReceived)
+        if (reverseMessagesReceived)
         {
             var cluster = Manager.Queue.Rider.Cluster;
             foreach (NodeClient client in cluster.Clients)
             {
-                if (client.Info.Id == RemoteNode.Info.Id)
+                if (client.Info.Id == remote.Info.Id)
                     continue;
 
                 HorseMessage message = new HorseMessage(MessageType.Cluster, client.Info.Id, KnownContentTypes.NodeTriggerQueueListRequest);
                 _ = client.SendMessage(message);
             }
-
-            _reverseMessagesReceived = false;
         }
-
-        return Task.CompletedTask;
     }
 
     private async Task WriteMessages(HorseMessage target, IEnumerable<string> idList)
@@ -348,49 +415,79 @@ public class DefaultQueueSynchronizer : IQueueSynchronizer
     }
 
     /// <inheritdoc />
-    public virtual async Task EndReceiving(bool sendLocalMessages)
+    public virtual Task EndReceiving(bool sendLocalMessages)
     {
-        if (sendLocalMessages && _additionalMessages != null && _additionalMessages.Count > 0)
+        return EndReceiving(sendLocalMessages, null);
+    }
+
+    /// <summary>
+    /// Ends receiving. When session is not null, ends only if that sync is still running.
+    /// </summary>
+    private async Task EndReceiving(bool sendLocalMessages, int? session)
+    {
+        NodeClient remote;
+        List<QueueMessage> additionalMessages;
+
+        lock (_stateLock)
         {
-            HorseMessage reverse = new HorseMessage(MessageType.Cluster, Manager.Queue.Name, KnownContentTypes.NodeQueueSyncReverseMessages);
-            reverse.AddHeader(HorseHeaders.COUNT, _additionalMessages.Count);
-            reverse.Content = new MemoryStream();
+            //the watcher, the disconnect handler and the main node's response may end the same sync.
+            //Only the first one releases the queue lock.
+            if (Status != QueueSyncStatus.Receiving || RemoteNode == null)
+                return;
 
-            foreach (QueueMessage msg in _additionalMessages)
-            {
-                byte[] data = HorseProtocolWriter.Create(msg.Message);
-                await reverse.Content.WriteAsync(data);
-            }
+            if (session.HasValue && session.Value != _session)
+                return;
 
-            reverse.CalculateLengths();
-            _additionalMessages.Clear();
-            reverse.AddHeader(HorseHeaders.COUNT, 0);
-            await RemoteNode.SendMessage(reverse);
+            Status = QueueSyncStatus.None;
+            remote = RemoteNode;
+            RemoteNode = null;
+            remote.OnDisconnected -= OnNodeDisconnected;
+            additionalMessages = _additionalMessages;
+            _additionalMessages = new List<QueueMessage>();
         }
-
-        Status = QueueSyncStatus.None;
-        Manager.Queue.SetStatus(QueueStatus.Running);
-        RemoteNode.OnDisconnected -= OnNodeDisconnected;
 
         try
         {
-            Manager.Queue.QueueLock.Release();
+            if (sendLocalMessages && additionalMessages != null && additionalMessages.Count > 0)
+            {
+                HorseMessage reverse = new HorseMessage(MessageType.Cluster, Manager.Queue.Name, KnownContentTypes.NodeQueueSyncReverseMessages);
+                reverse.AddHeader(HorseHeaders.COUNT, additionalMessages.Count);
+                reverse.Content = new MemoryStream();
+
+                foreach (QueueMessage msg in additionalMessages)
+                {
+                    byte[] data = HorseProtocolWriter.Create(msg.Message);
+                    await reverse.Content.WriteAsync(data);
+                }
+
+                reverse.CalculateLengths();
+                reverse.AddHeader(HorseHeaders.COUNT, 0);
+                await remote.SendMessage(reverse);
+            }
         }
-        catch
+        finally
         {
+            //the lock is released even if the reverse messages could not be sent
+            Manager.Queue.SetStatus(QueueStatus.Running);
+
+            try
+            {
+                Manager.Queue.QueueLock.Release();
+            }
+            catch
+            {
+            }
         }
 
         HorseMessage message = new HorseMessage(MessageType.Cluster, Manager.Queue.Name, KnownContentTypes.NodeQueueSyncCompletion);
-        await RemoteNode.SendMessage(message);
-
-        RemoteNode = null;
+        await remote.SendMessage(message);
     }
 
     private void OnNodeDisconnected(NodeClient nodeClient)
     {
         if (Status == QueueSyncStatus.Sharing)
-            _ = EndSharing();
+            EndSharing(null);
         else if (Status == QueueSyncStatus.Receiving)
-            _ = EndReceiving(false);
+            _ = EndReceiving(false, null);
     }
 }

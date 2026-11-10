@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Horse.Core;
 using Horse.Core.Protocols;
@@ -126,7 +127,9 @@ public class HorseProtocol : IHorseProtocol
             // ignore
         }
 
+        HorseServerSocket socket = (HorseServerSocket)handshakeResult.Socket;
         HorseProtocolReader reader = new HorseProtocolReader();
+        OrderedMessageProcessor processor = new OrderedMessageProcessor(this, info, socket);
 
         while (info.Client != null && info.Client.Connected)
         {
@@ -137,7 +140,13 @@ public class HorseProtocol : IHorseProtocol
                 return;
             }
 
-            await ProcessMessage(info, message, (HorseServerSocket)handshakeResult.Socket);
+            //the connection is alive when its messages are read, even if processing of a previous message waits.
+            //It was updated after the previous message was processed: a message waiting for a queue lock kept
+            //the PONGs of the connection unread and the heartbeat disconnected a healthy client.
+            if (socket.SmartHealthCheck || message.Type == MessageType.Pong)
+                socket.KeepAlive();
+
+            await processor.Enqueue(message);
         }
     }
 
@@ -146,16 +155,102 @@ public class HorseProtocol : IHorseProtocol
         //if user makes a mistake in received method, we should not interrupt connection handling
         try
         {
-            if (socket.SmartHealthCheck)
-                socket.KeepAlive();
-            else if (message.Type == MessageType.Pong)
-                socket.KeepAlive();
-
             await _handler.Received(_server, info, socket, message);
         }
-        catch (Exception e)
+        catch (Exception)
         {
             // ignore
+        }
+    }
+
+    /// <summary>
+    /// Processes the messages of a connection one by one, in the order they are read.
+    /// Reading the connection does not wait for processing: while a message is processed (a push waiting
+    /// for a queue lock, for example), next messages are read and kept in order, so PING and PONG messages
+    /// of the connection are still read. When nothing is processed, a message is processed on the reading
+    /// task, like before.
+    /// When <see cref="MaxPendingMessages"/> messages are waiting, reading waits until one is processed.
+    /// </summary>
+    private sealed class OrderedMessageProcessor
+    {
+        /// <summary>
+        /// Maximum count of read messages waiting for processing before reading waits
+        /// </summary>
+        private const int MaxPendingMessages = 1024;
+
+        private readonly HorseProtocol _protocol;
+        private readonly IConnectionInfo _info;
+        private readonly HorseServerSocket _socket;
+        private readonly Queue<HorseMessage> _pending = new();
+        private bool _processing;
+        private TaskCompletionSource _space;
+
+        public OrderedMessageProcessor(HorseProtocol protocol, IConnectionInfo info, HorseServerSocket socket)
+        {
+            _protocol = protocol;
+            _info = info;
+            _socket = socket;
+        }
+
+        /// <summary>
+        /// Processes the message or keeps it to process after the messages before it.
+        /// Returns a task that completes when the next message can be read.
+        /// </summary>
+        public Task Enqueue(HorseMessage message)
+        {
+            lock (_pending)
+            {
+                if (_processing)
+                {
+                    _pending.Enqueue(message);
+                    if (_pending.Count < MaxPendingMessages)
+                        return Task.CompletedTask;
+
+                    _space = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                    return _space.Task;
+                }
+
+                _processing = true;
+            }
+
+            _ = Process(message);
+            return Task.CompletedTask;
+        }
+
+        private async Task Process(HorseMessage message)
+        {
+            while (true)
+            {
+                await _protocol.ProcessMessage(_info, message, _socket);
+
+                bool done;
+                TaskCompletionSource space = null;
+                lock (_pending)
+                {
+                    //messages of a closed connection are not processed, as before:
+                    //reading stopped when the connection was closed.
+                    //A subscription of a disconnected client would never be removed.
+                    if (!_socket.IsConnected)
+                        _pending.Clear();
+
+                    done = _pending.Count == 0;
+                    if (done)
+                        _processing = false;
+                    else
+                        message = _pending.Dequeue();
+
+                    if (_space != null && _pending.Count < MaxPendingMessages)
+                    {
+                        space = _space;
+                        _space = null;
+                    }
+                }
+
+                space?.TrySetResult();
+
+                if (done)
+                    return;
+            }
         }
     }
 
