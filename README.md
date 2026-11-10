@@ -1,5 +1,6 @@
 # Horse Messaging
 
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/horse)](https://artifacthub.io/packages/helm/horse/horse)
 [![NuGet](https://img.shields.io/nuget/v/Horse.Messaging.Server?label=Server%20NuGet)](https://www.nuget.org/packages/Horse.Messaging.Server)
 [![NuGet](https://img.shields.io/nuget/v/Horse.Messaging.Client?label=Client%20NuGet)](https://www.nuget.org/packages/Horse.Messaging.Client)
 [![NuGet](https://img.shields.io/nuget/v/Horse.Messaging.Plugins?label=Plugins%20NuGet)](https://www.nuget.org/packages/Horse.Messaging.Plugins)
@@ -12,6 +13,17 @@ Horse Messaging Server can be deployed to Kubernetes with the official Helm char
 ```sh
 helm install horse oci://ghcr.io/horse-framework/charts/horse \
   --namespace messaging --create-namespace
+```
+
+or
+
+```sh
+helm install horse oci://ghcr.io/horse-framework/charts/horse \
+  --version 8.3.0 \
+  --namespace messaging --create-namespace \
+  --set jockey.password='<strong-password>' \
+  --set cluster.sharedSecret='<random-uuid>' \
+  --set jockey.ingressHost=.example.com
 ```
 
 For more information visit the
