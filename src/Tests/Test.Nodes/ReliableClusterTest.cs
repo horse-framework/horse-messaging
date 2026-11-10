@@ -602,6 +602,57 @@ public class ReliableClusterTest
     }
 
     /// <summary>
+    /// A sync the replica never completes must not keep the queue in Syncing forever.
+    /// The Main holds the queue lock while sharing and, in Reliable mode, every push waits for it.
+    /// The replica here is not receiving (it did not ask for the sync), so it never sends the completion,
+    /// like a replica that lost the list or failed while processing it. The replica stays connected.
+    /// Before the fix only a disconnect of the replica ended the sync: the queue stayed in Syncing
+    /// and the push below waited for the lock forever.
+    /// </summary>
+    [Fact]
+    public async Task QueueSync_ReplicaNeverCompletes_SyncTimesOutAndPushesContinue()
+    {
+        int[] ports = { 28921, 28922 };
+        List<ClusterNode> nodes = StartReliableCluster(ports, ReplicaAcknowledge.OnlySuccessor);
+        HorseClient client = null;
+
+        try
+        {
+            (ClusterNode main, ClusterNode successor) = await WaitForConnectedSuccessor(nodes);
+
+            client = new HorseClient();
+            client.SetClientName("sync-timeout-producer");
+            await client.ConnectAsync($"horse://localhost:{main.Port}");
+            Assert.True(await WaitUntil(() => client.IsConnected, 10000));
+
+            string queueName = $"sync-timeout-{_run}";
+            (bool replicated, bool anyCommit) = await PushUntilReplicated(client, queueName, Encoding.UTF8.GetBytes("before"), successor);
+            Assert.True(anyCommit && replicated, "queue was not replicated before the sync");
+
+            HorseQueue queue = main.Rider.Queue.Find(queueName);
+            DefaultQueueSynchronizer synchronizer = Assert.IsType<DefaultQueueSynchronizer>(queue.Manager.Synchronizer);
+            synchronizer.Timeout = TimeSpan.FromSeconds(3);
+
+            NodeClient replicaNode = main.Rider.Cluster.Clients.First(c => c.Info.Id == main.Rider.Cluster.SuccessorNode.Id);
+            Assert.True(await synchronizer.BeginSharing(replicaNode));
+            Assert.Equal(QueueStatus.Syncing, queue.Status);
+
+            Task<HorseResult> push = client.Queue.Push(queueName, Encoding.UTF8.GetBytes("during-sync"), true);
+            Task finished = await Task.WhenAny(push, Task.Delay(20000));
+            Assert.True(finished == push, "push waited for the queue lock of a sync that was never completed");
+
+            Assert.True(await WaitUntil(() => queue.Status == QueueStatus.Running, 5000));
+            Assert.Equal(QueueSyncStatus.None, synchronizer.Status);
+            Assert.True(replicaNode.IsConnected, "the sync must end by timeout, not by a disconnect");
+        }
+        finally
+        {
+            client?.Disconnect();
+            await StopCluster(nodes);
+        }
+    }
+
+    /// <summary>
     /// Scenario 7 — Node authentication: nodes configured with mismatched SharedSecret are rejected
     /// by HorseNetworkHandler.Connected (isNode path, HorseNetworkHandler.cs:107-111 → Unauthorized),
     /// so no cluster forms. Both nodes stay Single, never connect as peers, and never elect a Main.

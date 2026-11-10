@@ -401,7 +401,11 @@ public class NodeClient
             case KnownContentTypes.NodeQueueSyncCompletion:
             {
                 HorseQueue queue = Rider.Queue.Find(message.Target);
-                if (queue != null)
+
+                //only the node this queue is shared with can complete the sync.
+                //A late completion of another replica (its own receive timed out) ended the running sync
+                //and released the lock of the sync that was waiting behind it.
+                if (queue != null && queue.Manager.Synchronizer.RemoteNode == this)
                     _ = queue.Manager.Synchronizer.EndSharing();
 
                 break;
